@@ -14,20 +14,30 @@ class transaction:
 
 
 
-def loadStatementXML():
+def loadStatementXML(): #parsing an XML monthly bank account statement
+    def parseRecord(rootObj, XPath):
+        try:
+            value = rootObj.find(XPath, namespace).text
+        except AttributeError:
+            value = None
+        return value
 
     tree = ET.parse('statement.xml')
     root = tree.getroot()
     namespace = {'nms':'urn:iso:std:iso:20022:tech:xsd:camt.053.001.06'}
 
-    print(len(root.findall('.//nms:Ntry', namespace)))
-    #for n in root.findall('.//nms:Ntry', namespace):
-     #   print(n.tag)
+    expense = []
+    record = {'Name': None, 'Dir':None, 'SrcCurr': None, 'TrgtCurr': None, 'Title': None, 'Date': None, 'Place': None}
 
-    for n in root.findall('.//nms:Ntry', namespace):
-        print(len(n.findall('.//nms:Nm', namespace)))
-        Name = n.findall('nms:Nm', namespace)
-        print(Name)
-        pass
+    for count, i in enumerate(root.findall('.//nms:Ntry', namespace)):
+        expense.append(record)
+
+        # Parsing names
+        expense[count]['Name'] = parseRecord(i, './/nms:RltdPties//nms:Nm')
+        # Parsing Title
+        expense[count]['Title'] = parseRecord(i, './/nms:Ustrd')
+
+        print(expense[count]['Name'], ' - ', expense[count]['Title'])
+
 
 loadStatementXML()
