@@ -1,31 +1,31 @@
-Name,Title,Dir,Amount,SrcAmount,Date,Place
-Pizza famiglia,,-1,"[129.0, 'CZK']",,2021-09-02+02:00,Praha
-Mmb1967 vinohradska fl,,-1,"[500.0, 'CZK']",,2021-09-02+02:00,Praha 3
-Lidl dekuje za nakup,,-1,"[235.0, 'CZK']",,2021-09-04+02:00,Decin
-Shell 8125,,-1,"[1361.5, 'CZK']",,2021-09-05+02:00,Decin
-"Siemens, s.r.o.",5148 20000,1,"[40740.0, 'CZK']",,2021-09-06+02:00,
-Kafe damu,,-1,"[105.0, 'CZK']",,2021-09-06+02:00,Praha 1
-Albert vam dekuje,,-1,"[405.2, 'CZK']",,2021-09-06+02:00,Praha 3
-Uber -trip,,-1,"[199.85, 'CZK']",,2021-09-06+02:00,Help.uber.com
-Higarden,,-1,"[288.0, 'CZK']",,2021-09-07+02:00,Praha
-Anheuser-busch inbev,Io250cz67100xpy 0q6y08zfdsjxitkowiak klaudiavs9990821 ks01389990821,1,"[65914.0, 'CZK']",,2021-09-08+02:00,
-Albert vam dekuje,,-1,"[54.9, 'CZK']",,2021-09-08+02:00,Praha 3
-Terra,,-1,"[178.0, 'CZK']",,2021-09-09+02:00,Praha 3
-Albert vam dekuje,,-1,"[292.7, 'CZK']",,2021-09-10+02:00,Praha 3
-Gelato cafe,,-1,"[110.0, 'CZK']",,2021-09-14+02:00,Praha 1 - sta
-Potraviny vecerka,,-1,"[23.0, 'CZK']",,2021-09-14+02:00,Praha
-Billa siemensova,,-1,"[23.02, 'CZK']",,2021-09-15+02:00,Praha
-Zalando payments,,-1,"[5829.0, 'CZK']",,2021-09-17+02:00,Berlin
-Lezecke centrum,,-1,"[200.0, 'CZK']",,2021-09-17+02:00,Praha 5
-Vaprio,,-1,"[568.0, 'CZK']",,2021-09-18+02:00,Praha 3
-Cr ledro bcc,,-1,"[3902.85, 'CZK']","[150.0, 'EUR']",2021-09-22+02:00,Ledro
-,Najemne + zaloha (pisecka),-1,"[14000.0, 'CZK']",,2021-09-23+02:00,
-,,-1,"[1270.0, 'CZK']",,2021-09-23+02:00,
-,,-1,"[349.5, 'CZK']",,2021-09-23+02:00,
-Na3d s.r.o.,,-1,"[1346.0, 'CZK']",,2021-09-24+02:00,Jabl. n. b.
-Klaudia itkowiak,Dla perelki,-1,"[65100.0, 'CZK']",,2021-09-26+02:00,
-Lidl dekuje za nakup,,-1,"[97.7, 'CZK']",,2021-09-27+02:00,Praha
-Dolni dvoriste 220,,-1,"[19.0, 'CZK']",,2021-09-28+02:00,Dolni dvorist
-,Bday present cisco,-1,"[323.76, 'CZK']",,2021-09-29+02:00,
-,,1,"[4.02, 'CZK']",,2021-09-30+02:00,
-,,-1,"[0.6, 'CZK']",,2021-09-30+02:00,
+name,title,dir,amount,srcAmount,date,place,category
+Pizza famiglia,,-1,"[129.0, 'CZK']",,2021-09-02+02:00,Praha,
+Mmb1967 vinohradska fl,,-1,"[500.0, 'CZK']",,2021-09-02+02:00,Praha 3,
+Lidl dekuje za nakup,,-1,"[235.0, 'CZK']",,2021-09-04+02:00,Decin,
+Shell 8125,,-1,"[1361.5, 'CZK']",,2021-09-05+02:00,Decin,
+"Siemens, s.r.o.",5148 20000,1,"[40740.0, 'CZK']",,2021-09-06+02:00,,
+Kafe damu,,-1,"[105.0, 'CZK']",,2021-09-06+02:00,Praha 1,
+Albert vam dekuje,,-1,"[405.2, 'CZK']",,2021-09-06+02:00,Praha 3,
+Uber -trip,,-1,"[199.85, 'CZK']",,2021-09-06+02:00,Help.uber.com,
+Higarden,,-1,"[288.0, 'CZK']",,2021-09-07+02:00,Praha,
+Anheuser-busch inbev,Io250cz67100xpy 0q6y08zfdsjxitkowiak klaudiavs9990821 ks01389990821,1,"[65914.0, 'CZK']",,2021-09-08+02:00,,
+Albert vam dekuje,,-1,"[54.9, 'CZK']",,2021-09-08+02:00,Praha 3,
+Terra,,-1,"[178.0, 'CZK']",,2021-09-09+02:00,Praha 3,
+Albert vam dekuje,,-1,"[292.7, 'CZK']",,2021-09-10+02:00,Praha 3,
+Gelato cafe,,-1,"[110.0, 'CZK']",,2021-09-14+02:00,Praha 1 - sta,
+Potraviny vecerka,,-1,"[23.0, 'CZK']",,2021-09-14+02:00,Praha,
+Billa siemensova,,-1,"[23.02, 'CZK']",,2021-09-15+02:00,Praha,
+Zalando payments,,-1,"[5829.0, 'CZK']",,2021-09-17+02:00,Berlin,
+Lezecke centrum,,-1,"[200.0, 'CZK']",,2021-09-17+02:00,Praha 5,
+Vaprio,,-1,"[568.0, 'CZK']",,2021-09-18+02:00,Praha 3,
+Cr ledro bcc,,-1,"[3902.85, 'CZK']","[150.0, 'EUR']",2021-09-22+02:00,Ledro,
+,Najemne + zaloha (pisecka),-1,"[14000.0, 'CZK']",,2021-09-23+02:00,,
+,,-1,"[1270.0, 'CZK']",,2021-09-23+02:00,,
+,,-1,"[349.5, 'CZK']",,2021-09-23+02:00,,
+Na3d s.r.o.,,-1,"[1346.0, 'CZK']",,2021-09-24+02:00,Jabl. n. b.,
+Klaudia itkowiak,Dla perelki,-1,"[65100.0, 'CZK']",,2021-09-26+02:00,,
+Lidl dekuje za nakup,,-1,"[97.7, 'CZK']",,2021-09-27+02:00,Praha,
+Dolni dvoriste 220,,-1,"[19.0, 'CZK']",,2021-09-28+02:00,Dolni dvorist,
+,Bday present cisco,-1,"[323.76, 'CZK']",,2021-09-29+02:00,,
+,,1,"[4.02, 'CZK']",,2021-09-30+02:00,,
+,,-1,"[0.6, 'CZK']",,2021-09-30+02:00,,
