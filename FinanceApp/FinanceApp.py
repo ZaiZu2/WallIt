@@ -34,15 +34,18 @@ class Transaction:
                 self.dir == other.dir and 
                 self.amount[0] == other.amount[0] and
                 self.amount[1] == other.amount[1] and
-                self.srcAmount[0] == other.srcAmount[0] and
-                self.srcAmount[1] == other.srcAmount[1] and
                 self.date == other.date and
                 self.place == other.place) 
 
     def convertSavedRecord(self) -> None:
-        """Input-> "[129.0, 'CZK']" Output->[129.0 , 'CZK'] """
+        """Clean up the loaded-up record - change strings to correct varTypes, replace empty strings with None"""
+
+        def convertDate(date):
+            tempDate = datetime.datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
+            return tempDate
 
         def convertAmounts(string):
+            """Split "[129.0, 'CZK']" string into [129.0 , 'CZK']"""
             tempAmount = []
             tempCurrency = []
             for character in string:
@@ -55,12 +58,20 @@ class Transaction:
                     pass
             return [float(''.join(tempAmount)), str(''.join(tempCurrency))]
 
+        # check if following properties are not strings
+        if type(self.date) is str:
+            self.date = convertDate(self.date)
         if type(self.amount) is str: # check if amount is str and needs conversion
             self.amount = convertAmounts(self.amount)
         if (type(self.srcAmount) is str) and self.srcAmount: # check if 'amount is str & not empty' and needs conversion
             self.srcAmount = convertAmounts(self.srcAmount)
-        #print(self.amount)
-        #print(self.srcAmount)
+        if type(self.dir) is str:
+            self.dir = int(self.dir)
+        
+        # replace values with empty strings with None
+        for key, value in vars(self).items():
+            if not value:
+                self.__dict__[key] = None
 
     def categorizeRecord(self, targetCategory):
         """Assign a category to the record"""
@@ -93,19 +104,11 @@ class TransactionTable:
     def saveToCSV(self) -> None:
         """Save transaction table to .CSV"""
 
-        # I need to use tempSaveTable for saving to .csv
-        # passing 'record.parameters' straight to a looped 'writerow' doesn't work
-        # No clue why
+        # Temporary list of dictionaries is created to work as an input for 'writerows'
         tempSaveTable: list = []
         for i, record in enumerate(self.table):
             tempSaveTable.append({})
             tempSaveTable[i] = vars(record)
-
-        print(tempSaveTable)
-        
-        print(vars(self.table[0]).values())
-        lista = [items for items in vars(self.table[0])]
-        print(lista)
 
         with open('save.csv', 'w', newline='') as saveFile:
             writer = csv.DictWriter(saveFile, fieldnames = [key for key in vars(self.table[0]).keys()])
@@ -150,15 +153,14 @@ class TransactionTable:
             except AttributeError:
                 value = None
             return value
-        '''
+        
         def parseDate(rootObj, XPath):
             try:
-                date = 
-                value.append(float(rootObj.find(XPath, namespace).text)) 
+                date = datetime.datetime.strptime(rootObj.find(XPath, namespace).text, '%Y-%m-%d+%H:%M')
             except AttributeError:
-                value = None
-            return value        
-        '''
+                date = None
+            return date        
+        
         path = fileTypeCheck(".xml")
         tree = ET.parse(path)
         root = tree.getroot()
@@ -170,8 +172,9 @@ class TransactionTable:
 
             expenses[count].name = parseRecord(i, ".//nms:RltdPties//nms:Nm")
             expenses[count].title = parseRecord(i, ".//nms:Ustrd")
-            expenses[count].date = parseRecord(i, ".//nms:BookgDt/nms:Dt")
             expenses[count].place = parseRecord(i, ".//nms:PstlAdr/nms:TwnNm")
+
+            expenses[count].date = parseDate(i, ".//nms:BookgDt/nms:Dt")
 
             expenses[count].amount = parseAmount(i, "./nms:Amt")  # Parses list [Amount, Currency]
             expenses[count].srcAmount = parseAmount(i, ".//nms:InstdAmt/nms:Amt")  # Parses list [Amount, Currency]
@@ -210,8 +213,8 @@ def main():
 
     print(len(table.table))
     table.loadFromCSV()
-
-    #table.loadStatementXML()
+    print(len(table.table))
+    table.loadStatementXML()
     print(len(table.table))
     print(repr(table.table[10]))
     #table.saveToCSV()
