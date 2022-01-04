@@ -5,10 +5,6 @@ import copy, os, csv, datetime
 import tkinter as tk
 from tkinter import filedialog
 from typing import Type, List, Optional
-
-# TODO: loadFromCSV loads strings of old data instead of different variables, which confuses appendWithoutDuplicates() which compares strings to different variables
-# TODO: change saveToCSV for proper headers, understand how it works, change row 
-
 class Transaction:
     """Class cointaining a transaction record"""
 
@@ -22,8 +18,10 @@ class Transaction:
         self.place: Optional[str]  = None
         self.category: Optional[str] = None
 
+
     def __repr__(self) -> str:
         return f'{self.__class__.__qualname__}: {self.name}, {self.amount[0]}, {self.amount[1]}, {self.date}'
+
 
     def __eq__(self, other):
         if not isinstance(other, Transaction):
@@ -36,6 +34,7 @@ class Transaction:
                 self.amount[1] == other.amount[1] and
                 self.date == other.date and
                 self.place == other.place) 
+
 
     def convertSavedRecord(self) -> None:
         """Clean up the loaded-up record - change strings to correct varTypes, replace empty strings with None"""
@@ -72,6 +71,7 @@ class Transaction:
         for key, value in vars(self).items():
             if not value:
                 self.__dict__[key] = None
+
 
     def categorizeRecord(self, targetCategory):
         """Assign a category to the record"""
@@ -161,51 +161,74 @@ class TransactionTable:
                 date = None
             return date        
         
-        path = fileTypeCheck(".xml")
-        tree = ET.parse(path)
-        root = tree.getroot()
-        namespace = {"nms": "urn:iso:std:iso:20022:tech:xsd:camt.053.001.06"}
-        expenses = []
+        XMLfiles = fileTypeCheck(".xml")
 
-        for count, i in enumerate(root.findall(".//nms:Ntry", namespace)):  # Parsing transaction records
-            expenses.append(copy.deepcopy(Transaction()))
+        for file in XMLfiles:
+            tree = ET.parse(file)
+            root = tree.getroot()
+            namespace = {"nms": "urn:iso:std:iso:20022:tech:xsd:camt.053.001.06"}
+            expenses = []
 
-            expenses[count].name = parseRecord(i, ".//nms:RltdPties//nms:Nm")
-            expenses[count].title = parseRecord(i, ".//nms:Ustrd")
-            expenses[count].place = parseRecord(i, ".//nms:PstlAdr/nms:TwnNm")
+            for count, i in enumerate(root.findall(".//nms:Ntry", namespace)):  # Parsing transaction records
+                expenses.append(copy.deepcopy(Transaction()))
 
-            expenses[count].date = parseDate(i, ".//nms:BookgDt/nms:Dt")
+                expenses[count].name = parseRecord(i, ".//nms:RltdPties//nms:Nm")
+                expenses[count].title = parseRecord(i, ".//nms:Ustrd")
+                expenses[count].place = parseRecord(i, ".//nms:PstlAdr/nms:TwnNm")
 
-            expenses[count].amount = parseAmount(i, "./nms:Amt")  # Parses list [Amount, Currency]
-            expenses[count].srcAmount = parseAmount(i, ".//nms:InstdAmt/nms:Amt")  # Parses list [Amount, Currency]
+                expenses[count].date = parseDate(i, ".//nms:BookgDt/nms:Dt")
 
-            expenses[count].dir = parseRecord(i, "./nms:CdtDbtInd")  # Parsing just 'DBIT' or 'CRDT' to a dictionary
-            if expenses[count].dir == "Dbit":
-                expenses[count].dir = -1
+                expenses[count].amount = parseAmount(i, "./nms:Amt")  # Parses list [Amount, Currency]
+                expenses[count].srcAmount = parseAmount(i, ".//nms:InstdAmt/nms:Amt")  # Parses list [Amount, Currency]
+
+                expenses[count].dir = parseRecord(i, "./nms:CdtDbtInd")  # Parsing just 'DBIT' or 'CRDT' to a dictionary
+                if expenses[count].dir == "Dbit":
+                    expenses[count].dir = -1
+                else:
+                    expenses[count].dir = 1
+
+            # PARSING CHECKS
+            # Check for correct expenses amounts to balance
+            incSum = round(sum(expense.dir * expense.amount[0] for expense in expenses), 2)
+            if incSum == round(float(root.find(".//nms:TtlNtries/nms:Sum", namespace).text), 2):
+                print(f"Successfully loaded {len(expenses)} records.")
             else:
-                expenses[count].dir = 1
+                print("Records were loaded incorrectly.")
 
-        # PARSING CHECKS
-        # Check for correct expenses amounts to balance
-        incSum = round(sum(expense.dir * expense.amount[0] for expense in expenses), 2)
-        if incSum == round(float(root.find(".//nms:TtlNtries/nms:Sum", namespace).text), 2):
-            print(f"Successfully loaded {len(expenses)} records.")
-        else:
-            print("Records were loaded incorrectly.")
-
-        self.appendWithoutDuplicates(expenses)
+            self.appendWithoutDuplicates(expenses)
 
 
-def fileTypeCheck(type: str) -> str:
-    """Check if extension in form of '.xml' is opened"""
+    def writeSummary(self, start: datetime.datetime, end: datetime.datetime) -> str:
+        """Write juxtaposition of Incoming, Outcoming, Balance for a given period of time"""
+
+        # TODO: implement filtering method here
+        filtered = self.table
+
+        balance = round(sum((record.dir * record.amount[0] for record in filtered)), 2)
+        outgoing = round(sum((record.dir * record.amount[0] for record in filtered if record.dir == -1)), 2)
+        incoming = round(sum((record.dir * record.amount[0] for record in filtered if record.dir == 1)), 2)
+
+        return print(f"""{datetime.datetime} - {datetime.datetime}\n
+                        Balance: {balance}\n
+                        Incoming: {incoming}\n
+                        Outgoing: {outgoing}""")
+
+
+def fileTypeCheck(type: str) -> tuple:
+    """Check if all files with extension in form of e.g. '.xml' are opened"""
 
     while True:
-        path = filedialog.askopenfilename()
+        TupleOfPaths = filedialog.askopenfilenames()
+        correctFileInt = 0
 
-        if os.path.basename(path).endswith(f"{type}"):
-            return path
+        for path in TupleOfPaths:
+            if os.path.basename(path).endswith(f"{type}"):
+                correctFileInt += 1
+        
+        if correctFileInt == len(TupleOfPaths): 
+            return TupleOfPaths
         else:
-            print("Wrong file type.")
+            print(f'{len(TupleOfPaths) - correctFileInt} files have incorrect extension. Repeat.')
 
 
 def main():
@@ -214,10 +237,11 @@ def main():
     print(len(table.table))
     table.loadFromCSV()
     print(len(table.table))
-    table.loadStatementXML()
-    print(len(table.table))
+    #table.loadStatementXML()
+    #print(len(table.table))
     print(repr(table.table[10]))
-    #table.saveToCSV()
+    table.saveToCSV()
+    table.writeSummary(0,0)
     root = tk.Tk()
     root.withdraw()
 
