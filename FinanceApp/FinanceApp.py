@@ -1,7 +1,8 @@
 #! python 3
 
+from tkinter.constants import S
 import xml.etree.ElementTree as ET
-import copy, os, csv, datetime
+import copy, os, csv, datetime, sys
 import tkinter as tk
 from tkinter import filedialog
 from typing import Type, List, Optional
@@ -20,7 +21,7 @@ class Transaction:
 
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__qualname__}: {self.name}, {self.amount[0]}, {self.amount[1]}, {self.date}'
+        return f'{self.__class__.__qualname__}: {self.name}, {self.dir*self.amount[0]} {self.amount[1]}, {self.date}'
 
 
     def __eq__(self, other):
@@ -120,18 +121,19 @@ class TransactionTable:
     
     def loadFromCSV(self) -> None:
         """Load transaction table from .CSV"""
-
-        try:
-            with open('save.csv', 'r', newline='') as saveFile:
-                reader = csv.DictReader(saveFile)
-                recordTable = []
-                for i, row in enumerate(reader):
-                    recordTable.append(Transaction())
-                    recordTable[i].__dict__ = row
-                    recordTable[i].convertSavedRecord()
-        
-        except FileNotFoundError:
-            print('Savefile not found.')
+        while True:
+            try:
+                with open('save.csv', 'r', newline='') as saveFile:
+                    reader = csv.DictReader(saveFile)
+                    recordTable = []
+                    for i, row in enumerate(reader):
+                        recordTable.append(Transaction())
+                        recordTable[i].__dict__ = row
+                        recordTable[i].convertSavedRecord()
+                break
+            except FileNotFoundError:
+                print('Savefile not found.')
+                sys.exit()
 
         self.appendWithoutDuplicates(recordTable)        
         print('Data successfully loaded.')
@@ -176,7 +178,7 @@ class TransactionTable:
                 expenses[count].title = parseRecord(i, ".//nms:Ustrd")
                 expenses[count].place = parseRecord(i, ".//nms:PstlAdr/nms:TwnNm")
 
-                expenses[count].date = parseDate(i, ".//nms:BookgDt/nms:Dt")
+                expenses[count].date = parseDate(i, ".//nms:BookgDt/nms:Dt")  # Parses date to datatime object
 
                 expenses[count].amount = parseAmount(i, "./nms:Amt")  # Parses list [Amount, Currency]
                 expenses[count].srcAmount = parseAmount(i, ".//nms:InstdAmt/nms:Amt")  # Parses list [Amount, Currency]
@@ -212,10 +214,56 @@ class TransactionTable:
                         Balance: {balance}\n
                         Incoming: {incoming}\n
                         Outgoing: {outgoing}""")
+    
+
+    def filterTable(self, currency: str = None, lowerAmount: float = None, upperAmount: float = None, 
+                    lowerDate: datetime.datetime = None, upperDate: datetime.datetime = None, 
+                    dir: int = None, category: str = None) -> list(Transaction):
+        """Filter by: date, amount, category, place, dir, currency"""
+ 
+        def filterInRange(record: Transaction, recordParameter: str, lower, upper) -> bool:
+            """Select correct filtering condition based on lower/upper filtering thresholds"""
+            if recordParameter == 'amount':
+                if lower is None and upper is not None:
+                    return record.__getattribute__('amount')[0] <= upper
+                if lower is not None and upper is None:
+                    return lower <= record.__getattribute__('amount')[0]
+                if lower is not None and upper is not None:
+                    return lower <= record.__getattribute__('amount')[0] <= upper
+
+            if recordParameter == 'date':
+                if lower is None and upper is not None:
+                    return record.__getattribute__('date') <= upper
+                if lower is not None and upper is None:
+                    return lower <= record.__getattribute__('date')
+                if lower is not None and upper is not None:
+                    return lower <= record.__getattribute__('date') <= upper
+        
+        def filterInCurrency(record: Transaction) -> bool:
+            """Check and use original currency in case the transaction was converted"""
+
+            if (record.srcAmount is not None) and record.srcAmount[1] == currency:
+                return record.srcAmount[1] == currency  # Must be True if got there
+            else:
+                return record.amount[1] == currency
+
+        filteredTable = self.table
+
+        if (lowerAmount is not None) or (upperAmount is not None):
+            filteredTable = list(filter(lambda record: filterInRange(record, 'amount', lowerAmount, upperAmount), filteredTable))
+        if currency is not None:
+            filteredTable = list(filter(lambda record: filterInCurrency(record), filteredTable))
+        if dir is not None:
+            filteredTable = list(filter(lambda record: record.dir == dir, filteredTable))
+        if (lowerDate is not None) or (upperDate is not None):
+            filteredTable = list(filter(lambda record: filterInRange(record, 'date', lowerDate, upperDate), filteredTable))
+        if category is not None:
+            filteredTable = list(filter(lambda record: record.category == category, filteredTable))
+        return filteredTable
 
 
-def fileTypeCheck(type: str) -> tuple:
-    """Check if all files with extension in form of e.g. '.xml' are opened"""
+def fileTypeCheck(type: str) -> str:
+    """Check if extension in form of '.xml' is opened"""
 
     while True:
         TupleOfPaths = filedialog.askopenfilenames()
@@ -234,7 +282,7 @@ def fileTypeCheck(type: str) -> tuple:
 def main():
     table = TransactionTable()
 
-    print(len(table.table))
+    #print(len(table.table))
     table.loadFromCSV()
     print(len(table.table))
     #table.loadStatementXML()
@@ -242,8 +290,17 @@ def main():
     print(repr(table.table[10]))
     table.saveToCSV()
     table.writeSummary(0,0)
+    #print(len(table.table))
+    #table.loadStatementXML()
+    #print(len(table.table))
+    #print(repr(table.table[10]))
+    #table.saveToCSV()
+    filt = table.filterTable()
+    [print(a) for a in filt]
+
+
     root = tk.Tk()
-    root.withdraw()
+    root.withdraw() 
 
     
     #table.loadStatementXML()
