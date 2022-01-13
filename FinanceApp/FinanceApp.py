@@ -133,7 +133,7 @@ class TransactionTable:
                 break
             except FileNotFoundError:
                 print('Savefile not found.')
-                sys.exit()
+                break
 
         self.appendWithoutDuplicates(recordTable)        
         print('Data successfully loaded.')
@@ -201,7 +201,7 @@ class TransactionTable:
 
 
     def writeSummary(self, start: datetime.datetime, end: datetime.datetime) -> str:
-        """Write juxtaposition of Incoming, Outcoming, Balance for a given period of time"""
+        """Write summary of Incoming, Outcoming, Balance for a given period of time"""
 
         # TODO: implement filtering method here
         filtered = self.table
@@ -216,9 +216,7 @@ class TransactionTable:
                         Outgoing: {outgoing}""")
     
 
-    def filterTable(self, currency: str = None, lowerAmount: float = None, upperAmount: float = None, 
-                    lowerDate: datetime.datetime = None, upperDate: datetime.datetime = None, 
-                    dir: int = None, category: str = None) -> list(Transaction):
+    def filterTable(self, currency: str = None, lowerAmount: float = None, upperAmount: float = None, lowerDate: datetime.datetime = None, upperDate: datetime.datetime = None, dir: int = None, category: str = None) -> list[Transaction]:
         """Filter by: date, amount, category, place, dir, currency"""
  
         def filterInRange(record: Transaction, recordParameter: str, lower, upper) -> bool:
@@ -282,21 +280,14 @@ def fileTypeCheck(type: str) -> str:
 def main():
     table = TransactionTable()
 
-    #print(len(table.table))
-    table.loadFromCSV()
+    table.loadStatementXML()
+    #table.loadFromCSV()
     print(len(table.table))
-    #table.loadStatementXML()
-    #print(len(table.table))
-    print(repr(table.table[10]))
+
+    for record in table.table:
+        print(record.__repr__())
     table.saveToCSV()
-    table.writeSummary(0,0)
-    #print(len(table.table))
-    #table.loadStatementXML()
-    #print(len(table.table))
-    #print(repr(table.table[10]))
-    #table.saveToCSV()
-    filt = table.filterTable()
-    [print(a) for a in filt]
+    #filt = table.filterTable()
 
 
     root = tk.Tk()
