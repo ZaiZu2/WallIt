@@ -1,11 +1,11 @@
-#! python 3
+#! python3
 
-from tkinter.constants import S
 import xml.etree.ElementTree as ET
 import copy, os, csv, datetime, sys
 import tkinter as tk
 from tkinter import filedialog
 from typing import Type, List, Optional
+
 class Transaction:
     """Class cointaining a transaction record"""
 
@@ -15,9 +15,9 @@ class Transaction:
         self.dir: int | None =  None
         self.amount: list = [None, None]
         self.srcAmount: list = [None, None]
-        self.date: Optional[datetime.datetime] = None
-        self.place: Optional[str]  = None
-        self.category: Optional[str] = None
+        self.date: datetime.datetime | None = None
+        self.place: str | None  = None
+        self.category: str | None = None
 
 
     def __repr__(self) -> str:
@@ -198,22 +198,6 @@ class TransactionTable:
                 print("Records were loaded incorrectly.")
 
             self.appendWithoutDuplicates(expenses)
-
-
-    def writeSummary(self, start: datetime.datetime, end: datetime.datetime) -> str:
-        """Write summary of Incoming, Outcoming, Balance for a given period of time"""
-
-        # TODO: implement filtering method here
-        filtered = self.table
-
-        balance = round(sum((record.dir * record.amount[0] for record in filtered)), 2)
-        outgoing = round(sum((record.dir * record.amount[0] for record in filtered if record.dir == -1)), 2)
-        incoming = round(sum((record.dir * record.amount[0] for record in filtered if record.dir == 1)), 2)
-
-        return print(f"""{datetime.datetime} - {datetime.datetime}\n
-                        Balance: {balance}\n
-                        Incoming: {incoming}\n
-                        Outgoing: {outgoing}""")
     
 
     def filterTable(self, currency: str = None, lowerAmount: float = None, upperAmount: float = None, lowerDate: datetime.datetime = None, upperDate: datetime.datetime = None, dir: int = None, category: str = None) -> list[Transaction]:
@@ -260,6 +244,24 @@ class TransactionTable:
         return filteredTable
 
 
+    def writeSummary(self, startDate: datetime.datetime, endDate: datetime.datetime) -> str:
+        """Write summary of Incoming, Outcoming, Balance for a given period of time"""
+
+        if startDate < endDate:
+            filtered = self.filterTable(None, None, None, startDate, endDate, None, None)
+        else:
+            return print('Select correct period of time.')
+
+        balance = round(sum((record.dir * record.amount[0] for record in filtered)), 2)
+        outgoing = round(sum((record.dir * record.amount[0] for record in filtered if record.dir == -1)), 2)
+        incoming = round(sum((record.dir * record.amount[0] for record in filtered if record.dir == 1)), 2)
+
+        return print(f"""{datetime.datetime} - {datetime.datetime}\n
+                        Balance: {balance}\n
+                        Incoming: {incoming}\n
+                        Outgoing: {outgoing}""")
+
+
 def fileTypeCheck(type: str) -> str:
     """Check if extension in form of '.xml' is opened"""
 
@@ -280,24 +282,14 @@ def fileTypeCheck(type: str) -> str:
 def main():
     table = TransactionTable()
 
-    table.loadStatementXML()
-    #table.loadFromCSV()
+    #table.loadStatementXML()
+    table.loadFromCSV()
     print(len(table.table))
 
-    for record in table.table:
-        print(record.__repr__())
-    table.saveToCSV()
-    #filt = table.filterTable()
-
-
-    root = tk.Tk()
-    root.withdraw() 
-
-    
-    #table.loadStatementXML()
-    #[print(table.n.parameters) for table.n in table.table]
-
     #table.saveToCSV()
+    filt = table.filterTable(None, 350, 400)
 
+    [print(record) for record in filt]
 
-main()
+if __name__ == "__main__":
+    main()
