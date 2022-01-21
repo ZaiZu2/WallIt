@@ -1,9 +1,13 @@
 #! python3
 
-import pytest, sys
+import pytest, sys, os
 
-from tests_context import aaa
-from tests_context import FinanceApp as f
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), 
+                                            os.pardir))
+sys.path.append(PROJECT_ROOT)
+from FinanceApp import FinanceApp as FA
 
 
-aaa.a()
+
+def test_a(): 
+    print('a')
