@@ -133,7 +133,7 @@ class TransactionTable:
                 break
             except FileNotFoundError:
                 print('Savefile not found.')
-                break
+                return 1
 
         self.appendWithoutDuplicates(recordTable)        
         print('Data successfully loaded.')
@@ -235,7 +235,7 @@ class TransactionTable:
             filteredTable = list(filter(lambda record: filterInRange(record, 'amount', lowerAmount, upperAmount), filteredTable))
         if currency is not None:
             filteredTable = list(filter(lambda record: filterInCurrency(record), filteredTable))
-        if dir is not None:
+        if dir is not None:                                             
             filteredTable = list(filter(lambda record: record.dir == dir, filteredTable))
         if (lowerDate is not None) or (upperDate is not None):
             filteredTable = list(filter(lambda record: filterInRange(record, 'date', lowerDate, upperDate), filteredTable))
