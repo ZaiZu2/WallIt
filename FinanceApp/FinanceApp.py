@@ -5,9 +5,12 @@ import copy, os, csv, datetime, sys
 import tkinter as tk
 from tkinter import filedialog
 from typing import Tuple, Type, List
+
 import psycopg2
 from psycopg2 import sql
-
+from configparser import ConfigParser
+import configparser
+from pathlib import Path
 
 
 class TransactionService:
@@ -81,6 +84,26 @@ class Transaction:
         self.category = targetCategory
 
 
+def readDatabaseConfig(filePath: str) -> dict:
+    """Reads DB config file and returns dict of config parameters"""
+
+    config = configparser.ConfigParser()
+    config.read(filePath)
+
+    # reads the first block only
+    section = str(config.sections()[0])
+    params = {}
+
+    # extract keywords from .ini to dict
+    try:
+        for key in config[section]:
+            params[key] = config[section][key]
+    except:
+        print('Corrupted .ini file')
+
+    return params
+
+
 class TransactionRepo:
     """Class cointaining temporary transaction data and handling connection and queries to the DB"""
 
@@ -100,7 +123,8 @@ class TransactionRepo:
         self.upsertReq = 'upsert_req'
 
         try:
-            self.conn = psycopg2.connect("dbname=financeapp user=zaizu port=5433")
+            configDB = readDatabaseConfig('db.ini')
+            self.conn = psycopg2.connect(**configDB)
             self.cur = self.conn.cursor()
             print('Succesfully connected to the database.')
         except:
@@ -198,7 +222,7 @@ class TransactionRepo:
                 date = None
             return date        
         
-        XMLfiles = fileTypeCheck(".xml")
+        XMLfiles = _fileTypeCheck(".xml")
 
         for file in XMLfiles:
             tree = ET.parse(file)
@@ -297,7 +321,7 @@ class TransactionRepo:
                         Outgoing: {outgoing}""")
 
 
-def fileTypeCheck(type: str) -> Tuple:
+def _fileTypeCheck(type: str) -> Tuple:
     """Check if extension in form of '.xml' is opened"""
 
     while True:
