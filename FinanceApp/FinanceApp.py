@@ -64,9 +64,9 @@ class Transaction:
         if type(self.date) is str:
             self.date = datetime.datetime.strptime(self.date, '%Y-%m-%d %H:%M:%S')
         if type(self.amount) is str: # check if amount is str and needs conversion
-            self.amount = convertAmounts(self.amount)
+            self.amount = float(self.amount)
         if (type(self.srcAmount) is str) and self.srcAmount: # check if 'amount is str & not empty' and needs conversion
-            self.srcAmount = convertAmounts(self.srcAmount)
+            self.srcAmount = float(self.srcAmount)
         
         # replace values with empty strings with None
         for key, value in vars(self).items():
@@ -82,10 +82,10 @@ class Transaction:
 
 
 class TransactionRepo:
-    """Class cointaining a list of transactions"""
+    """Class cointaining temporary transaction data and handling connection and queries to the DB"""
 
     def __init__(self):
-        self.table: list[Transaction] = []
+        self.repo: list[Transaction] = []
         self.columnDict: dict = {
             'name' : 'info',
             'title' : 'title', 
@@ -96,7 +96,8 @@ class TransactionRepo:
             'date' : 'transaction_date',
             'place' : 'place',
             'category' : 'category'}
-        self.DBname = 'transactions'
+        self.tableName = 'transactions'
+        self.upsertReq = 'upsert_req'
 
         try:
             self.conn = psycopg2.connect("dbname=financeapp user=zaizu port=5433")
@@ -105,13 +106,16 @@ class TransactionRepo:
         except:
             print('Cannot connect to the database.')
 
-    def _upsertDB(self) -> None:
-        """UPSERT the DB with changes"""
+    def upsertRepo(self) -> None:
+        """UPSERT the DB with the currently stored changes"""
 
         mappedColumns= sql.SQL(', ').join(map(sql.Identifier, tuple(self.columnDict.values())))
 
-        for transaction in self.table:
-            query = self.cur.mogrify(sql.SQL("""INSERT INTO {}({}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""").format(sql.Identifier(self.DBname), mappedColumns),
+        for transaction in self.repo:
+            query = self.cur.mogrify(sql.SQL("""INSERT INTO {}({}) 
+                                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                                ON CONFLICT ON CONSTRAINT {}
+                                                DO NOTHING;""").format(sql.Identifier(self.tableName), mappedColumns, sql.Identifier(self.upsertReq)),
                 (transaction.name, transaction.title, transaction.amount, transaction.currency, transaction.srcAmount, transaction.srcCurrency, transaction.date, transaction.place, transaction.category))
             self.cur.execute(query)
             #print(query.decode())
@@ -122,13 +126,13 @@ class TransactionRepo:
 
         for record in records:
             duplicate = False
-            for checkedRecord in self.table:
+            for checkedRecord in self.repo:
                 if record == checkedRecord:
                     duplicate = True
                     break
 
             if duplicate is False: 
-                self.table.append(record)
+                self.repo.append(record)
 
     
     def saveToCSV(self) -> None:
@@ -136,12 +140,12 @@ class TransactionRepo:
 
         # Temporary list of dictionaries is created to work as an input for 'writerows'
         tempSaveTable: list = []
-        for i, record in enumerate(self.table):
+        for i, record in enumerate(self.repo):
             tempSaveTable.append({})
             tempSaveTable[i] = vars(record)
 
         with open('save.csv', 'w', newline='') as saveFile:
-            writer = csv.DictWriter(saveFile, fieldnames = [key for key in vars(self.table[0]).keys()])
+            writer = csv.DictWriter(saveFile, fieldnames = [key for key in vars(self.repo[0]).keys()])
             writer.writeheader()
             writer.writerows(tempSaveTable)
 
@@ -262,7 +266,7 @@ class TransactionRepo:
             else:
                 return record.srcCurrency == currency
 
-        filteredTable = self.table
+        filteredTable = self.repo
 
         if (lowerAmount is not None) or (upperAmount is not None):
             filteredTable = list(filter(lambda record: filterInRange(record, 'amount', lowerAmount, upperAmount), filteredTable))
@@ -311,12 +315,15 @@ def fileTypeCheck(type: str) -> Tuple:
 
 
 def main():
-    table = TransactionRepo()
+    repo = TransactionRepo()
+
+    repo.loadStatementXML()
+    #table.saveToCSV()
 
     #table.loadFromCSV()
-    table._upsertDB()
+    repo.upsertRepo()
     
-    #table.loadStatementXML()
+
     #print('a')
     #print(len(table.table))
     #table.saveToCSV()
