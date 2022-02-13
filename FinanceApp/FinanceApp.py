@@ -1,10 +1,12 @@
 #! python3
 
+from locale import currency
 import xml.etree.ElementTree as ET
 import copy, os, csv, datetime, sys
 import tkinter as tk
 from tkinter import filedialog
 from typing import Tuple, Type, List
+from xmlrpc.server import list_public_methods
 
 import psycopg2
 from psycopg2 import sql
@@ -20,7 +22,7 @@ class TransactionService:
 class Transaction:
     """Class cointaining a transaction record"""
 
-    def __init__(self) -> None:
+    def __init__(self):
         self.name: str | None = None
         self.title: str | None = None
         self.amount: float | None =  None
@@ -30,6 +32,11 @@ class Transaction:
         self.date: datetime.datetime | None = None
         self.place: str | None  = None
         self.category: str | None = None
+
+    def queryList(self) -> list: 
+        """returns transaction attributes in a modifiable, ordered list"""
+        return [self.name, self.title, self.amount, self.currency, self.srcAmount, self.srcCurrency, self.date, self.place, self.category]
+
 
     def __repr__(self) -> str:
         return f'{self.__class__.__qualname__}: {self.name}, {self.amount} {self.currency}, {self.date}'
@@ -44,37 +51,6 @@ class Transaction:
                 self.amount == other.amount and
                 self.date == other.date and
                 self.place == other.place) 
-
-
-    def convertSavedRecord(self) -> None:
-        """Clean up the loaded-up record - change strings to correct varTypes, replace empty strings with None"""
-
-        def convertAmounts(string):
-            """Split "[129.0, 'CZK']" string into [129.0 , 'CZK']"""
-            tempAmount = []
-            tempCurrency = []
-            for character in string:
-                try:
-                    if character.isdigit() or character == '.':
-                        tempAmount.append(character)
-                    if character.isalpha():
-                        tempCurrency.append(character)
-                except ValueError:
-                    pass
-            return [float(''.join(tempAmount)), str(''.join(tempCurrency))]
-
-        # check if following properties are not strings
-        if type(self.date) is str:
-            self.date = datetime.datetime.strptime(self.date, '%Y-%m-%d %H:%M:%S')
-        if type(self.amount) is str: # check if amount is str and needs conversion
-            self.amount = float(self.amount)
-        if (type(self.srcAmount) is str) and self.srcAmount: # check if 'amount is str & not empty' and needs conversion
-            self.srcAmount = float(self.srcAmount)
-        
-        # replace values with empty strings with None
-        for key, value in vars(self).items():
-            if not value:
-                self.__dict__[key] = None
 
 
     def categorizeRecord(self, targetCategory):
@@ -122,41 +98,134 @@ class TransactionRepo:
         self.tableName = 'transactions'
         self.upsertReq = 'upsert_req'
 
+        configDB = readDatabaseConfig('db.ini')
         try:
-            configDB = readDatabaseConfig('db.ini')
             self.conn = psycopg2.connect(**configDB)
             self.cur = self.conn.cursor()
             print('Succesfully connected to the database.')
         except:
             print('Cannot connect to the database.')
+        self._decToFloat()
+
+    def _decToFloat(self):
+        """Casts decimal database types to Python float type, instead of the default Decimal."""
+
+        DEC2FLOAT = psycopg2.extensions.new_type(
+        psycopg2.extensions.DECIMAL.values,
+        'DEC2FLOAT',
+        lambda value, curs: float(value) if value is not None else None)
+        psycopg2.extensions.register_type(DEC2FLOAT)
+        
 
     def upsertRepo(self) -> None:
         """UPSERT the DB with the currently stored changes"""
 
-        mappedColumns= sql.SQL(', ').join(map(sql.Identifier, tuple(self.columnDict.values())))
-
         for transaction in self.repo:
             query = self.cur.mogrify(sql.SQL("""INSERT INTO {}({}) 
-                                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                                VALUES ({})
                                                 ON CONFLICT ON CONSTRAINT {}
-                                                DO NOTHING;""").format(sql.Identifier(self.tableName), mappedColumns, sql.Identifier(self.upsertReq)),
-                (transaction.name, transaction.title, transaction.amount, transaction.currency, transaction.srcAmount, transaction.srcCurrency, transaction.date, transaction.place, transaction.category))
+                                                DO NOTHING;""").format(
+                                                    sql.Identifier(self.tableName), 
+                                                    sql.SQL(', ').join(map(sql.Identifier, tuple(self.columnDict.values()))), 
+                                                    sql.SQL(', ').join(sql.Placeholder() * len(transaction.queryList())), 
+                                                    sql.Identifier(self.upsertReq)), 
+                                                transaction.queryList())
             self.cur.execute(query)
             #print(query.decode())
         self.conn.commit()
 
-    def appendWithoutDuplicates(self, records: list[Transaction]) -> None:
-        """Append list to transaction table with no repeating records"""
+    def filterRepo(self, **kwarg) -> list[Transaction]:
+        """Filter the DB for specific records\n
+        amount = (min: float, max: float)\n
+        currency = ('CZK': str, ...)\n
+        srcAmount = (min: float, max: float)\n
+        srcCurrency = ('CZK': str, ...)\n
+        date = (min: datetime.datetime, max: datetime.datetime)\n
+        category = ('grocery': str, ...)
+        """
 
-        for record in records:
-            duplicate = False
-            for checkedRecord in self.repo:
-                if record == checkedRecord:
-                    duplicate = True
-                    break
 
-            if duplicate is False: 
-                self.repo.append(record)
+        # WHERE (amount BETWEEN 100 AND 1000) AND (CURRENCY IN ('CZK'));
+        #amount = (100,1000)
+        #currency = ('CZK')
+
+        filters = []
+        filterValues = []
+
+        # amount - 'amount BETWEEN %s AND %s'
+        if 'amount' in kwarg.keys():
+            amountFilter = sql.SQL("{} BETWEEN %s AND %s").format(
+                sql.Identifier(self.columnDict['amount']))
+
+            filters.append(amountFilter)
+            filterValues.extend(kwarg['amount'])
+
+        # currency - 'currency IN (%s, ...)'
+        if 'currency' in kwarg.keys():
+            currencyFilter = sql.SQL("{} IN ({})").format(
+                sql.Identifier(self.columnDict['currency']),
+                sql.SQL(', ').join(sql.Placeholder() * len(kwarg['currency'])))
+
+            filters.append(currencyFilter)
+            filterValues.extend(kwarg['currency'])
+
+        # srcAmount - 'src_amount BETWEEN %s AND %s'
+        if 'srcAmount' in kwarg.keys():
+            srcAmountFilter = sql.SQL("{} BETWEEN %s AND %s").format(
+                sql.Identifier(self.columnDict['srcAmount']))
+
+            filters.append(srcAmountFilter)
+            filterValues.extend(kwarg['srcAmount'])
+
+        # srcCurrency - 'src_currency IN (%s, ...)'
+        if 'srcCurrency' in kwarg.keys():
+            srcCurrencyFilter = sql.SQL("{} IN ({})").format(
+                sql.Identifier(self.columnDict['srcCurrency']),
+                sql.SQL(', ').join(sql.Placeholder() * len(kwarg['srcCurrency'])))
+
+            filters.append(srcCurrencyFilter)
+            filterValues.extend(kwarg['srcCurrency'])
+
+        # date - 'transaction_date BETWEEN %s AND %s'
+        if 'date' in kwarg.keys():
+            dateFilter = sql.SQL("{} BETWEEN %s AND %s").format(
+                sql.Identifier(self.columnDict['date']))
+
+            filters.append(dateFilter)
+            filterValues.extend(kwarg['date'])
+
+        # category - 'category IN (%s, ...)'
+        if 'category' in kwarg.keys():
+            categoryFilter = sql.SQL("{} IN ({})").format(
+                sql.Identifier(self.columnDict['category']),
+                sql.SQL(', ').join(sql.Placeholder() * len(kwarg['category'])))
+
+            filters.append(categoryFilter)
+            filterValues.extend(kwarg['category'])
+
+
+        query = self.cur.mogrify(sql.SQL("""SELECT * FROM {} WHERE {};""").format(
+                                                sql.Identifier(self.tableName),
+                                                sql.SQL(' AND ').join(
+                                                    [sql.Composed(filter) for filter in filters])),
+                                            filterValues)                                   
+        self.cur.execute(query)
+        print(query.decode())
+        
+        temp: list[Transaction] = []
+        for i, row in enumerate(self.cur.fetchall()):
+            temp.append(copy.deepcopy(Transaction()))
+            temp[i].name = row[1]
+            temp[i].title = row[2]
+            temp[i].amount =  row[3]
+            temp[i].currency = row[4]
+            temp[i].srcAmount = row[5]
+            temp[i].srcCurrency = row[6]
+            temp[i].date = row[7]
+            temp[i].place = row[8]
+            temp[i].category = row[9]
+
+        return temp
 
     
     def saveToCSV(self) -> None:
@@ -176,27 +245,25 @@ class TransactionRepo:
         print('Data successfully saved.')
         
     
-    def loadFromCSV(self) -> None:
+    def loadFromCSV(self) -> list[Transaction]:
         """Load transaction table from .CSV"""
         while True:
             try:
                 with open('save.csv', 'r', newline='') as saveFile:
                     reader = csv.DictReader(saveFile)
-                    recordTable = []
+                    temp = []
                     for i, row in enumerate(reader):
-                        recordTable.append(Transaction())
-                        recordTable[i].__dict__ = row
-                        recordTable[i].convertSavedRecord()
+                        temp.append(Transaction())
+                        temp[i].__dict__ = row
                 break
             except FileNotFoundError:
                 print('Savefile not found.')
-                return 1
-
-        self.appendWithoutDuplicates(recordTable)        
+       
         print('Data successfully loaded.')
-        
+        return temp
 
-    def loadStatementXML(self):
+
+    def loadStatementXML(self) -> list[Transaction]:
         """Parsing an XML monthly bank account statement"""
 
         def parseRecord(rootObj, XPath):
@@ -228,81 +295,39 @@ class TransactionRepo:
             tree = ET.parse(file)
             root = tree.getroot()
             namespace = {"nms": "urn:iso:std:iso:20022:tech:xsd:camt.053.001.06"}
-            expenses = []
+            temp: list[Transaction] = []
 
-            for count, i in enumerate(root.findall(".//nms:Ntry", namespace)):  # Parsing transaction records
-                expenses.append(copy.deepcopy(Transaction()))
+            for i, rootDir in enumerate(root.findall(".//nms:Ntry", namespace)):  # Parsing transaction records
+                temp.append(copy.deepcopy(Transaction()))
 
-                expenses[count].name = parseRecord(i, ".//nms:RltdPties//nms:Nm")
-                expenses[count].title = parseRecord(i, ".//nms:Ustrd")
-                expenses[count].place = parseRecord(i, ".//nms:PstlAdr/nms:TwnNm")
+                temp[i].name = parseRecord(rootDir, ".//nms:RltdPties//nms:Nm")
+                temp[i].title = parseRecord(rootDir, ".//nms:Ustrd")
+                temp[i].place = parseRecord(rootDir, ".//nms:PstlAdr/nms:TwnNm")
 
-                expenses[count].date = parseDate(i, ".//nms:BookgDt/nms:Dt")  # Parses date to datatime object
+                temp[i].date = parseDate(rootDir, ".//nms:BookgDt/nms:Dt")  # Parses date to datatime object
 
-                expenses[count].amount, expenses[count].currency = parseAmount(i, "./nms:Amt")  # Parses list [Amount, Currency]                
-                expenses[count].srcAmount, expenses[count].srcCurrency  = parseAmount(i, ".//nms:InstdAmt/nms:Amt")  # Parses list [Amount, Currency]
+                temp[i].amount, temp[i].currency = parseAmount(rootDir, "./nms:Amt")  # Parses list [Amount, Currency]                
+                temp[i].srcAmount, temp[i].srcCurrency  = parseAmount(rootDir, ".//nms:InstdAmt/nms:Amt")  # Parses list [Amount, Currency]
 
                 # Parsing just 'DBIT' or 'CRDT', then changing Amount sign if needed
-                dir = parseRecord(i, "./nms:CdtDbtInd") 
+                dir = parseRecord(rootDir, "./nms:CdtDbtInd") 
                 if dir == "Dbit":
-                    if expenses[count].amount:
-                        expenses[count].amount = -expenses[count].amount
-                    if expenses[count].srcAmount:
-                        expenses[count].srcAmount = -expenses[count].srcAmount
+                    if temp[i].amount:
+                        temp[i].amount = -temp[i].amount
+                    if temp[i].srcAmount:
+                        temp[i].srcAmount = -temp[i].srcAmount
 
             # PARSING CHECKS
             # Check for correct expenses amounts to balance
-            incSum = round(sum(expense.amount for expense in expenses), 2)
+            incSum = round(sum([transaction.amount for transaction in temp]), 2)
             if incSum == round(float(root.find(".//nms:TtlNtries/nms:Sum", namespace).text), 2):
-                print(f"Successfully loaded {len(expenses)} records.")
+                print(f"Successfully loaded {len(temp)} records.")
             else:
                 print("Records were loaded incorrectly.")
 
-            self.appendWithoutDuplicates(expenses)
-    
+        return temp
 
-    def filterTable(self, currency: str = None, lowerAmount: float = None, upperAmount: float = None, lowerDate: datetime.datetime = None, upperDate: datetime.datetime = None, category: str = None) -> list[Transaction]:
-        """Filter by: date, amount, category, place, dir, currency"""
- 
-        def filterInRange(record: Transaction, recordParameter: str, lower, upper) -> bool:
-            """Select correct filtering condition based on lower/upper filtering thresholds"""
-            if recordParameter == 'amount':
-                if lower is None and upper is not None:
-                    return record.__getattribute__('amount') <= upper
-                if lower is not None and upper is None:
-                    return lower <= record.__getattribute__('amount')
-                if lower is not None and upper is not None:
-                    return lower <= record.__getattribute__('amount') <= upper
-
-            if recordParameter == 'date':
-                if lower is None and upper is not None:
-                    return record.__getattribute__('date') <= upper
-                if lower is not None and upper is None:
-                    return lower <= record.__getattribute__('date')
-                if lower is not None and upper is not None:
-                    return lower <= record.__getattribute__('date') <= upper
-        
-        def filterInCurrency(record: Transaction) -> bool:
-            """Check and use original currency in case the transaction was converted"""
-
-            if (record.srcCurrency is not None) and record.srcCurrency == currency:
-                return record.srcCurrency == currency  # Must be True if got there
-            else:
-                return record.srcCurrency == currency
-
-        filteredTable = self.repo
-
-        if (lowerAmount is not None) or (upperAmount is not None):
-            filteredTable = list(filter(lambda record: filterInRange(record, 'amount', lowerAmount, upperAmount), filteredTable))
-        if currency is not None:
-            filteredTable = list(filter(lambda record: filterInCurrency(record), filteredTable))
-        if (lowerDate is not None) or (upperDate is not None):
-            filteredTable = list(filter(lambda record: filterInRange(record, 'date', lowerDate, upperDate), filteredTable))
-        if category is not None:
-            filteredTable = list(filter(lambda record: record.category == category, filteredTable))
-        return filteredTable
-
-
+    '''
     def writeSummary(self, startDate: datetime.datetime, endDate: datetime.datetime) -> None:
         """Write summary of Incoming, Outcoming, Balance for a given period of time"""
 
@@ -319,13 +344,13 @@ class TransactionRepo:
                         Balance: {balance}\n
                         Incoming: {incoming}\n
                         Outgoing: {outgoing}""")
-
+    '''
 
 def _fileTypeCheck(type: str) -> Tuple:
     """Check if extension in form of '.xml' is opened"""
 
     while True:
-        TupleOfPaths = filedialog.askopenfilenames()
+        TupleOfPaths: tuple[str] = filedialog.askopenfilenames()
         correctFileInt = 0
 
         for path in TupleOfPaths:
@@ -341,19 +366,20 @@ def _fileTypeCheck(type: str) -> Tuple:
 def main():
     repo = TransactionRepo()
 
-    repo.loadStatementXML()
+    repo.repo = repo.loadStatementXML()
     #table.saveToCSV()
 
-    #table.loadFromCSV()
-    repo.upsertRepo()
-    
+    #repo.repo = repo.loadFromCSV()
+    #repo.upsertRepo()
+    repo.repo = repo.filterRepo(amount=(-5000,-100), date=(datetime.datetime(2021,10,20), datetime.datetime(2022,1,1)),)
 
-    #print('a')
+    print('a')
     #print(len(table.table))
     #table.saveToCSV()
     #filt = table.filterTable(None, 350, 400)
 
     #[print(record) for record in filt]
+
 
 if __name__ == "__main__":
     main()
