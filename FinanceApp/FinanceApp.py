@@ -1,18 +1,19 @@
 #! python3
 
-from locale import currency
+from tracemalloc import start
 import xml.etree.ElementTree as ET
 import copy, os, csv, datetime, sys
 import tkinter as tk
 from tkinter import filedialog
 from typing import Tuple, Type, List
-from xmlrpc.server import list_public_methods
 
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from dateutil.rrule import rrule, MONTHLY
+import itertools
 import psycopg2
 from psycopg2 import sql
-from configparser import ConfigParser
 import configparser
-from pathlib import Path
 
 
 class TransactionService:
@@ -61,7 +62,7 @@ class Transaction:
 
 
 def readDatabaseConfig(filePath: str) -> dict:
-    """Reads DB config file and returns dict of config parameters"""
+    """Read DB config file and returns dict of config parameters"""
 
     config = configparser.ConfigParser()
     config.read(filePath)
@@ -85,7 +86,7 @@ class TransactionRepo:
 
     def __init__(self):
         self.repo: list[Transaction] = []
-        self.columnDict: dict = {
+        self.columnMap: dict = { # Dict mapping Transaction attribute names to DB columns
             'name' : 'info',
             'title' : 'title', 
             'amount' : 'amount',
@@ -99,16 +100,16 @@ class TransactionRepo:
         self.upsertReq = 'upsert_req'
 
         configDB = readDatabaseConfig('db.ini')
+        self._decToFloat()
         try:
             self.conn = psycopg2.connect(**configDB)
             self.cur = self.conn.cursor()
             print('Succesfully connected to the database.')
         except:
             print('Cannot connect to the database.')
-        self._decToFloat()
 
     def _decToFloat(self):
-        """Casts decimal database types to Python float type, instead of the default Decimal."""
+        """Cast decimal database type to Python float type, instead of the default Decimal"""
 
         DEC2FLOAT = psycopg2.extensions.new_type(
         psycopg2.extensions.DECIMAL.values,
@@ -126,7 +127,7 @@ class TransactionRepo:
                                                 ON CONFLICT ON CONSTRAINT {}
                                                 DO NOTHING;""").format(
                                                     sql.Identifier(self.tableName), 
-                                                    sql.SQL(', ').join(map(sql.Identifier, tuple(self.columnDict.values()))), 
+                                                    sql.SQL(', ').join(map(sql.Identifier, tuple(self.columnMap.values()))), 
                                                     sql.SQL(', ').join(sql.Placeholder() * len(transaction.queryList())), 
                                                     sql.Identifier(self.upsertReq)), 
                                                 transaction.queryList())
@@ -144,18 +145,13 @@ class TransactionRepo:
         category = ('grocery': str, ...)
         """
 
-
-        # WHERE (amount BETWEEN 100 AND 1000) AND (CURRENCY IN ('CZK'));
-        #amount = (100,1000)
-        #currency = ('CZK')
-
         filters = []
         filterValues = []
 
         # amount - 'amount BETWEEN %s AND %s'
         if 'amount' in kwarg.keys():
             amountFilter = sql.SQL("{} BETWEEN %s AND %s").format(
-                sql.Identifier(self.columnDict['amount']))
+                sql.Identifier(self.columnMap['amount']))
 
             filters.append(amountFilter)
             filterValues.extend(kwarg['amount'])
@@ -163,7 +159,7 @@ class TransactionRepo:
         # currency - 'currency IN (%s, ...)'
         if 'currency' in kwarg.keys():
             currencyFilter = sql.SQL("{} IN ({})").format(
-                sql.Identifier(self.columnDict['currency']),
+                sql.Identifier(self.columnMap['currency']),
                 sql.SQL(', ').join(sql.Placeholder() * len(kwarg['currency'])))
 
             filters.append(currencyFilter)
@@ -172,7 +168,7 @@ class TransactionRepo:
         # srcAmount - 'src_amount BETWEEN %s AND %s'
         if 'srcAmount' in kwarg.keys():
             srcAmountFilter = sql.SQL("{} BETWEEN %s AND %s").format(
-                sql.Identifier(self.columnDict['srcAmount']))
+                sql.Identifier(self.columnMap['srcAmount']))
 
             filters.append(srcAmountFilter)
             filterValues.extend(kwarg['srcAmount'])
@@ -180,7 +176,7 @@ class TransactionRepo:
         # srcCurrency - 'src_currency IN (%s, ...)'
         if 'srcCurrency' in kwarg.keys():
             srcCurrencyFilter = sql.SQL("{} IN ({})").format(
-                sql.Identifier(self.columnDict['srcCurrency']),
+                sql.Identifier(self.columnMap['srcCurrency']),
                 sql.SQL(', ').join(sql.Placeholder() * len(kwarg['srcCurrency'])))
 
             filters.append(srcCurrencyFilter)
@@ -189,7 +185,7 @@ class TransactionRepo:
         # date - 'transaction_date BETWEEN %s AND %s'
         if 'date' in kwarg.keys():
             dateFilter = sql.SQL("{} BETWEEN %s AND %s").format(
-                sql.Identifier(self.columnDict['date']))
+                sql.Identifier(self.columnMap['date']))
 
             filters.append(dateFilter)
             filterValues.extend(kwarg['date'])
@@ -197,14 +193,14 @@ class TransactionRepo:
         # category - 'category IN (%s, ...)'
         if 'category' in kwarg.keys():
             categoryFilter = sql.SQL("{} IN ({})").format(
-                sql.Identifier(self.columnDict['category']),
+                sql.Identifier(self.columnMap['category']),
                 sql.SQL(', ').join(sql.Placeholder() * len(kwarg['category'])))
 
             filters.append(categoryFilter)
             filterValues.extend(kwarg['category'])
 
-
-        query = self.cur.mogrify(sql.SQL("""SELECT * FROM {} WHERE {};""").format(
+        temp: list[Transaction] = []
+        query = self.cur.mogrify(sql.SQL("SELECT * FROM {} WHERE {};").format(
                                                 sql.Identifier(self.tableName),
                                                 sql.SQL(' AND ').join(
                                                     [sql.Composed(filter) for filter in filters])),
@@ -212,7 +208,6 @@ class TransactionRepo:
         self.cur.execute(query)
         print(query.decode())
         
-        temp: list[Transaction] = []
         for i, row in enumerate(self.cur.fetchall()):
             temp.append(copy.deepcopy(Transaction()))
             temp[i].name = row[1]
@@ -227,6 +222,50 @@ class TransactionRepo:
 
         return temp
 
+    def monthlySummary(self) -> list[tuple]:
+        """Return list of monthly incoming/outcoming/difference summaries"""
+
+        # Extract the newest and oldest transaction on DB
+        query = self.cur.mogrify(sql.SQL("SELECT MIN({}), MAX({}) FROM {}").format(
+            sql.Identifier(self.columnMap['date']),
+            sql.Identifier(self.columnMap['date']),
+            sql.Identifier(self.tableName)))
+        #print(query.decode())
+        self.cur.execute(query)
+        startDate, endDate = self.cur.fetchone()
+
+        # Set the boundary dates to the first day of month
+        startDate = startDate - relativedelta(day=1, hour=0, minute=0, second=0)
+        endDate = endDate - relativedelta(day=1, hour=0, minute=0, second=0)
+
+        # Iterate over monthly periods, querying the database
+        tempSummary: list[tuple] = []
+        for date in rrule(freq=MONTHLY, dtstart=startDate, until=endDate):
+            if date != endDate:
+                query = self.cur.mogrify(sql.SQL("""SELECT
+                                                        SUM (CASE
+                                                                WHEN {} >= 0 THEN {}
+                                                            ELSE 0
+                                                                END) AS incoming,
+                                                        SUM (CASE
+                                                                WHEN {} < 0 THEN {}
+                                                                ELSE 0
+                                                            END) AS outgoing,
+                                                        SUM ({}) AS difference
+                                                    FROM {}
+                                                    WHERE {}  
+                                                        BETWEEN %s 
+                                                        AND %s;""").format(
+                                                            *[sql.Identifier(self.columnMap['amount'])]*5,
+                                                            sql.Identifier(self.tableName),
+                                                            sql.Identifier(self.columnMap['date'])), 
+                                                        (str(date),
+                                                        str(date + relativedelta(months=+1))))
+                #print(query.decode())
+                self.cur.execute(query)
+                tempSummary.append(self.cur.fetchone())
+
+        return tempSummary
     
     def saveToCSV(self) -> None:
         """Save transaction table to .CSV"""
@@ -289,13 +328,13 @@ class TransactionRepo:
                 date = None
             return date        
         
-        XMLfiles = _fileTypeCheck(".xml")
+        XMLfiles = _fileOpen(".xml")
 
+        temp: list[Transaction] = []
         for file in XMLfiles:
             tree = ET.parse(file)
             root = tree.getroot()
             namespace = {"nms": "urn:iso:std:iso:20022:tech:xsd:camt.053.001.06"}
-            temp: list[Transaction] = []
 
             for i, rootDir in enumerate(root.findall(".//nms:Ntry", namespace)):  # Parsing transaction records
                 temp.append(copy.deepcopy(Transaction()))
@@ -346,8 +385,10 @@ class TransactionRepo:
                         Outgoing: {outgoing}""")
     '''
 
-def _fileTypeCheck(type: str) -> Tuple:
-    """Check if extension in form of '.xml' is opened"""
+def _fileOpen(type: str) -> Tuple[str]:
+    """Opens multiple files and checks for specified extension (e.g. '.xml')\n
+    returns Tuple[paths] or empty string 
+    """
 
     while True:
         TupleOfPaths: tuple[str] = filedialog.askopenfilenames()
@@ -366,12 +407,14 @@ def _fileTypeCheck(type: str) -> Tuple:
 def main():
     repo = TransactionRepo()
 
-    repo.repo = repo.loadStatementXML()
+    #repo.repo = repo.loadStatementXML()
     #table.saveToCSV()
 
     #repo.repo = repo.loadFromCSV()
     #repo.upsertRepo()
-    repo.repo = repo.filterRepo(amount=(-5000,-100), date=(datetime.datetime(2021,10,20), datetime.datetime(2022,1,1)),)
+    #repo.repo = repo.filterRepo(amount=(-5000,-100), date=(datetime.datetime(2021,10,20), datetime.datetime(2022,1,1)),)
+    #repo.repo = repo.filterRepo()
+    repo.monthlySummary()
 
     print('a')
     #print(len(table.table))
