@@ -7,12 +7,12 @@ import tkinter as tk
 from tkinter import filedialog
 from typing import Tuple, Type, List
 
-from datetime import datetime
+import datetime
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, MONTHLY
 import itertools
 import psycopg2
-from psycopg2 import sql
+from psycopg2.sql import SQL, Identifier, Placeholder, Composed
 import configparser
 
 
@@ -24,6 +24,7 @@ class Transaction:
     """Class cointaining a transaction record"""
 
     def __init__(self):
+        self.id: int | None = None
         self.name: str | None = None
         self.title: str | None = None
         self.amount: float | None =  None
@@ -32,7 +33,9 @@ class Transaction:
         self.srcCurrency: str | None = None
         self.date: datetime.datetime | None = None
         self.place: str | None  = None
-        self.category: str | None = None
+        self._category: str | None = None
+
+        self.categories: tuple = ('savings', 'grocery', 'rent', 'bills', 'restaurants', 'holidays', 'hobbies', 'experiences', 'presents', 'petty expenses')
 
     def queryList(self) -> list: 
         """returns transaction attributes in a modifiable, ordered list"""
@@ -53,56 +56,82 @@ class Transaction:
                 self.date == other.date and
                 self.place == other.place) 
 
+    @property
+    def category(self):
+        return self._category
 
-    def categorizeRecord(self, targetCategory):
-        """Assign a category to the record"""
+    @category.setter
+    def category(self, value):
+        """Additionally check if category exists in the list of categories"""
+        
+        if value in self.categories:
+            self._category = value
+        else:
+            print('There is no such category. Category not updated.')
+    
 
-        # ['salary', 'restaurant', 'sport', 'electronics', 'bill', 'activity', 'other']
-        self.category = targetCategory
+def fileOpen(type: str) -> Tuple[str]:
+    """Opens multiple files and checks for specified extension (e.g. '.xml')\n
+    returns Tuple[paths] or empty string 
+    """
+
+    while True:
+        TupleOfPaths: tuple[str] = filedialog.askopenfilenames()
+        correctFileInt = 0
+
+        for path in TupleOfPaths:
+            if os.path.basename(path).endswith(f"{type}"):
+                correctFileInt += 1
+        
+        if correctFileInt == len(TupleOfPaths): 
+            return TupleOfPaths
+        else:
+            print(f'{len(TupleOfPaths) - correctFileInt} files have incorrect extension. Repeat.')
 
 
-def readDatabaseConfig(filePath: str) -> dict:
+def readDatabaseConfig(filePath: str) -> tuple[dict, dict, dict]:
     """Read DB config file and returns dict of config parameters"""
 
-    config = configparser.ConfigParser()
+    config = configparser.RawConfigParser()
+    config.optionxform = lambda option: option # preserve case-sensitivity of keys/values
     config.read(filePath)
 
-    # reads the first block only
-    section = str(config.sections()[0])
-    params = {}
+    postgresConfig: dict = {}
+    columnMap: dict = {}
+    tableNames: dict = {}
 
-    # extract keywords from .ini to dict
+    # read separate blocks and extract key-value pairs
     try:
-        for key in config[section]:
-            params[key] = config[section][key]
+        for key in config['postgresql']:
+            postgresConfig[key] = config['postgresql'][key]
+
+        for key in config['columnMap']:
+            columnMap[key] = config['columnMap'][key]
+
+        for key in config['tables']:
+            tableNames[key] = config['tables'][key]
     except:
         print('Corrupted .ini file')
 
-    return params
+    return postgresConfig, tableNames, columnMap
 
 
 class TransactionRepo:
     """Class cointaining temporary transaction data and handling connection and queries to the DB"""
 
     def __init__(self):
-        self.repo: list[Transaction] = []
-        self.columnMap: dict = { # Dict mapping Transaction attribute names to DB columns
-            'name' : 'info',
-            'title' : 'title', 
-            'amount' : 'amount',
-            'currency' : 'currency',
-            'srcAmount' : 'src_amount',
-            'srcCurrency' : 'src_currency',
-            'date' : 'transaction_date',
-            'place' : 'place',
-            'category' : 'category'}
-        self.tableName = 'transactions'
-        self.upsertReq = 'upsert_req'
+        # postgresConfig - maps DB connection info
+        # tableNames - specifies used tables in DB
+        # columnMap - map DB columns to Transaction class
+        postgresConfig, tableNames, self.columnMap = readDatabaseConfig('db.ini')
 
-        configDB = readDatabaseConfig('db.ini')
+        self.repo: list[Transaction] = []
+        self.tableName: str = tableNames['tableName']
+        self.upsertReq = 'upsert_req' # Internal postgresql constraint for row uniqueness
+
         self._decToFloat()
         try:
-            self.conn = psycopg2.connect(**configDB)
+            self.conn = psycopg2.connect(**postgresConfig)
             self.cur = self.conn.cursor()
             print('Succesfully connected to the database.')
         except:
@@ -118,21 +147,44 @@ class TransactionRepo:
         psycopg2.extensions.register_type(DEC2FLOAT)
         
 
+    def updateRepo(self) -> None:
+        """Update the DB with modified transactions with the use of common transaction ID"""
+        
+        for transaction in self.repo:
+            query = self.cur.mogrify(SQL("""UPDATE {}
+                                            SET {} = {},
+                                                {} = {},
+                                                {} = {},
+                                                {} = {}
+                                            WHERE {} = {};""").format(
+                                                Identifier(self.tableName), 
+                                                Identifier(self.columnMap['name']), Placeholder(name='name'),
+                                                Identifier(self.columnMap['title']), Placeholder(name='title'),
+                                                Identifier(self.columnMap['place']), Placeholder(name='place'),
+                                                Identifier(self.columnMap['category']), Placeholder(name='category'),
+                                                Identifier(self.columnMap['id']), Placeholder(name='id')),
+                                            {'name': transaction.name, 'title': transaction.title, 'place': transaction.place, 
+                                            'category': transaction.category, 'id': transaction.id})
+            self.cur.execute(query)
+            print(query.decode())
+        self.conn.commit()
+
+
     def upsertRepo(self) -> None:
-        """UPSERT the DB with the currently stored changes"""
+        """Insert temporarily stored transactions to the DB, while ignoring duplicates"""
 
         for transaction in self.repo:
-            query = self.cur.mogrify(sql.SQL("""INSERT INTO {}({}) 
+            query = self.cur.mogrify(SQL("""INSERT INTO {}({}) s
                                                 VALUES ({})
                                                 ON CONFLICT ON CONSTRAINT {}
                                                 DO NOTHING;""").format(
-                                                    sql.Identifier(self.tableName), 
-                                                    sql.SQL(', ').join(map(sql.Identifier, tuple(self.columnMap.values()))), 
-                                                    sql.SQL(', ').join(sql.Placeholder() * len(transaction.queryList())), 
-                                                    sql.Identifier(self.upsertReq)), 
+                                                    Identifier(self.tableName), 
+                                                    SQL(', ').join(map(Identifier, tuple(self.columnMap.values()))), 
+                                                    SQL(', ').join(Placeholder() * len(transaction.queryList())), 
+                                                    Identifier(self.upsertReq)), 
                                                 transaction.queryList())
             self.cur.execute(query)
-            #print(query.decode())
+            print(query.decode())
         self.conn.commit()
 
     def filterRepo(self, **kwarg) -> list[Transaction]:
@@ -150,66 +202,67 @@ class TransactionRepo:
 
         # amount - 'amount BETWEEN %s AND %s'
         if 'amount' in kwarg.keys():
-            amountFilter = sql.SQL("{} BETWEEN %s AND %s").format(
-                sql.Identifier(self.columnMap['amount']))
+            amountFilter = SQL("{} BETWEEN %s AND %s").format(
+                Identifier(self.columnMap['amount']))
 
             filters.append(amountFilter)
             filterValues.extend(kwarg['amount'])
 
         # currency - 'currency IN (%s, ...)'
         if 'currency' in kwarg.keys():
-            currencyFilter = sql.SQL("{} IN ({})").format(
-                sql.Identifier(self.columnMap['currency']),
-                sql.SQL(', ').join(sql.Placeholder() * len(kwarg['currency'])))
+            currencyFilter = SQL("{} IN ({})").format(
+                Identifier(self.columnMap['currency']),
+                SQL(', ').join(Placeholder() * len(kwarg['currency'])))
 
             filters.append(currencyFilter)
             filterValues.extend(kwarg['currency'])
 
         # srcAmount - 'src_amount BETWEEN %s AND %s'
         if 'srcAmount' in kwarg.keys():
-            srcAmountFilter = sql.SQL("{} BETWEEN %s AND %s").format(
-                sql.Identifier(self.columnMap['srcAmount']))
+            srcAmountFilter = SQL("{} BETWEEN %s AND %s").format(
+                Identifier(self.columnMap['srcAmount']))
 
             filters.append(srcAmountFilter)
             filterValues.extend(kwarg['srcAmount'])
 
         # srcCurrency - 'src_currency IN (%s, ...)'
         if 'srcCurrency' in kwarg.keys():
-            srcCurrencyFilter = sql.SQL("{} IN ({})").format(
-                sql.Identifier(self.columnMap['srcCurrency']),
-                sql.SQL(', ').join(sql.Placeholder() * len(kwarg['srcCurrency'])))
+            srcCurrencyFilter = SQL("{} IN ({})").format(
+                Identifier(self.columnMap['srcCurrency']),
+                SQL(', ').join(Placeholder() * len(kwarg['srcCurrency'])))
 
             filters.append(srcCurrencyFilter)
             filterValues.extend(kwarg['srcCurrency'])
 
         # date - 'transaction_date BETWEEN %s AND %s'
         if 'date' in kwarg.keys():
-            dateFilter = sql.SQL("{} BETWEEN %s AND %s").format(
-                sql.Identifier(self.columnMap['date']))
+            dateFilter = SQL("{} BETWEEN %s AND %s").format(
+                Identifier(self.columnMap['date']))
 
             filters.append(dateFilter)
             filterValues.extend(kwarg['date'])
 
         # category - 'category IN (%s, ...)'
         if 'category' in kwarg.keys():
-            categoryFilter = sql.SQL("{} IN ({})").format(
-                sql.Identifier(self.columnMap['category']),
-                sql.SQL(', ').join(sql.Placeholder() * len(kwarg['category'])))
+            categoryFilter = SQL("{} IN ({})").format(
+                Identifier(self.columnMap['category']),
+                SQL(', ').join(Placeholder() * len(kwarg['category'])))
 
             filters.append(categoryFilter)
             filterValues.extend(kwarg['category'])
 
         temp: list[Transaction] = []
-        query = self.cur.mogrify(sql.SQL("SELECT * FROM {} WHERE {};").format(
-                                                sql.Identifier(self.tableName),
-                                                sql.SQL(' AND ').join(
-                                                    [sql.Composed(filter) for filter in filters])),
+        query = self.cur.mogrify(SQL("SELECT * FROM {} WHERE {};").format(
+                                                Identifier(self.tableName),
+                                                SQL(' AND ').join(
+                                                    [Composed(filter) for filter in filters])),
                                             filterValues)                                   
         self.cur.execute(query)
         print(query.decode())
         
-        for i, row in enumerate(self.cur.fetchall()):
+        for i, row in enumerate(self.cur.fetchall()): 
             temp.append(copy.deepcopy(Transaction()))
+            temp[i].id = row[0]
             temp[i].name = row[1]
             temp[i].title = row[2]
             temp[i].amount =  row[3]
@@ -225,11 +278,11 @@ class TransactionRepo:
     def monthlySummary(self) -> list[tuple]:
         """Return list of monthly incoming/outcoming/difference summaries"""
 
-        # Extract the newest and oldest transaction on DB
-        query = self.cur.mogrify(sql.SQL("SELECT MIN({}), MAX({}) FROM {}").format(
-            sql.Identifier(self.columnMap['date']),
-            sql.Identifier(self.columnMap['date']),
-            sql.Identifier(self.tableName)))
+        # Extract the newest and oldest transaction in the DB
+        query = self.cur.mogrify(SQL("SELECT MIN({}), MAX({}) FROM {}").format(
+            Identifier(self.columnMap['date']),
+            Identifier(self.columnMap['date']),
+            Identifier(self.tableName)))
         #print(query.decode())
         self.cur.execute(query)
         startDate, endDate = self.cur.fetchone()
@@ -241,8 +294,8 @@ class TransactionRepo:
         # Iterate over monthly periods, querying the database
         tempSummary: list[tuple] = []
         for date in rrule(freq=MONTHLY, dtstart=startDate, until=endDate):
-            if date != endDate:
-                query = self.cur.mogrify(sql.SQL("""SELECT
+            if date != endDate:  # omit last iteration
+                query = self.cur.mogrify(SQL("""SELECT
                                                         SUM (CASE
                                                                 WHEN {} >= 0 THEN {}
                                                             ELSE 0
@@ -256,9 +309,9 @@ class TransactionRepo:
                                                     WHERE {}  
                                                         BETWEEN %s 
                                                         AND %s;""").format(
-                                                            *[sql.Identifier(self.columnMap['amount'])]*5,
-                                                            sql.Identifier(self.tableName),
-                                                            sql.Identifier(self.columnMap['date'])), 
+                                                            *[Identifier(self.columnMap['amount'])]*5,
+                                                            Identifier(self.tableName),
+                                                            Identifier(self.columnMap['date'])), 
                                                         (str(date),
                                                         str(date + relativedelta(months=+1))))
                 #print(query.decode())
@@ -283,7 +336,6 @@ class TransactionRepo:
 
         print('Data successfully saved.')
         
-    
     def loadFromCSV(self) -> list[Transaction]:
         """Load transaction table from .CSV"""
         while True:
@@ -301,9 +353,13 @@ class TransactionRepo:
         print('Data successfully loaded.')
         return temp
 
-
     def loadStatementXML(self) -> list[Transaction]:
         """Parsing an XML monthly bank account statement"""
+
+        # TODO: Handling multiple transactions which are not unique by DB standards (UNIQUE amount, currency, date)
+        #       Due to generalized transaction date in Equabank XML, it's not possible to clearly define transaction uniqueness
+        #       Solution1: providing additional column in DB which indexes transactions having same (amount, currency, date) combo?
+        #       Solution2: requirement from the user to manually modify date or other UNIQUEness parameter during XML loading process
 
         def parseRecord(rootObj, XPath):
             try:
@@ -328,7 +384,7 @@ class TransactionRepo:
                 date = None
             return date        
         
-        XMLfiles = _fileOpen(".xml")
+        XMLfiles = fileOpen(".xml")
 
         temp: list[Transaction] = []
         for file in XMLfiles:
@@ -363,45 +419,9 @@ class TransactionRepo:
                 print(f"Successfully loaded {len(temp)} records.")
             else:
                 print("Records were loaded incorrectly.")
-
+ 
         return temp
 
-    '''
-    def writeSummary(self, startDate: datetime.datetime, endDate: datetime.datetime) -> None:
-        """Write summary of Incoming, Outcoming, Balance for a given period of time"""
-
-        if startDate < endDate:
-            filtered = self.filterTable(None, None, None, startDate, endDate, None, None)
-        else:
-            return print('Select correct period of time.')
-
-        balance = round(sum(record.amount for record in filtered), 2)
-        outgoing = round(sum(record.amount for record in filtered if record.amount >= 0), 2)
-        incoming = round(sum(record.amount for record in filtered if record.amount <= 0), 2)
-
-        return print(f"""{startDate} - {endDate}\n
-                        Balance: {balance}\n
-                        Incoming: {incoming}\n
-                        Outgoing: {outgoing}""")
-    '''
-
-def _fileOpen(type: str) -> Tuple[str]:
-    """Opens multiple files and checks for specified extension (e.g. '.xml')\n
-    returns Tuple[paths] or empty string 
-    """
-
-    while True:
-        TupleOfPaths: tuple[str] = filedialog.askopenfilenames()
-        correctFileInt = 0
-
-        for path in TupleOfPaths:
-            if os.path.basename(path).endswith(f"{type}"):
-                correctFileInt += 1
-        
-        if correctFileInt == len(TupleOfPaths): 
-            return TupleOfPaths
-        else:
-            print(f'{len(TupleOfPaths) - correctFileInt} files have incorrect extension. Repeat.')
 
 
 def main():
@@ -409,14 +429,18 @@ def main():
 
     #repo.repo = repo.loadStatementXML()
     #table.saveToCSV()
+    repo.repo = repo.filterRepo(amount=(20,20))
+    repo.repo[0].name = 'UEUEUEUEU'
+    repo.repo[0].title = 'BUEBUEBUE'    
+    repo.repo[0].place = 'CUEUEUEUE'  
+    repo.repo[0].category = 'petty expenses'  
 
-    #repo.repo = repo.loadFromCSV()
+    repo.updateRepo()
     #repo.upsertRepo()
     #repo.repo = repo.filterRepo(amount=(-5000,-100), date=(datetime.datetime(2021,10,20), datetime.datetime(2022,1,1)),)
     #repo.repo = repo.filterRepo()
-    repo.monthlySummary()
+    #repo.monthlySummary()
 
-    print('a')
     #print(len(table.table))
     #table.saveToCSV()
     #filt = table.filterTable(None, 350, 400)
