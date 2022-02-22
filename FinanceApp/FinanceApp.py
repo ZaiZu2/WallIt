@@ -336,7 +336,7 @@ class TransactionRepo:
         print('Data successfully saved.')
         
     def loadRevolutStatement(self) -> list[Transaction]:
-        """Load Revolut monthly bank account statement"""
+        """Load Revolut monthly bank account statement in CSV format"""
 
         # Maps Revolut CSV columns to Transaction class
         revolutColumnMap: dict = {
@@ -364,7 +364,7 @@ class TransactionRepo:
 
 
     def loadEquabankStatement(self) -> list[Transaction]:
-        """Parsing Equabank monthly bank account statement"""
+        """Parsing Equabank monthly bank account statement in XML format"""
 
         # TODO: Handling multiple transactions which are not unique by DB standards (UNIQUE amount, currency, date)
         #       Due to incomplete/generalized transaction date in Equabank XML, it's not possible to clearly define transaction uniqueness
