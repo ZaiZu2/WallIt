@@ -1,13 +1,12 @@
 #! python3
 
-from tracemalloc import start
 import xml.etree.ElementTree as ET
 import copy, os, csv, datetime, sys
 import tkinter as tk
 from tkinter import filedialog
+import pprint
 from typing import Tuple, Type, List
 
-import datetime
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, MONTHLY
 import itertools
@@ -122,8 +121,8 @@ class TransactionRepo:
     def __init__(self):
         # postgresConfig - maps DB connection info
         # tableNames - specifies used tables in DB
-        # columnMap - map DB columns to Transaction class
-        postgresConfig, tableNames, self.columnMap = readDatabaseConfig('db.ini')
+        # DBcolumnMap - map DB columns to Transaction class
+        postgresConfig, tableNames, self.DBcolumnMap = readDatabaseConfig('db.ini')
 
         self.repo: list[Transaction] = []
         self.tableName: str = tableNames['tableName']
@@ -158,11 +157,11 @@ class TransactionRepo:
                                                 {} = {}
                                             WHERE {} = {};""").format(
                                                 Identifier(self.tableName), 
-                                                Identifier(self.columnMap['name']), Placeholder(name='name'),
-                                                Identifier(self.columnMap['title']), Placeholder(name='title'),
-                                                Identifier(self.columnMap['place']), Placeholder(name='place'),
-                                                Identifier(self.columnMap['category']), Placeholder(name='category'),
-                                                Identifier(self.columnMap['id']), Placeholder(name='id')),
+                                                Identifier(self.DBcolumnMap['name']), Placeholder(name='name'),
+                                                Identifier(self.DBcolumnMap['title']), Placeholder(name='title'),
+                                                Identifier(self.DBcolumnMap['place']), Placeholder(name='place'),
+                                                Identifier(self.DBcolumnMap['category']), Placeholder(name='category'),
+                                                Identifier(self.DBcolumnMap['id']), Placeholder(name='id')),
                                             {'name': transaction.name, 'title': transaction.title, 'place': transaction.place, 
                                             'category': transaction.category, 'id': transaction.id})
             self.cur.execute(query)
@@ -179,7 +178,7 @@ class TransactionRepo:
                                                 ON CONFLICT ON CONSTRAINT {}
                                                 DO NOTHING;""").format(
                                                     Identifier(self.tableName), 
-                                                    SQL(', ').join(map(Identifier, tuple(self.columnMap.values()))), 
+                                                    SQL(', ').join(map(Identifier, tuple(self.DBcolumnMap.values()))), 
                                                     SQL(', ').join(Placeholder() * len(transaction.queryList())), 
                                                     Identifier(self.upsertReq)), 
                                                 transaction.queryList())
@@ -203,7 +202,7 @@ class TransactionRepo:
         # amount - 'amount BETWEEN %s AND %s'
         if 'amount' in kwarg.keys():
             amountFilter = SQL("{} BETWEEN %s AND %s").format(
-                Identifier(self.columnMap['amount']))
+                Identifier(self.DBcolumnMap['amount']))
 
             filters.append(amountFilter)
             filterValues.extend(kwarg['amount'])
@@ -211,7 +210,7 @@ class TransactionRepo:
         # currency - 'currency IN (%s, ...)'
         if 'currency' in kwarg.keys():
             currencyFilter = SQL("{} IN ({})").format(
-                Identifier(self.columnMap['currency']),
+                Identifier(self.DBcolumnMap['currency']),
                 SQL(', ').join(Placeholder() * len(kwarg['currency'])))
 
             filters.append(currencyFilter)
@@ -220,7 +219,7 @@ class TransactionRepo:
         # srcAmount - 'src_amount BETWEEN %s AND %s'
         if 'srcAmount' in kwarg.keys():
             srcAmountFilter = SQL("{} BETWEEN %s AND %s").format(
-                Identifier(self.columnMap['srcAmount']))
+                Identifier(self.DBcolumnMap['srcAmount']))
 
             filters.append(srcAmountFilter)
             filterValues.extend(kwarg['srcAmount'])
@@ -228,7 +227,7 @@ class TransactionRepo:
         # srcCurrency - 'src_currency IN (%s, ...)'
         if 'srcCurrency' in kwarg.keys():
             srcCurrencyFilter = SQL("{} IN ({})").format(
-                Identifier(self.columnMap['srcCurrency']),
+                Identifier(self.DBcolumnMap['srcCurrency']),
                 SQL(', ').join(Placeholder() * len(kwarg['srcCurrency'])))
 
             filters.append(srcCurrencyFilter)
@@ -237,7 +236,7 @@ class TransactionRepo:
         # date - 'transaction_date BETWEEN %s AND %s'
         if 'date' in kwarg.keys():
             dateFilter = SQL("{} BETWEEN %s AND %s").format(
-                Identifier(self.columnMap['date']))
+                Identifier(self.DBcolumnMap['date']))
 
             filters.append(dateFilter)
             filterValues.extend(kwarg['date'])
@@ -245,7 +244,7 @@ class TransactionRepo:
         # category - 'category IN (%s, ...)'
         if 'category' in kwarg.keys():
             categoryFilter = SQL("{} IN ({})").format(
-                Identifier(self.columnMap['category']),
+                Identifier(self.DBcolumnMap['category']),
                 SQL(', ').join(Placeholder() * len(kwarg['category'])))
 
             filters.append(categoryFilter)
@@ -280,8 +279,8 @@ class TransactionRepo:
 
         # Extract the newest and oldest transaction in the DB
         query = self.cur.mogrify(SQL("SELECT MIN({}), MAX({}) FROM {}").format(
-            Identifier(self.columnMap['date']),
-            Identifier(self.columnMap['date']),
+            Identifier(self.DBcolumnMap['date']),
+            Identifier(self.DBcolumnMap['date']),
             Identifier(self.tableName)))
         #print(query.decode())
         self.cur.execute(query)
@@ -309,9 +308,9 @@ class TransactionRepo:
                                                     WHERE {}  
                                                         BETWEEN %s 
                                                         AND %s;""").format(
-                                                            *[Identifier(self.columnMap['amount'])]*5,
+                                                            *[Identifier(self.DBcolumnMap['amount'])]*5,
                                                             Identifier(self.tableName),
-                                                            Identifier(self.columnMap['date'])), 
+                                                            Identifier(self.DBcolumnMap['date'])), 
                                                         (str(date),
                                                         str(date + relativedelta(months=+1))))
                 #print(query.decode())
@@ -336,28 +335,39 @@ class TransactionRepo:
 
         print('Data successfully saved.')
         
-    def loadFromCSV(self) -> list[Transaction]:
-        """Load transaction table from .CSV"""
-        while True:
-            try:
-                with open('save.csv', 'r', newline='') as saveFile:
-                    reader = csv.DictReader(saveFile)
-                    temp = []
-                    for i, row in enumerate(reader):
-                        temp.append(Transaction())
-                        temp[i].__dict__ = row
-                break
-            except FileNotFoundError:
-                print('Savefile not found.')
-       
-        print('Data successfully loaded.')
+    def loadRevolutStatement(self) -> list[Transaction]:
+        """Load Revolut monthly bank account statement"""
+
+        # Maps Revolut CSV columns to Transaction class
+        revolutColumnMap: dict = {
+            'name' : 'Type', 
+            'date' : 'Completed Date', 
+            'title' : 'Description', 
+            'amount' : 'Amount', 
+            'currency' : 'Currency' 
+        }
+
+        CSVpaths = fileOpen('.csv')
+
+        temp: list[Transaction] = []
+        for path in CSVpaths:
+            with open(path, 'r', newline='') as csvFile:
+                reader = csv.DictReader(csvFile)
+                for i, row in enumerate(reader):
+                    temp.append(copy.deepcopy(Transaction()))
+                    temp[i].name = row['Description']
+                    temp[i].title = row['Type']
+                    temp[i].amount = float(row['Amount'])
+                    temp[i].currency = row['Currency']
+                    temp[i].date = datetime.datetime.strptime(row['Completed Date'], '%Y-%m-%d %H:%M:%S')
         return temp
 
-    def loadStatementXML(self) -> list[Transaction]:
-        """Parsing an XML monthly bank account statement"""
+
+    def loadEquabankStatement(self) -> list[Transaction]:
+        """Parsing Equabank monthly bank account statement"""
 
         # TODO: Handling multiple transactions which are not unique by DB standards (UNIQUE amount, currency, date)
-        #       Due to generalized transaction date in Equabank XML, it's not possible to clearly define transaction uniqueness
+        #       Due to incomplete/generalized transaction date in Equabank XML, it's not possible to clearly define transaction uniqueness
         #       Solution1: providing additional column in DB which indexes transactions having same (amount, currency, date) combo?
         #       Solution2: requirement from the user to manually modify date or other UNIQUEness parameter during XML loading process
 
@@ -426,19 +436,11 @@ class TransactionRepo:
 
 def main():
     repo = TransactionRepo()
+    repo.repo = repo.loadRevolutStatement()
 
-    #repo.repo = repo.loadStatementXML()
-    #table.saveToCSV()
-    repo.repo = repo.filterRepo(amount=(20,20))
-    repo.repo[0].name = 'UEUEUEUEU'
-    repo.repo[0].title = 'BUEBUEBUE'    
-    repo.repo[0].place = 'CUEUEUEUE'  
-    repo.repo[0].category = 'petty expenses'  
 
-    repo.updateRepo()
+    #repo.updateRepo()
     #repo.upsertRepo()
-    #repo.repo = repo.filterRepo(amount=(-5000,-100), date=(datetime.datetime(2021,10,20), datetime.datetime(2022,1,1)),)
-    #repo.repo = repo.filterRepo()
     #repo.monthlySummary()
 
     #print(len(table.table))
