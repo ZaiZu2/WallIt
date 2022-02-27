@@ -1,11 +1,13 @@
 #! python3
 
 import xml.etree.ElementTree as ET
-import copy, os, csv, datetime, sys
+import copy
+import os
+import csv
+import datetime
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import Place, filedialog
 import pprint
-from typing import Tuple, Type, List
 
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, MONTHLY
@@ -14,9 +16,29 @@ import psycopg2
 from psycopg2.sql import SQL, Identifier, Placeholder, Composed
 import configparser
 
+class Session:
+    """Main class holding user session"""
+
+    def __init__(self) -> None:
+        self.repo: TransactionRepo = TransactionRepo()
+        self.user: User = User()
+        self.service: TransactionService = TransactionService()
+
+
+class User:
+    """Class representing user"""
+
+    def __init__(self):
+        self.userId: int | None = None
+        self.username: str | None = None
+        self.password: str = None
+        self.firstName: str | None = None
+        self.lastName: str | None = None
+
+    def __repr__(self) -> str:
+        return f'{self.firstName} {self.lastName} under username {self.username}'
 
 class TransactionService:
-
     pass
 
 class Transaction:
@@ -33,27 +55,19 @@ class Transaction:
         self.date: datetime.datetime | None = None
         self.place: str | None  = None
         self._category: str | None = None
+        self.userId: int | None = None
+        self.bankId: int | None = None
 
         self.categories: tuple = ('savings', 'grocery', 'rent', 'bills', 'restaurants', 'holidays', 'hobbies', 'experiences', 'presents', 'petty expenses')
 
-    def queryList(self) -> list: 
-        """returns transaction attributes in a modifiable, ordered list"""
-        return [self.name, self.title, self.amount, self.currency, self.srcAmount, self.srcCurrency, self.date, self.place, self.category]
-
-
     def __repr__(self) -> str:
         return f'{self.__class__.__qualname__}: {self.name}, {self.amount} {self.currency}, {self.date}'
-
 
     def __eq__(self, other):
         if not isinstance(other, Transaction):
             return TypeError
         
-        return (self.name == other.name and 
-                self.title == other.title and
-                self.amount == other.amount and
-                self.date == other.date and
-                self.place == other.place) 
+        return (self.name, self.title, self.amount, self.date, self.place) == (other.name, other.title, other.amount, other.date, other.place) 
 
     @property
     def category(self):
@@ -67,74 +81,68 @@ class Transaction:
             self._category = value
         else:
             print('There is no such category. Category not updated.')
-    
 
-def fileOpen(type: str) -> Tuple[str]:
-    """Opens multiple files and checks for specified extension (e.g. '.xml')\n
-    returns Tuple[paths] or empty string 
-    """
-
-    while True:
-        TupleOfPaths: tuple[str] = filedialog.askopenfilenames()
-        correctFileInt = 0
-
-        for path in TupleOfPaths:
-            if os.path.basename(path).endswith(f"{type}"):
-                correctFileInt += 1
-        
-        if correctFileInt == len(TupleOfPaths): 
-            return TupleOfPaths
-        else:
-            print(f'{len(TupleOfPaths) - correctFileInt} files have incorrect extension. Repeat.')
-
-
-def readDatabaseConfig(filePath: str) -> tuple[dict, dict, dict]:
-    """Read DB config file and returns dict of config parameters"""
-
-    config = configparser.RawConfigParser()
-    config.optionxform = lambda option: option # preserve case-sensitivity of keys/values
-    config.read(filePath)
-
-    postgresConfig: dict = {}
-    columnMap: dict = {}
-    tableNames: dict = {}
-
-    # read separate blocks and extract key-value pairs
-    try:
-        for key in config['postgresql']:
-            postgresConfig[key] = config['postgresql'][key]
-
-        for key in config['columnMap']:
-            columnMap[key] = config['columnMap'][key]
-
-        for key in config['tables']:
-            tableNames[key] = config['tables'][key]
-    except:
-        print('Corrupted .ini file')
-
-    return postgresConfig, tableNames, columnMap
-
+    def queryList(self) -> list: 
+        """returns transaction attributes in a modifiable, ordered list"""
+        return [self.name, self.title, self.amount, self.currency, self.srcAmount, self.srcCurrency, self.date, self.place, self.category]
 
 class TransactionRepo:
     """Class cointaining temporary transaction data and handling connection and queries to the DB"""
 
     def __init__(self):
-        # postgresConfig - maps DB connection info
-        # tableNames - specifies used tables in DB
-        # DBcolumnMap - map DB columns to Transaction class
-        postgresConfig, tableNames, self.DBcolumnMap = readDatabaseConfig('db.ini')
+        # postgresConfig - contains DB connection keywords
+        # userMap - map USER table columns to Transaction class
+        # transactionMap - map TRANSACTION table columns to Transaction class
+        postgresConfig, self.userMap, self.transactionMap = self._readDatabaseConfig('db.ini')
+
+        self.transactionTable: str = 'transactions'
+        self.userTable: str = 'users'
+        self.upsertReq = 'upsert_constr' # Internal postgresql constraint for row uniqueness
 
         self.repo: list[Transaction] = []
-        self.tableName: str = tableNames['tableName']
-        self.upsertReq = 'upsert_req' # Internal postgresql constraint for row uniqueness
 
+        # Create a database connection with data from .ini file
+        self.conn, self.cur = self._connectDB(postgresConfig)
         self._decToFloat()
+
+    def _readDatabaseConfig(self, filePath) -> tuple[dict, dict, dict]:
+        """Read DB config file and returns dict of config parameters"""
+
+        config = configparser.RawConfigParser()
+        config.optionxform = lambda option: option # preserve case-sensitivity of keys/values
+        config.read(filePath)
+
+        postgresConfig: dict = {}
+        transactionMap: dict = {}
+        userMap: dict = {}
+
+        # read separate blocks and extract key-value pairs
         try:
-            self.conn = psycopg2.connect(**postgresConfig)
-            self.cur = self.conn.cursor()
+            for key in config['postgresql']:
+                postgresConfig[key] = config['postgresql'][key]
+
+            for key in config['transactions']:
+                transactionMap[key] = config['transactions'][key]
+
+            for key in config['users']:
+                userMap[key] = config['users'][key]
+        except:
+            print('Corrupted .ini file')
+
+        return postgresConfig, userMap, transactionMap    
+
+    def _connectDB(self, config: dict): #-> tuple[psycopg2.connection, psycopg2.cursor]:
+        """Initialize connection to the DB"""
+
+        # Create DB connection object based on config file
+        try:
+            conn = psycopg2.connect(**config)
+            cur = conn.cursor()
             print('Succesfully connected to the database.')
         except:
             print('Cannot connect to the database.')
+
+        return conn, cur
 
     def _decToFloat(self):
         """Cast decimal database type to Python float type, instead of the default Decimal"""
@@ -144,9 +152,32 @@ class TransactionRepo:
         'DEC2FLOAT',
         lambda value, curs: float(value) if value is not None else None)
         psycopg2.extensions.register_type(DEC2FLOAT)
-        
 
-    def updateRepo(self) -> None:
+    def userQuery(self, username: str) -> User | None:
+        """Query the DB with username and return user details"""
+
+        query = self.cur.mogrify(SQL("""SELECT * FROM {} WHERE {} = %s;""").format(
+                Identifier(self.userTable),
+                Identifier(self.userMap['username'])),
+            (username,))
+        self.cur.execute(query)
+        print(query.decode())
+        result = self.cur.fetchone()
+
+        if result:
+            temp = User()
+            temp.userId = result[0]
+            temp.username = result[1]
+            temp.password = result[2]
+            temp.firstName = result[3]
+            temp.lastName = result[4]
+
+            return temp
+        else:
+            print('Your username is invalid.')
+            return None
+
+    def updateRepo(self, session) -> None:
         """Update the DB with modified transactions with the use of common transaction ID"""
         
         for transaction in self.repo:
@@ -156,18 +187,17 @@ class TransactionRepo:
                                                 {} = {},
                                                 {} = {}
                                             WHERE {} = {};""").format(
-                                                Identifier(self.tableName), 
-                                                Identifier(self.DBcolumnMap['name']), Placeholder(name='name'),
-                                                Identifier(self.DBcolumnMap['title']), Placeholder(name='title'),
-                                                Identifier(self.DBcolumnMap['place']), Placeholder(name='place'),
-                                                Identifier(self.DBcolumnMap['category']), Placeholder(name='category'),
-                                                Identifier(self.DBcolumnMap['id']), Placeholder(name='id')),
+                                                Identifier(self.transactionTable), 
+                                                Identifier(self.transactionMap['name']), Placeholder(name='name'),
+                                                Identifier(self.transactionMap['title']), Placeholder(name='title'),
+                                                Identifier(self.transactionMap['place']), Placeholder(name='place'),
+                                                Identifier(self.transactionMap['category']), Placeholder(name='category'),
+                                                Identifier(self.transactionMap['id']), Placeholder(name='id')),
                                             {'name': transaction.name, 'title': transaction.title, 'place': transaction.place, 
                                             'category': transaction.category, 'id': transaction.id})
             self.cur.execute(query)
             print(query.decode())
         self.conn.commit()
-
 
     def upsertRepo(self) -> None:
         """Insert temporarily stored transactions to the DB, while ignoring duplicates"""
@@ -177,8 +207,8 @@ class TransactionRepo:
                                                 VALUES ({})
                                                 ON CONFLICT ON CONSTRAINT {}
                                                 DO NOTHING;""").format(
-                                                    Identifier(self.tableName), 
-                                                    SQL(', ').join(map(Identifier, tuple(self.DBcolumnMap.values()))), 
+                                                    Identifier(self.transactionTable), 
+                                                    SQL(', ').join(map(Identifier, tuple(self.transactionMap.values()))), 
                                                     SQL(', ').join(Placeholder() * len(transaction.queryList())), 
                                                     Identifier(self.upsertReq)), 
                                                 transaction.queryList())
@@ -202,7 +232,7 @@ class TransactionRepo:
         # amount - 'amount BETWEEN %s AND %s'
         if 'amount' in kwarg.keys():
             amountFilter = SQL("{} BETWEEN %s AND %s").format(
-                Identifier(self.DBcolumnMap['amount']))
+                Identifier(self.transactionMap['amount']))
 
             filters.append(amountFilter)
             filterValues.extend(kwarg['amount'])
@@ -210,7 +240,7 @@ class TransactionRepo:
         # currency - 'currency IN (%s, ...)'
         if 'currency' in kwarg.keys():
             currencyFilter = SQL("{} IN ({})").format(
-                Identifier(self.DBcolumnMap['currency']),
+                Identifier(self.transactionMap['currency']),
                 SQL(', ').join(Placeholder() * len(kwarg['currency'])))
 
             filters.append(currencyFilter)
@@ -219,7 +249,7 @@ class TransactionRepo:
         # srcAmount - 'src_amount BETWEEN %s AND %s'
         if 'srcAmount' in kwarg.keys():
             srcAmountFilter = SQL("{} BETWEEN %s AND %s").format(
-                Identifier(self.DBcolumnMap['srcAmount']))
+                Identifier(self.transactionMap['srcAmount']))
 
             filters.append(srcAmountFilter)
             filterValues.extend(kwarg['srcAmount'])
@@ -227,7 +257,7 @@ class TransactionRepo:
         # srcCurrency - 'src_currency IN (%s, ...)'
         if 'srcCurrency' in kwarg.keys():
             srcCurrencyFilter = SQL("{} IN ({})").format(
-                Identifier(self.DBcolumnMap['srcCurrency']),
+                Identifier(self.transactionMap['srcCurrency']),
                 SQL(', ').join(Placeholder() * len(kwarg['srcCurrency'])))
 
             filters.append(srcCurrencyFilter)
@@ -236,7 +266,7 @@ class TransactionRepo:
         # date - 'transaction_date BETWEEN %s AND %s'
         if 'date' in kwarg.keys():
             dateFilter = SQL("{} BETWEEN %s AND %s").format(
-                Identifier(self.DBcolumnMap['date']))
+                Identifier(self.transactionMap['date']))
 
             filters.append(dateFilter)
             filterValues.extend(kwarg['date'])
@@ -244,7 +274,7 @@ class TransactionRepo:
         # category - 'category IN (%s, ...)'
         if 'category' in kwarg.keys():
             categoryFilter = SQL("{} IN ({})").format(
-                Identifier(self.DBcolumnMap['category']),
+                Identifier(self.transactionMap['category']),
                 SQL(', ').join(Placeholder() * len(kwarg['category'])))
 
             filters.append(categoryFilter)
@@ -252,7 +282,7 @@ class TransactionRepo:
 
         temp: list[Transaction] = []
         query = self.cur.mogrify(SQL("SELECT * FROM {} WHERE {};").format(
-                                                Identifier(self.tableName),
+                                                Identifier(self.transactionTable),
                                                 SQL(' AND ').join(
                                                     [Composed(filter) for filter in filters])),
                                             filterValues)                                   
@@ -279,9 +309,9 @@ class TransactionRepo:
 
         # Extract the newest and oldest transaction in the DB
         query = self.cur.mogrify(SQL("SELECT MIN({}), MAX({}) FROM {}").format(
-            Identifier(self.DBcolumnMap['date']),
-            Identifier(self.DBcolumnMap['date']),
-            Identifier(self.tableName)))
+            Identifier(self.transactionMap['date']),
+            Identifier(self.transactionMap['date']),
+            Identifier(self.transactionTable)))
         #print(query.decode())
         self.cur.execute(query)
         startDate, endDate = self.cur.fetchone()
@@ -295,45 +325,30 @@ class TransactionRepo:
         for date in rrule(freq=MONTHLY, dtstart=startDate, until=endDate):
             if date != endDate:  # omit last iteration
                 query = self.cur.mogrify(SQL("""SELECT
-                                                        SUM (CASE
-                                                                WHEN {} >= 0 THEN {}
+                                                    SUM (CASE
+                                                            WHEN {} >= 0 THEN {}
+                                                        ELSE 0
+                                                            END) AS incoming,
+                                                    SUM (CASE
+                                                            WHEN {} < 0 THEN {}
                                                             ELSE 0
-                                                                END) AS incoming,
-                                                        SUM (CASE
-                                                                WHEN {} < 0 THEN {}
-                                                                ELSE 0
-                                                            END) AS outgoing,
-                                                        SUM ({}) AS difference
-                                                    FROM {}
-                                                    WHERE {}  
-                                                        BETWEEN %s 
-                                                        AND %s;""").format(
-                                                            *[Identifier(self.DBcolumnMap['amount'])]*5,
-                                                            Identifier(self.tableName),
-                                                            Identifier(self.DBcolumnMap['date'])), 
-                                                        (str(date),
-                                                        str(date + relativedelta(months=+1))))
+                                                        END) AS outgoing,
+                                                    SUM ({}) AS difference
+                                                FROM {}
+                                                WHERE {}  
+                                                    BETWEEN %s 
+                                                    AND %s;""").format(
+                                                        *[Identifier(self.transactionMap['amount'])]*5,
+                                                        Identifier(self.transactionTable),
+                                                        Identifier(self.transactionMap['date'])), 
+                                                    (str(date),
+                                                    str(date + relativedelta(months=+1))))
                 #print(query.decode())
                 self.cur.execute(query)
                 tempSummary.append(self.cur.fetchone())
 
         return tempSummary
     
-    def saveToCSV(self) -> None:
-        """Save transaction table to .CSV"""
-
-        # Temporary list of dictionaries is created to work as an input for 'writerows'
-        tempSaveTable: list = []
-        for i, record in enumerate(self.repo):
-            tempSaveTable.append({})
-            tempSaveTable[i] = vars(record)
-
-        with open('save.csv', 'w', newline='') as saveFile:
-            writer = csv.DictWriter(saveFile, fieldnames = [key for key in vars(self.repo[0]).keys()])
-            writer.writeheader()
-            writer.writerows(tempSaveTable)
-
-        print('Data successfully saved.')
         
     def loadRevolutStatement(self) -> list[Transaction]:
         """Load Revolut monthly bank account statement in CSV format"""
@@ -361,7 +376,6 @@ class TransactionRepo:
                     temp[i].currency = row['Currency']
                     temp[i].date = datetime.datetime.strptime(row['Completed Date'], '%Y-%m-%d %H:%M:%S')
         return temp
-
 
     def loadEquabankStatement(self) -> list[Transaction]:
         """Parsing Equabank monthly bank account statement in XML format"""
@@ -432,12 +446,57 @@ class TransactionRepo:
  
         return temp
 
+    def saveToCSV(self) -> None:
+        """Save transaction table to .CSV"""
 
+        # Temporary list of dictionaries is created to work as an input for 'writerows'
+        tempSaveTable: list = []
+        for i, record in enumerate(self.repo):
+            tempSaveTable.append({})
+            tempSaveTable[i] = vars(record)
+
+        with open('save.csv', 'w', newline='') as saveFile:
+            writer = csv.DictWriter(saveFile, fieldnames = [key for key in vars(self.repo[0]).keys()])
+            writer.writeheader()
+            writer.writerows(tempSaveTable)
+
+        print('Data successfully saved.')
+
+
+def fileOpen(type: str) -> tuple[str]:
+    """
+    Opens multiple files and checks for specified extension (e.g. '.xml')\n
+    returns Tuple[paths] or empty string 
+    """
+
+    while True:
+        TupleOfPaths: tuple[str] = filedialog.askopenfilenames()
+        correctFileInt = 0
+
+        for path in TupleOfPaths:
+            if os.path.basename(path).endswith(f"{type}"):
+                correctFileInt += 1
+        
+        if correctFileInt == len(TupleOfPaths): 
+            return TupleOfPaths
+        else:
+            print(f'{len(TupleOfPaths) - correctFileInt} files have incorrect extension. Repeat.')
+
+def login(username: str, listOfSessions: dict[str, Session]):
+    """Handle user log-in procedure"""
+
+    # Create a session object if there's no session opened for 'username'
+    if username not in listOfSessions.keys():
+        listOfSessions[username] = Session()
+        listOfSessions[username].user = listOfSessions[username].repo.userQuery(username)
+
+        # Delete session object in case username/password check (repo.userQuery()) returned None and was unsuccessful
+        if not listOfSessions[username].user:
+            del listOfSessions[username]
 
 def main():
-    repo = TransactionRepo()
-    repo.repo = repo.loadRevolutStatement()
-
+    listOfSessions: dict(Session) = {}
+    login('Zaiu', listOfSessions)
 
     #repo.updateRepo()
     #repo.upsertRepo()
