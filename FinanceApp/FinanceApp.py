@@ -1,32 +1,33 @@
 #! python3
 
+from multiprocessing.dummy import connection
 import xml.etree.ElementTree as ET
 import copy
 import os
 import csv
 import datetime
 import tkinter as tk
-from tkinter import Place, filedialog
+from tkinter import filedialog
 import pprint
 
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, MONTHLY
-import itertools
 import psycopg2
 from psycopg2.sql import SQL, Identifier, Placeholder, Composed
 import configparser
 
+# TODO: Modify queries to search in linked tables user.id/bank.id
+
 class Session:
     """Main class holding user session"""
 
-    def __init__(self) -> None:
+    def __init__(self):
+        self.user: User | None = None
         self.repo: TransactionRepo = TransactionRepo()
-        self.user: User = User()
         self.service: TransactionService = TransactionService()
 
-
 class User:
-    """Class representing user"""
+    """Class representing logged-in user"""
 
     def __init__(self):
         self.userId: int | None = None
@@ -45,7 +46,7 @@ class Transaction:
     """Class cointaining a transaction record"""
 
     def __init__(self):
-        self.id: int | None = None
+        self.transactionId: int | None = None
         self.name: str | None = None
         self.title: str | None = None
         self.amount: float | None =  None
@@ -84,26 +85,27 @@ class Transaction:
 
     def queryList(self) -> list: 
         """returns transaction attributes in a modifiable, ordered list"""
-        return [self.name, self.title, self.amount, self.currency, self.srcAmount, self.srcCurrency, self.date, self.place, self.category]
+        return [self.name, self.title, self.amount, self.currency, self.srcAmount, self.srcCurrency, self.date, self.place, self.category, self.userId, self.bankId]
 
 class TransactionRepo:
-    """Class cointaining temporary transaction data and handling connection and queries to the DB"""
+    """Class cointaining temporary transaction data and handling connection and queries to the DB during session"""
 
     def __init__(self):
         # postgresConfig - contains DB connection keywords
-        # userMap - map USER table columns to Transaction class
-        # transactionMap - map TRANSACTION table columns to Transaction class
-        postgresConfig, self.userMap, self.transactionMap = self._readDatabaseConfig('db.ini')
+        # USERMAP - map USER table columns to Transaction class
+        # TRANSACTIONMAP - map TRANSACTION table columns to Transaction class
+        postgresConfig, self.USERMAP, self.TRANSACTIONMAP = self._readDatabaseConfig('db.ini')
 
         self.transactionTable: str = 'transactions'
         self.userTable: str = 'users'
-        self.upsertReq = 'upsert_constr' # Internal postgresql constraint for row uniqueness
-
-        self.repo: list[Transaction] = []
+        self.bankTable: str = 'banks'
+        self.upsertReq = 'upsert_constraint' # Internal postgresql constraint for row uniqueness
+        self.tempTransactions: list[Transaction] = []
 
         # Create a database connection with data from .ini file
         self.conn, self.cur = self._connectDB(postgresConfig)
         self._decToFloat()
+        self.bankMap: dict[str, int] = self._parseBankID()
 
     def _readDatabaseConfig(self, filePath) -> tuple[dict, dict, dict]:
         """Read DB config file and returns dict of config parameters"""
@@ -131,7 +133,7 @@ class TransactionRepo:
 
         return postgresConfig, userMap, transactionMap    
 
-    def _connectDB(self, config: dict): #-> tuple[psycopg2.connection, psycopg2.cursor]:
+    def _connectDB(self, config: dict): #-> tuple[psycopg2.connect.cursor, psycopg2.connection.cursor]:
         """Initialize connection to the DB"""
 
         # Create DB connection object based on config file
@@ -153,12 +155,23 @@ class TransactionRepo:
         lambda value, curs: float(value) if value is not None else None)
         psycopg2.extensions.register_type(DEC2FLOAT)
 
+    def _parseBankID(self) -> dict[str, int]:
+        """Parse from the DB, dictionary of current bank names/bank IDs"""
+
+        query = self.cur.mogrify(SQL("""SELECT * FROM {};""").format(Identifier(self.bankTable)))
+        #print(query.decode())
+        self.cur.execute(query)
+
+        # Create dictionary of  
+        temp = dict((row[1], row[0]) for row in self.cur.fetchall())
+        return temp
+
     def userQuery(self, username: str) -> User | None:
         """Query the DB with username and return user details"""
 
         query = self.cur.mogrify(SQL("""SELECT * FROM {} WHERE {} = %s;""").format(
                 Identifier(self.userTable),
-                Identifier(self.userMap['username'])),
+                Identifier(self.USERMAP['username'])),
             (username,))
         self.cur.execute(query)
         print(query.decode())
@@ -177,10 +190,10 @@ class TransactionRepo:
             print('Your username is invalid.')
             return None
 
-    def updateRepo(self, session) -> None:
+    def updateRepo(self) -> None:
         """Update the DB with modified transactions with the use of common transaction ID"""
         
-        for transaction in self.repo:
+        for transaction in self.tempTransactions:
             query = self.cur.mogrify(SQL("""UPDATE {}
                                             SET {} = {},
                                                 {} = {},
@@ -188,13 +201,13 @@ class TransactionRepo:
                                                 {} = {}
                                             WHERE {} = {};""").format(
                                                 Identifier(self.transactionTable), 
-                                                Identifier(self.transactionMap['name']), Placeholder(name='name'),
-                                                Identifier(self.transactionMap['title']), Placeholder(name='title'),
-                                                Identifier(self.transactionMap['place']), Placeholder(name='place'),
-                                                Identifier(self.transactionMap['category']), Placeholder(name='category'),
-                                                Identifier(self.transactionMap['id']), Placeholder(name='id')),
+                                                Identifier(self.TRANSACTIONMAP['name']), Placeholder(name='name'),
+                                                Identifier(self.TRANSACTIONMAP['title']), Placeholder(name='title'),
+                                                Identifier(self.TRANSACTIONMAP['place']), Placeholder(name='place'),
+                                                Identifier(self.TRANSACTIONMAP['category']), Placeholder(name='category'),
+                                                Identifier(self.TRANSACTIONMAP['id']), Placeholder(name='id')),
                                             {'name': transaction.name, 'title': transaction.title, 'place': transaction.place, 
-                                            'category': transaction.category, 'id': transaction.id})
+                                            'category': transaction.category, 'id': transaction.transactionId})
             self.cur.execute(query)
             print(query.decode())
         self.conn.commit()
@@ -202,13 +215,16 @@ class TransactionRepo:
     def upsertRepo(self) -> None:
         """Insert temporarily stored transactions to the DB, while ignoring duplicates"""
 
-        for transaction in self.repo:
-            query = self.cur.mogrify(SQL("""INSERT INTO {}({}) s
+        tempMap = copy.copy(self.TRANSACTIONMAP)
+        tempMap.pop('transactionId')
+
+        for transaction in self.tempTransactions:
+            query = self.cur.mogrify(SQL("""INSERT INTO {}({})
                                                 VALUES ({})
                                                 ON CONFLICT ON CONSTRAINT {}
                                                 DO NOTHING;""").format(
                                                     Identifier(self.transactionTable), 
-                                                    SQL(', ').join(map(Identifier, tuple(self.transactionMap.values()))), 
+                                                    SQL(', ').join(map(Identifier, tuple(tempMap.values()))), 
                                                     SQL(', ').join(Placeholder() * len(transaction.queryList())), 
                                                     Identifier(self.upsertReq)), 
                                                 transaction.queryList())
@@ -232,7 +248,7 @@ class TransactionRepo:
         # amount - 'amount BETWEEN %s AND %s'
         if 'amount' in kwarg.keys():
             amountFilter = SQL("{} BETWEEN %s AND %s").format(
-                Identifier(self.transactionMap['amount']))
+                Identifier(self.TRANSACTIONMAP['amount']))
 
             filters.append(amountFilter)
             filterValues.extend(kwarg['amount'])
@@ -240,7 +256,7 @@ class TransactionRepo:
         # currency - 'currency IN (%s, ...)'
         if 'currency' in kwarg.keys():
             currencyFilter = SQL("{} IN ({})").format(
-                Identifier(self.transactionMap['currency']),
+                Identifier(self.TRANSACTIONMAP['currency']),
                 SQL(', ').join(Placeholder() * len(kwarg['currency'])))
 
             filters.append(currencyFilter)
@@ -249,7 +265,7 @@ class TransactionRepo:
         # srcAmount - 'src_amount BETWEEN %s AND %s'
         if 'srcAmount' in kwarg.keys():
             srcAmountFilter = SQL("{} BETWEEN %s AND %s").format(
-                Identifier(self.transactionMap['srcAmount']))
+                Identifier(self.TRANSACTIONMAP['srcAmount']))
 
             filters.append(srcAmountFilter)
             filterValues.extend(kwarg['srcAmount'])
@@ -257,7 +273,7 @@ class TransactionRepo:
         # srcCurrency - 'src_currency IN (%s, ...)'
         if 'srcCurrency' in kwarg.keys():
             srcCurrencyFilter = SQL("{} IN ({})").format(
-                Identifier(self.transactionMap['srcCurrency']),
+                Identifier(self.TRANSACTIONMAP['srcCurrency']),
                 SQL(', ').join(Placeholder() * len(kwarg['srcCurrency'])))
 
             filters.append(srcCurrencyFilter)
@@ -266,7 +282,7 @@ class TransactionRepo:
         # date - 'transaction_date BETWEEN %s AND %s'
         if 'date' in kwarg.keys():
             dateFilter = SQL("{} BETWEEN %s AND %s").format(
-                Identifier(self.transactionMap['date']))
+                Identifier(self.TRANSACTIONMAP['date']))
 
             filters.append(dateFilter)
             filterValues.extend(kwarg['date'])
@@ -274,7 +290,7 @@ class TransactionRepo:
         # category - 'category IN (%s, ...)'
         if 'category' in kwarg.keys():
             categoryFilter = SQL("{} IN ({})").format(
-                Identifier(self.transactionMap['category']),
+                Identifier(self.TRANSACTIONMAP['category']),
                 SQL(', ').join(Placeholder() * len(kwarg['category'])))
 
             filters.append(categoryFilter)
@@ -291,7 +307,7 @@ class TransactionRepo:
         
         for i, row in enumerate(self.cur.fetchall()): 
             temp.append(copy.deepcopy(Transaction()))
-            temp[i].id = row[0]
+            temp[i].transactionId = row[0]
             temp[i].name = row[1]
             temp[i].title = row[2]
             temp[i].amount =  row[3]
@@ -309,8 +325,8 @@ class TransactionRepo:
 
         # Extract the newest and oldest transaction in the DB
         query = self.cur.mogrify(SQL("SELECT MIN({}), MAX({}) FROM {}").format(
-            Identifier(self.transactionMap['date']),
-            Identifier(self.transactionMap['date']),
+            Identifier(self.TRANSACTIONMAP['date']),
+            Identifier(self.TRANSACTIONMAP['date']),
             Identifier(self.transactionTable)))
         #print(query.decode())
         self.cur.execute(query)
@@ -338,9 +354,9 @@ class TransactionRepo:
                                                 WHERE {}  
                                                     BETWEEN %s 
                                                     AND %s;""").format(
-                                                        *[Identifier(self.transactionMap['amount'])]*5,
+                                                        *[Identifier(self.TRANSACTIONMAP['amount'])]*5,
                                                         Identifier(self.transactionTable),
-                                                        Identifier(self.transactionMap['date'])), 
+                                                        Identifier(self.TRANSACTIONMAP['date'])), 
                                                     (str(date),
                                                     str(date + relativedelta(months=+1))))
                 #print(query.decode())
@@ -348,9 +364,8 @@ class TransactionRepo:
                 tempSummary.append(self.cur.fetchone())
 
         return tempSummary
-    
         
-    def loadRevolutStatement(self) -> list[Transaction]:
+    def loadRevolutStatement(self, user: User) -> list[Transaction]:
         """Load Revolut monthly bank account statement in CSV format"""
 
         # Maps Revolut CSV columns to Transaction class
@@ -375,9 +390,11 @@ class TransactionRepo:
                     temp[i].amount = float(row['Amount'])
                     temp[i].currency = row['Currency']
                     temp[i].date = datetime.datetime.strptime(row['Completed Date'], '%Y-%m-%d %H:%M:%S')
+                    temp[i].bankId = self.bankMap['Revolut']
+                    temp[i].userId = user.userId
         return temp
 
-    def loadEquabankStatement(self) -> list[Transaction]:
+    def loadEquabankStatement(self, user: User) -> list[Transaction]:
         """Parsing Equabank monthly bank account statement in XML format"""
 
         # TODO: Handling multiple transactions which are not unique by DB standards (UNIQUE amount, currency, date)
@@ -436,6 +453,9 @@ class TransactionRepo:
                     if temp[i].srcAmount:
                         temp[i].srcAmount = -temp[i].srcAmount
 
+                temp[i].bankId = self.bankMap['Equabank']
+                temp[i].userId = user.userId
+                
             # PARSING CHECKS
             # Check for correct expenses amounts to balance
             incSum = round(sum([transaction.amount for transaction in temp]), 2)
@@ -445,9 +465,11 @@ class TransactionRepo:
                 print("Records were loaded incorrectly.")
  
         return temp
+        
 
+"""
     def saveToCSV(self) -> None:
-        """Save transaction table to .CSV"""
+        Save transaction table to .CSV
 
         # Temporary list of dictionaries is created to work as an input for 'writerows'
         tempSaveTable: list = []
@@ -461,7 +483,7 @@ class TransactionRepo:
             writer.writerows(tempSaveTable)
 
         print('Data successfully saved.')
-
+"""
 
 def fileOpen(type: str) -> tuple[str]:
     """
@@ -482,21 +504,34 @@ def fileOpen(type: str) -> tuple[str]:
         else:
             print(f'{len(TupleOfPaths) - correctFileInt} files have incorrect extension. Repeat.')
 
-def login(username: str, listOfSessions: dict[str, Session]):
+def login(username: str, password: str, sessions: dict[str, Session]) -> bool:
     """Handle user log-in procedure"""
 
     # Create a session object if there's no session opened for 'username'
-    if username not in listOfSessions.keys():
-        listOfSessions[username] = Session()
-        listOfSessions[username].user = listOfSessions[username].repo.userQuery(username)
+    if username not in sessions.keys():
+        sessions[username] = Session()
+        sessions[username].user = sessions[username].repo.userQuery(username)
+    else:
+        print('User already logged in.')
+        return False
 
-        # Delete session object in case username/password check (repo.userQuery()) returned None and was unsuccessful
-        if not listOfSessions[username].user:
-            del listOfSessions[username]
+    # Delete session object in case username/password check (repo.userQuery()) returned None and was unsuccessful
+    if sessions[username].user and password == sessions[username].user.password:
+        print('User logged in.')
+        return True
+    else:
+        print('Username or password invalid.')
+        del sessions[username]
+        return False
 
 def main():
-    listOfSessions: dict(Session) = {}
-    login('Zaiu', listOfSessions)
+    sessions: dict[Session] = {}
+    
+    zaizu = 'ZaiZu'
+    loggedIn = login(zaizu, 'poop', sessions)
+    zaizu = sessions['ZaiZu']
+    zaizu.repo.tempTransactions = zaizu.repo.loadEquabankStatement(zaizu.user)
+    zaizu.repo.upsertRepo()
 
     #repo.updateRepo()
     #repo.upsertRepo()

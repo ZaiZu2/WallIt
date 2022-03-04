@@ -13,7 +13,7 @@ CREATE TABLE transactions(
     user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
     bank_id BIGINT REFERENCES banks(id) ON DELETE SET NULL,
 
-    CONSTRAINT upsert_constr UNIQUE (amount, currency, transaction_date)
+    CONSTRAINT upsert_constraint UNIQUE (amount, currency, transaction_date, user_id, bank_id);
 )
 
 CREATE TABLE users(
