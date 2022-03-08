@@ -1,5 +1,6 @@
 #! python3
 
+from locale import currency
 import xml.etree.ElementTree as ET
 import copy
 import os
@@ -58,8 +59,9 @@ class Transaction:
         self._category: str | None = None
         self.userId: int | None = None
         self.bankId: int | None = None
+        self.bankName: str | None = None
 
-        self.categories: tuple = ('savings', 'grocery', 'rent', 'bills', 'restaurants', 'holidays', 'hobbies', 'experiences', 'presents', 'petty expenses')
+        self.categories: tuple = ('savings', 'grocery', 'rent', 'bills', 'restaurants', 'holidays', 'hobbies', 'experiences', 'presents', 'petty expenses', None)
 
     def __repr__(self) -> str:
         return f'{self.__class__.__qualname__}: {self.name}, {self.amount} {self.currency}, {self.date}'
@@ -85,7 +87,7 @@ class Transaction:
 
     def queryList(self) -> list: 
         """returns transaction attributes in a modifiable, ordered list"""
-        return [self.name, self.title, self.amount, self.currency, self.srcAmount, self.srcCurrency, self.date, self.place, self.category, self.userId, self.bankId]
+        return [self.name, self.title, self.amount, self.currency, self.srcAmount, self.srcCurrency, self.date, self.place, self.category, self.userId, self.bankId, self.bankName]
 
 class TransactionRepo:
     """Class cointaining temporary transaction data and handling connection and queries to the DB during session"""
@@ -127,6 +129,9 @@ class TransactionRepo:
 
             for key in config['users']:
                 userMap[key] = config['users'][key]
+
+            #for key in config['banks']:
+            #    userMap[key] = config['banks'][key]
         except:
             print('Corrupted db.ini file')
 
@@ -155,7 +160,7 @@ class TransactionRepo:
         psycopg2.extensions.register_type(DEC2FLOAT)
 
     def _parseBankID(self) -> dict[str, int]:
-        """Parse from the DB, dictionary of current bank names/bank IDs"""
+        """Parse dict[bankName] = bankID for all banks in the DB"""
 
         query = self.cur.mogrify(SQL("""SELECT * FROM {};""").format(Identifier(self.bankTable)))
         #print(query.decode())
@@ -232,17 +237,27 @@ class TransactionRepo:
         self.conn.commit()
 
     def filterRepo(self, user: User, **kwarg) -> list[Transaction]:
-        """Filter the DB for specific records\n
-        amount = (min: float, max: float)\n
-        currency = ('CZK': str, ...)\n
-        srcAmount = (min: float, max: float)\n
-        srcCurrency = ('CZK': str, ...)\n
-        date = (min: datetime.datetime, max: datetime.datetime)\n
+        """
+        Filter the DB for specific records:
+        user: User
+        amount = (min: float, max: float)
+        currency = ('CZK': str, ...)
+        srcAmount = (min: float, max: float)
+        srcCurrency = ('CZK': str, ...)
+        date = (min: datetime.datetime, max: datetime.datetime)
         category = ('grocery': str, ...)
+        bank = ('Revolut': str, ...)
         """
 
         filters = []
         filterValues = []
+
+        # userId - 'userId = %s'
+        userFilter = SQL("{} = %s").format(
+            Identifier(self.TRANSACTIONMAP['userId']))
+
+        filters.append(userFilter)
+        filterValues.append(user.userId)
 
         # amount - 'amount BETWEEN %s AND %s'
         if 'amount' in kwarg.keys():
@@ -294,6 +309,22 @@ class TransactionRepo:
 
             filters.append(categoryFilter)
             filterValues.extend(kwarg['category'])
+
+        # bank - 'bank_id IN (%s, ...)'
+        if 'bank' in kwarg.keys():
+            # map bankIds to bankNames and use them as a filtering value to keep the query simple (without a join)
+            bankIdList: list = []
+            for bankName in kwarg['bank']:
+                bankIdList.append(self.bankMap[bankName])
+
+            # build query using bankIds instead of bankNames
+            bankFilter = SQL("{} IN ({})").format(
+                Identifier(self.TRANSACTIONMAP['bankId']),
+                SQL(', ').join(Placeholder() * len(kwarg['bank'])))
+
+            filters.append(bankFilter)
+            # use mapped bankIds as the filtering values
+            filterValues.extend(bankIdList)
 
         temp: list[Transaction] = []
         query = self.cur.mogrify(SQL("SELECT * FROM {} WHERE {};").format(
@@ -516,9 +547,12 @@ if __name__ == "__main__":
     
     loggedIn = login('ZaiZu', 'poop', sessions)
     zaizu = sessions['ZaiZu']
-    zaizu.tempTransactions = repo.loadRevolutStatement(zaizu.user)
-    repo.upsertRepo(zaizu.tempTransactions)
+    #zaizu.tempTransactions = repo.loadRevolutStatement(zaizu.user)
+    #repo.upsertRepo(zaizu.tempTransactions)
+    po = repo.filterRepo(zaizu.user, bank=('Revolut',))
+    [print(repr(pop)) for pop in po]
 
+    print('a')
     #repo.updateRepo()
     #repo.upsertRepo()
     #repo.monthlySummary()
