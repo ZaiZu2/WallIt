@@ -1,6 +1,5 @@
 #! python3
 
-from multiprocessing.dummy import connection
 import xml.etree.ElementTree as ET
 import copy
 import os
@@ -92,10 +91,10 @@ class TransactionRepo:
     """Class cointaining temporary transaction data and handling connection and queries to the DB during session"""
 
     def __init__(self):
-        # postgresConfig - contains DB connection keywords
+        # POSTGRESCONFIG - contains DB connection keywords
         # USERMAP - map USER table columns to Transaction class
         # TRANSACTIONMAP - map TRANSACTION table columns to Transaction class
-        postgresConfig, self.USERMAP, self.TRANSACTIONMAP = self._readDatabaseConfig('db.ini')
+        self.POSTGRESCONFIG, self.USERMAP, self.TRANSACTIONMAP = self._readDatabaseConfig('db.ini')
 
         self.transactionTable: str = 'transactions'
         self.userTable: str = 'users'
@@ -103,7 +102,7 @@ class TransactionRepo:
         self.upsertReq = 'upsert_constraint' # Internal postgresql constraint for row uniqueness
 
         # Create a database connection with data from .ini file
-        self.conn, self.cur = self._connectDB(postgresConfig)
+        self.conn, self.cur = self._connectDB(self.POSTGRESCONFIG)
         self._decToFloat()
         self.bankMap: dict[str, int] = self._parseBankID()
 
@@ -129,7 +128,7 @@ class TransactionRepo:
             for key in config['users']:
                 userMap[key] = config['users'][key]
         except:
-            print('Corrupted .ini file')
+            print('Corrupted db.ini file')
 
         return postgresConfig, userMap, transactionMap    
 
@@ -343,8 +342,8 @@ class TransactionRepo:
                 query = self.cur.mogrify(SQL("""SELECT
                                                     SUM (CASE
                                                             WHEN {} >= 0 THEN {}
-                                                        ELSE 0
-                                                            END) AS incoming,
+                                                            ELSE 0
+                                                        END) AS incoming,
                                                     SUM (CASE
                                                             WHEN {} < 0 THEN {}
                                                             ELSE 0
