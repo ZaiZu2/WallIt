@@ -21,10 +21,11 @@ import configparser
 class Session:
     """Main class holding user session"""
 
-    def __init__(self):
-        self.user: User | None = None
-        self.repo: TransactionRepo = TransactionRepo()
+    def __init__(self, user):
+        self.user: User = user
         self.service: TransactionService = TransactionService()
+
+        self.tempTransactions: list[Transaction] | None = None
 
 class User:
     """Class representing logged-in user"""
@@ -100,7 +101,6 @@ class TransactionRepo:
         self.userTable: str = 'users'
         self.bankTable: str = 'banks'
         self.upsertReq = 'upsert_constraint' # Internal postgresql constraint for row uniqueness
-        self.tempTransactions: list[Transaction] = []
 
         # Create a database connection with data from .ini file
         self.conn, self.cur = self._connectDB(postgresConfig)
@@ -146,7 +146,7 @@ class TransactionRepo:
 
         return conn, cur
 
-    def _decToFloat(self):
+    def _decToFloat(self) -> None:
         """Cast decimal database type to Python float type, instead of the default Decimal"""
 
         DEC2FLOAT = psycopg2.extensions.new_type(
@@ -190,10 +190,10 @@ class TransactionRepo:
             print('Your username is invalid.')
             return None
 
-    def updateRepo(self) -> None:
+    def updateRepo(self, transactions: list[Transaction]) -> None:
         """Update the DB with modified transactions with the use of common transaction ID"""
         
-        for transaction in self.tempTransactions:
+        for transaction in transactions:
             query = self.cur.mogrify(SQL("""UPDATE {}
                                             SET {} = {},
                                                 {} = {},
@@ -212,13 +212,13 @@ class TransactionRepo:
             print(query.decode())
         self.conn.commit()
 
-    def upsertRepo(self) -> None:
+    def upsertRepo(self, transactions: list[Transaction]) -> None:
         """Insert temporarily stored transactions to the DB, while ignoring duplicates"""
 
         tempMap = copy.copy(self.TRANSACTIONMAP)
         tempMap.pop('transactionId')
 
-        for transaction in self.tempTransactions:
+        for transaction in transactions:
             query = self.cur.mogrify(SQL("""INSERT INTO {}({})
                                                 VALUES ({})
                                                 ON CONFLICT ON CONSTRAINT {}
@@ -232,7 +232,7 @@ class TransactionRepo:
             print(query.decode())
         self.conn.commit()
 
-    def filterRepo(self, **kwarg) -> list[Transaction]:
+    def filterRepo(self, user: User, **kwarg) -> list[Transaction]:
         """Filter the DB for specific records\n
         amount = (min: float, max: float)\n
         currency = ('CZK': str, ...)\n
@@ -301,9 +301,9 @@ class TransactionRepo:
                                                 Identifier(self.transactionTable),
                                                 SQL(' AND ').join(
                                                     [Composed(filter) for filter in filters])),
-                                            filterValues)                                   
+                                            filterValues)       
+        print(query.decode())                            
         self.cur.execute(query)
-        print(query.decode())
         
         for i, row in enumerate(self.cur.fetchall()): 
             temp.append(copy.deepcopy(Transaction()))
@@ -387,8 +387,8 @@ class TransactionRepo:
                     temp.append(copy.deepcopy(Transaction()))
                     temp[i].name = row['Description']
                     temp[i].title = row['Type']
-                    temp[i].amount = float(row['Amount'])
-                    temp[i].currency = row['Currency']
+                    temp[i].srcAmount = float(row['Amount'])
+                    temp[i].srcCurrency = row['Currency']
                     temp[i].date = datetime.datetime.strptime(row['Completed Date'], '%Y-%m-%d %H:%M:%S')
                     temp[i].bankId = self.bankMap['Revolut']
                     temp[i].userId = user.userId
@@ -410,6 +410,7 @@ class TransactionRepo:
             return value
 
         def parseAmount(rootObj, XPath):
+            """Parse list [Amount, Currency] from Equabank XML"""
             value = []
             try:
                 value.append(float(rootObj.find(XPath, namespace).text))
@@ -419,6 +420,7 @@ class TransactionRepo:
             return value
         
         def parseDate(rootObj, XPath):
+            """Parse date to datatime object from Equabank XML"""
             try:
                 date = datetime.datetime.strptime(rootObj.find(XPath, namespace).text, '%Y-%m-%d+%H:%M')
             except AttributeError:
@@ -440,10 +442,10 @@ class TransactionRepo:
                 temp[i].title = parseRecord(rootDir, ".//nms:Ustrd")
                 temp[i].place = parseRecord(rootDir, ".//nms:PstlAdr/nms:TwnNm")
 
-                temp[i].date = parseDate(rootDir, ".//nms:BookgDt/nms:Dt")  # Parses date to datatime object
+                temp[i].date = parseDate(rootDir, ".//nms:BookgDt/nms:Dt")
 
-                temp[i].amount, temp[i].currency = parseAmount(rootDir, "./nms:Amt")  # Parses list [Amount, Currency]                
-                temp[i].srcAmount, temp[i].srcCurrency  = parseAmount(rootDir, ".//nms:InstdAmt/nms:Amt")  # Parses list [Amount, Currency]
+                temp[i].amount, temp[i].currency = parseAmount(rootDir, "./nms:Amt")                
+                temp[i].srcAmount, temp[i].srcCurrency  = parseAmount(rootDir, ".//nms:InstdAmt/nms:Amt")
 
                 # Parsing just 'DBIT' or 'CRDT', then changing Amount sign if needed
                 dir = parseRecord(rootDir, "./nms:CdtDbtInd") 
@@ -465,25 +467,7 @@ class TransactionRepo:
                 print("Records were loaded incorrectly.")
  
         return temp
-        
-
-"""
-    def saveToCSV(self) -> None:
-        Save transaction table to .CSV
-
-        # Temporary list of dictionaries is created to work as an input for 'writerows'
-        tempSaveTable: list = []
-        for i, record in enumerate(self.repo):
-            tempSaveTable.append({})
-            tempSaveTable[i] = vars(record)
-
-        with open('save.csv', 'w', newline='') as saveFile:
-            writer = csv.DictWriter(saveFile, fieldnames = [key for key in vars(self.repo[0]).keys()])
-            writer.writeheader()
-            writer.writerows(tempSaveTable)
-
-        print('Data successfully saved.')
-"""
+    
 
 def fileOpen(type: str) -> tuple[str]:
     """
@@ -507,31 +491,34 @@ def fileOpen(type: str) -> tuple[str]:
 def login(username: str, password: str, sessions: dict[str, Session]) -> bool:
     """Handle user log-in procedure"""
 
+    global repo
+
     # Create a session object if there's no session opened for 'username'
     if username not in sessions.keys():
-        sessions[username] = Session()
-        sessions[username].user = sessions[username].repo.userQuery(username)
+        tempUser: User | None = repo.userQuery(username)
     else:
         print('User already logged in.')
         return False
 
     # Delete session object in case username/password check (repo.userQuery()) returned None and was unsuccessful
-    if sessions[username].user and password == sessions[username].user.password:
+    if tempUser and password == tempUser.password:
+        sessions[username] = Session(tempUser)
         print('User logged in.')
         return True
     else:
-        print('Username or password invalid.')
+        print('Password invalid.')
         del sessions[username]
         return False
 
-def main():
-    sessions: dict[Session] = {}
+if __name__ == "__main__":
+
+    repo = TransactionRepo()
+    sessions: dict[str, Session] = {}
     
-    zaizu = 'ZaiZu'
-    loggedIn = login(zaizu, 'poop', sessions)
+    loggedIn = login('ZaiZu', 'poop', sessions)
     zaizu = sessions['ZaiZu']
-    zaizu.repo.tempTransactions = zaizu.repo.loadEquabankStatement(zaizu.user)
-    zaizu.repo.upsertRepo()
+    zaizu.tempTransactions = repo.loadRevolutStatement(zaizu.user)
+    repo.upsertRepo(zaizu.tempTransactions)
 
     #repo.updateRepo()
     #repo.upsertRepo()
@@ -542,9 +529,3 @@ def main():
     #filt = table.filterTable(None, 350, 400)
 
     #[print(record) for record in filt]
-
-
-if __name__ == "__main__":
-    main()
-
-    
