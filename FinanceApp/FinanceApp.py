@@ -96,12 +96,12 @@ class TransactionRepo:
         # POSTGRESCONFIG - contains DB connection keywords
         # USERMAP - map USER table columns to Transaction class
         # TRANSACTIONMAP - map TRANSACTION table columns to Transaction class
-        self.POSTGRESCONFIG, self.USERMAP, self.TRANSACTIONMAP = self._readDatabaseConfig('db.ini')
+        self.POSTGRESCONFIG, self.USERMAP, self.TRANSACTIONMAP = self._readDatabaseConfig('./config/db.ini')
 
         self.transactionTable: str = 'transactions'
         self.userTable: str = 'users'
         self.bankTable: str = 'banks'
-        self.upsertReq = 'upsert_constraint' # Internal postgresql constraint for row uniqueness
+        self.upsertReq = 'upsert_constraint' # Internal postgresql constraint for record uniqueness
 
         # Create a database connection with data from .ini file
         self.conn, self.cur = self._connectDB(self.POSTGRESCONFIG)
