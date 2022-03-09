@@ -350,15 +350,17 @@ class TransactionRepo:
 
         return temp
 
-    def monthlySummary(self) -> list[tuple]:
+    def monthlySummary(self, user: User) -> list[tuple]:
         """Return list of monthly incoming/outcoming/difference summaries"""
 
         # Extract the newest and oldest transaction in the DB
-        query = self.cur.mogrify(SQL("SELECT MIN({}), MAX({}) FROM {}").format(
-            Identifier(self.TRANSACTIONMAP['date']),
-            Identifier(self.TRANSACTIONMAP['date']),
-            Identifier(self.transactionTable)))
-        #print(query.decode())
+        query = self.cur.mogrify(SQL("SELECT MIN({}), MAX({}) FROM {} WHERE {} = %s;").format(
+                Identifier(self.TRANSACTIONMAP['date']),
+                Identifier(self.TRANSACTIONMAP['date']),
+                Identifier(self.transactionTable),
+                Identifier(self.TRANSACTIONMAP['userId'])),
+            (user.userId,))
+        print(query.decode())
         self.cur.execute(query)
         startDate, endDate = self.cur.fetchone()
 
@@ -371,27 +373,38 @@ class TransactionRepo:
         for date in rrule(freq=MONTHLY, dtstart=startDate, until=endDate):
             if date != endDate:  # omit last iteration
                 query = self.cur.mogrify(SQL("""SELECT
-                                                    SUM (CASE
-                                                            WHEN {} >= 0 THEN {}
-                                                            ELSE 0
-                                                        END) AS incoming,
-                                                    SUM (CASE
-                                                            WHEN {} < 0 THEN {}
-                                                            ELSE 0
-                                                        END) AS outgoing,
-                                                    SUM ({}) AS difference
+                                                    COALESCE(
+                                                        SUM(
+                                                            CASE
+                                                                WHEN {} >= 0 THEN {}
+                                                                ELSE 0
+                                                            END), 
+                                                        0)  AS incoming,
+                                                    COALESCE(                                                        
+                                                        SUM(
+                                                            CASE
+                                                                WHEN {} < 0 THEN {}
+                                                                ELSE 0
+                                                            END),
+                                                        0) AS outgoing,
+                                                    COALESCE(SUM({}), 0) AS difference
                                                 FROM {}
                                                 WHERE {}  
-                                                    BETWEEN %s 
-                                                    AND %s;""").format(
+                                                    BETWEEN %s AND %s
+                                                AND
+                                                    {} = %s;""").format(
                                                         *[Identifier(self.TRANSACTIONMAP['amount'])]*5,
                                                         Identifier(self.transactionTable),
-                                                        Identifier(self.TRANSACTIONMAP['date'])), 
+                                                        Identifier(self.TRANSACTIONMAP['date']),
+                                                        Identifier(self.TRANSACTIONMAP['userId'])), 
                                                     (str(date),
-                                                    str(date + relativedelta(months=+1))))
-                #print(query.decode())
+                                                    str(date + relativedelta(months=+1)),
+                                                    user.userId))
+                print(query.decode())
                 self.cur.execute(query)
-                tempSummary.append(self.cur.fetchone())
+
+                tempSummary.append(date) # attach starting date to each summary
+                tempSummary.extend(self.cur.fetchone())
 
         return tempSummary
         
@@ -549,8 +562,12 @@ if __name__ == "__main__":
     zaizu = sessions['ZaiZu']
     #zaizu.tempTransactions = repo.loadRevolutStatement(zaizu.user)
     #repo.upsertRepo(zaizu.tempTransactions)
-    po = repo.filterRepo(zaizu.user, bank=('Revolut',))
-    [print(repr(pop)) for pop in po]
+
+    do = repo.monthlySummary(zaizu.user)
+    [print(repr(dod)) for dod in do]
+
+    #po = repo.filterRepo(zaizu.user, bank=('Revolut',))
+    #[print(repr(pop)) for pop in po]
 
     print('a')
     #repo.updateRepo()

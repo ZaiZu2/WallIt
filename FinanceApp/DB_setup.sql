@@ -10,8 +10,8 @@ CREATE TABLE transactions(
     transaction_date TIMESTAMP NOT NULL,
     place TEXT,
     category TEXT,
-    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
-    bank_id BIGINT REFERENCES banks(id) ON DELETE SET NULL,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    bank_id BIGINT NOT NULL REFERENCES banks(id) ON DELETE SET NULL,
 
     CONSTRAINT upsert_constraint UNIQUE (amount, currency, transaction_date, user_id, bank_id);
 )
@@ -28,20 +28,3 @@ CREATE TABLE banks(
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     bank_name TEXT UNIQUE NOT NULL
 );
-
-SELECT
-    SUM (CASE
-            WHEN amount >= 0 THEN amount
-            ELSE 0
-        END) AS incoming,
-    SUM (CASE
-            WHEN amount < 0 THEN amount
-            ELSE 0
-        END) AS outgoing,
-    SUM (amount) AS difference
-FROM
-    transactions
-WHERE
-    transaction_date  
-        BETWEEN '1-1-2021' 
-        AND '1-2-2021';
