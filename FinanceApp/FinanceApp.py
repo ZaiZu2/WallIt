@@ -212,8 +212,8 @@ class TransactionRepo:
                                                 Identifier(self.TRANSACTIONMAP['id']), Placeholder(name='id')),
                                             {'name': transaction.name, 'title': transaction.title, 'place': transaction.place, 
                                             'category': transaction.category, 'id': transaction.transactionId})
-            self.cur.execute(query)
             print(query.decode())
+            self.cur.execute(query)
         self.conn.commit()
 
     def upsertRepo(self, transactions: list[Transaction]) -> None:
@@ -232,13 +232,15 @@ class TransactionRepo:
                                                     SQL(', ').join(Placeholder() * len(transaction.queryList())), 
                                                     Identifier(self.upsertReq)), 
                                                 transaction.queryList())
-            self.cur.execute(query)
             print(query.decode())
+            self.cur.execute(query)
         self.conn.commit()
 
     def filterRepo(self, user: User, **kwarg) -> list[Transaction]:
         """
-        Filter the DB for specific records:
+        Filter the DB for specific records
+
+        list of used keywords
         user: User
         amount = (min: float, max: float)
         currency = ('CZK': str, ...)
