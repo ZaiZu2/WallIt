@@ -470,8 +470,7 @@ class TransactionRepo:
             'date' : 'Completed Date', 
             'title' : 'Description', 
             'amount' : 'Amount', 
-            'currency' : 'Currency' 
-        }
+            'currency' : 'Currency' }
 
         CSVpaths = fileOpen('.csv')
 
@@ -583,17 +582,17 @@ def fileOpen(type: str) -> tuple[str]:
     """
 
     while True:
-        TupleOfPaths: tuple[str] = filedialog.askopenfilenames()
+        tupleOfPaths: tuple[str, ] = filedialog.askopenfilenames()
         correctFileInt = 0
 
-        for path in TupleOfPaths:
-            if os.path.basename(path).endswith(f"{type}"):
+        for path in tupleOfPaths:
+            if str(pathlib.Path(path)).endswith(type):
                 correctFileInt += 1
         
-        if correctFileInt == len(TupleOfPaths): 
-            return TupleOfPaths
+        if correctFileInt == len(tupleOfPaths): 
+            return tupleOfPaths
         else:
-            print(f'{len(TupleOfPaths) - correctFileInt} files have incorrect extension. Repeat.')
+            print(f'{len(tupleOfPaths) - correctFileInt} files have incorrect extension. Repeat.')
 
 def login(username: str, password: str, sessions: dict[str, Session]) -> bool:
     """Handle user log-in procedure
@@ -627,10 +626,9 @@ def login(username: str, password: str, sessions: dict[str, Session]) -> bool:
         return False
 
 if __name__ == "__main__":
-
     repo = TransactionRepo()
     sessions: dict[str, Session] = {}
-    
+
     loggedIn = login('ZaiZu', 'poop', sessions)
     zaizu = sessions['ZaiZu']
     #zaizu.tempTransactions = repo.loadRevolutStatement(zaizu.user)

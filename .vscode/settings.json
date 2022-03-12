@@ -1,7 +1,8 @@
 {
     "python.formatting.provider": "black",
 
-    //"python.pythonPath": "F:/Web Dev/Python/Django/project_x_v2/backend/venv/Scripts/python.exe",
     "python.venvPath": "${workspaceRoot}/FinanceApp_env/Scripts/python3.10.exe",
     "files.autoSave": "afterDelay",
+    "python.linting.enabled": true,
+    "python.linting.mypyEnabled": true,
 }
