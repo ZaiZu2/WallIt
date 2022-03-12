@@ -1,15 +1,14 @@
 #! python3
 
-from locale import currency
 import xml.etree.ElementTree as ET
 import copy
-import os
 import csv
 import datetime
 import tkinter as tk
 from tkinter import filedialog
 import pprint
 
+import pathlib
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, MONTHLY
 import psycopg2
@@ -70,7 +69,7 @@ class Transaction:
         if not isinstance(other, Transaction):
             return TypeError
         
-        return (self.name, self.title, self.amount, self.date, self.place) == (other.name, other.title, other.amount, other.date, other.place) 
+        return (self.name, self.title, self.amount, self.date, self.place) == (other.name, other.title, other.amount, other.date, other.place)
 
     @property
     def category(self):
@@ -86,7 +85,11 @@ class Transaction:
             print('There is no such category. Category not updated.')
 
     def queryList(self) -> list: 
-        """returns transaction attributes in a modifiable, ordered list"""
+        """Returns transaction attributes in a modifiable, ordered list
+
+        Returns:
+            list: ordered list of Transaction attributes
+        """
         return [self.name, self.title, self.amount, self.currency, self.srcAmount, self.srcCurrency, self.date, self.place, self.category, self.userId, self.bankId, self.bankName]
 
 class TransactionRepo:
@@ -96,7 +99,7 @@ class TransactionRepo:
         # POSTGRESCONFIG - contains DB connection keywords
         # USERMAP - map USER table columns to Transaction class
         # TRANSACTIONMAP - map TRANSACTION table columns to Transaction class
-        self.POSTGRESCONFIG, self.USERMAP, self.TRANSACTIONMAP = self._readDatabaseConfig('./config/db.ini')
+        self.POSTGRESCONFIG, self.USERMAP, self.TRANSACTIONMAP = self._readDatabaseConfig()
 
         self.transactionTable: str = 'transactions'
         self.userTable: str = 'users'
@@ -108,18 +111,23 @@ class TransactionRepo:
         self._decToFloat()
         self.bankMap: dict[str, int] = self._parseBankID()
 
-    def _readDatabaseConfig(self, filePath) -> tuple[dict, dict, dict]:
-        """Read DB config file and returns dict of config parameters"""
+    def _readDatabaseConfig(self) -> tuple[dict, dict, dict]:
+        """Read .ini file and load DB config parameters and DB column name mappings
+
+        Returns:
+            tuple[dict, dict, dict]: key-value maps for DB config and DB column mappings
+        """
 
         config = configparser.RawConfigParser()
         config.optionxform = lambda option: option # preserve case-sensitivity of keys/values
-        config.read(filePath)
+        
+        configFilePath = pathlib.Path(__file__).parents[1].joinpath('config','db.ini')
+        config.read(configFilePath)
 
         postgresConfig: dict = {}
         transactionMap: dict = {}
         userMap: dict = {}
-
-        # read separate blocks and extract key-value pairs
+        # Read separate config blocks and extract key-value pairs
         try:
             for key in config['postgresql']:
                 postgresConfig[key] = config['postgresql'][key]
@@ -137,8 +145,15 @@ class TransactionRepo:
 
         return postgresConfig, userMap, transactionMap    
 
-    def _connectDB(self, config: dict): #-> tuple[psycopg2.connect.cursor, psycopg2.connection.cursor]:
-        """Initialize connection to the DB"""
+    def _connectDB(self, config: dict): #-> tuple[psycopg2.cursor, psycopg2.connection]:
+        """Initialize connection to the DB
+
+        Args:
+            config (dict): Dictionary holding connection key-value parameters  
+
+        Returns:
+            tuple[psycopg2.cursor, psycopg2.connection]: curson and connection elements
+        """
 
         # Create DB connection object based on config file
         try:
@@ -160,18 +175,28 @@ class TransactionRepo:
         psycopg2.extensions.register_type(DEC2FLOAT)
 
     def _parseBankID(self) -> dict[str, int]:
-        """Parse dict[bankName] = bankID for all banks in the DB"""
+        """Query mapping of all existing bank names to their ID from DB
+
+        Returns:
+            dict[str, int]: dictionary of ['bankName': 'bankId']
+        """
 
         query = self.cur.mogrify(SQL("""SELECT * FROM {};""").format(Identifier(self.bankTable)))
-        #print(query.decode())
+        print(query.decode())
         self.cur.execute(query)
 
-        # Create dictionary of  
         temp = dict((row[1], row[0]) for row in self.cur.fetchall())
         return temp
 
     def userQuery(self, username: str) -> User | None:
-        """Query the DB with username and return user details"""
+        """Query the DB with username to check if corresponding user exists
+
+        Args:
+            username (str): username
+
+        Returns:
+            User | None: User class if user exists, None if not
+        """
 
         query = self.cur.mogrify(SQL("""SELECT * FROM {} WHERE {} = %s;""").format(
                 Identifier(self.userTable),
@@ -195,7 +220,11 @@ class TransactionRepo:
             return None
 
     def updateRepo(self, transactions: list[Transaction]) -> None:
-        """Update the DB with modified transactions with the use of common transaction ID"""
+        """Update the DB with modified transactions with the use of common transaction ID
+
+        Args:
+            transactions (list[Transaction]): list of Transactions to be updated
+        """
         
         for transaction in transactions:
             query = self.cur.mogrify(SQL("""UPDATE {}
@@ -217,7 +246,11 @@ class TransactionRepo:
         self.conn.commit()
 
     def upsertRepo(self, transactions: list[Transaction]) -> None:
-        """Insert temporarily stored transactions to the DB, while ignoring duplicates"""
+        """Insert temporarily stored transactions to the DB, while ignoring duplicates
+
+        Args:
+            transactions (list[Transaction]): List of transactions to be upserted
+        """
 
         tempMap = copy.copy(self.TRANSACTIONMAP)
         tempMap.pop('transactionId')
@@ -237,18 +270,22 @@ class TransactionRepo:
         self.conn.commit()
 
     def filterRepo(self, user: User, **kwarg) -> list[Transaction]:
-        """
-        Filter the DB for specific records
+        """Query and filter the DB for specific records
 
-        list of used keywords
-        user: User
-        amount = (min: float, max: float)
-        currency = ('CZK': str, ...)
-        srcAmount = (min: float, max: float)
-        srcCurrency = ('CZK': str, ...)
-        date = (min: datetime.datetime, max: datetime.datetime)
-        category = ('grocery': str, ...)
-        bank = ('Revolut': str, ...)
+        Args:
+            user (User): user for whom the query is constructed
+
+            filtering parameters:
+            amount=(min: float, max: float)
+            currency=('CZK': str, ...)
+            srcAmount=(min: float, max: float)
+            srcCurrency=('CZK': str, ...)
+            date = (min: datetime.datetime, max: datetime.datetime)
+            category=('grocery': str, ...)
+            bank=('Revolut': str, ...)
+
+        Returns:
+            list[Transaction]: filtered list of transactions
         """
 
         filters = []
@@ -353,7 +390,14 @@ class TransactionRepo:
         return temp
 
     def monthlySummary(self, user: User) -> list[tuple]:
-        """Return list of monthly incoming/outcoming/difference summaries"""
+        """Query the DB for monthly, juxtaposed incoming/outcoming/difference values
+
+        Args:
+            user (User): user for whom the query is constructed
+
+        Returns:
+            list[tuple]: list of tuples containing incoming/outcoming/difference numbers
+        """
 
         # Extract the newest and oldest transaction in the DB
         query = self.cur.mogrify(SQL("SELECT MIN({}), MAX({}) FROM {} WHERE {} = %s;").format(
@@ -411,7 +455,14 @@ class TransactionRepo:
         return tempSummary
         
     def loadRevolutStatement(self, user: User) -> list[Transaction]:
-        """Load Revolut monthly bank account statement in CSV format"""
+        """Load Transactions from Revolut monthly bank statement in .csv file format
+
+        Args:
+            user (User): user for whom the query is constructed
+
+        Returns:
+            list[Transaction]: list of Transactions which were loaded
+        """
 
         # Maps Revolut CSV columns to Transaction class
         revolutColumnMap: dict = {
@@ -440,7 +491,14 @@ class TransactionRepo:
         return temp
 
     def loadEquabankStatement(self, user: User) -> list[Transaction]:
-        """Parsing Equabank monthly bank account statement in XML format"""
+        """Load Transactions from Equabank monthly bank statement in .xml file format
+
+        Args:
+            user (User): user for whom the query is constructed
+
+        Returns:
+            list[Transaction]: list of Transactions which were loaded
+        """
 
         # TODO: Handling multiple transactions which are not unique by DB standards (UNIQUE amount, currency, date)
         #       Due to incomplete/generalized transaction date in Equabank XML, it's not possible to clearly define transaction uniqueness
@@ -515,9 +573,13 @@ class TransactionRepo:
     
 
 def fileOpen(type: str) -> tuple[str]:
-    """
-    Opens multiple files and checks for specified extension (e.g. '.xml')\n
-    returns Tuple[paths] or empty string 
+    """Open multiple files and checks their type. If not all files are as specified, require to select them again. 
+
+    Args:
+        type (str): expected type of files stated in '.xml' format
+
+    Returns:
+        tuple[str]: _description_
     """
 
     while True:
@@ -534,7 +596,16 @@ def fileOpen(type: str) -> tuple[str]:
             print(f'{len(TupleOfPaths) - correctFileInt} files have incorrect extension. Repeat.')
 
 def login(username: str, password: str, sessions: dict[str, Session]) -> bool:
-    """Handle user log-in procedure"""
+    """Handle user log-in procedure
+
+    Args:
+        username (str): username to be verified in the log-in procedure
+        password (str): password to be verified in the log-in procedure
+        sessions (dict[str, Session]): dictionary of logged-in user sessions {'username': Session}
+
+    Returns:
+        bool: Return True if log-in process was successful
+    """
 
     global repo
 
