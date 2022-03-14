@@ -8,6 +8,7 @@ import tkinter as tk
 from tkinter import filedialog
 import pprint
 
+from typing import Generator
 from contextlib import contextmanager
 import pathlib
 from dateutil.relativedelta import relativedelta
@@ -95,77 +96,104 @@ class Transaction:
 
 class TransactionRepo:
     """Class cointaining temporary transaction data and handling connection and queries to the DB during session"""
-    
-    # POSTGRESCONFIG - contains DB connection keywords
-    POSTGRESCONFIG: dict = {}
-    # TRANSACTIONMAP - map TRANSACTION table columns to Transaction class
-    TRANSACTIONMAP: dict = {}
-    # USERMAP - map USER table columns to Transaction class
-    USERMAP: dict = {}
-
-    @classmethod
-    def _readDatabaseConfig(cls) -> None:
-        """Read .ini file and load database config parameters and database column name mappings
-
-        Raises:
-            Exception: Exception raised in case of corrupted config file
-        """
-
-        config = configparser.RawConfigParser()
-        config.optionxform = lambda option: option # preserve case-sensitivity of keys/values
-        
-        configFilePath = pathlib.Path(__file__).parents[1].joinpath('config','db.ini')
-        config.read(configFilePath)
-
-        # Read separate config blocks and extract key-value pairs
-        try:
-            for key in config['postgresql']:
-                cls.POSTGRESCONFIG[key] = config['postgresql'][key]
-
-            for key in config['transactions']:
-                cls.TRANSACTIONMAP[key] = config['transactions'][key]
-
-            for key in config['users']:
-                cls.USERMAP[key] = config['users'][key]
-        except:
-            raise Exception('Corrupted db.ini file') 
 
     @classmethod
     @contextmanager
-    def establishConnection(cls): # -> Generator[psycopg2.connection, psycopg2.cursor]:
-        """Create ContextManager handling connection with the database
+    def establishConnection(cls): #-> Generator[TransactionRepo, None, None]:
+        """Read .ini file and load database config parameters and database column name mappings.
+        Create ContextManager handling connection with the database.
+
+        Raises:
+            Exception: raised in case of unexpected config file formatting
 
         Yields:
-            connection (psycopg2.connection): connection object
-            cursor (psycopg2.cursor): cursor object
+            Generator[TransactionRepo, None, None]: ????
         """
-        
-        cls._readDatabaseConfig()
 
-        with psycopg2.connect(**cls.POSTGRESCONFIG) as connection:
+        config = configparser.ConfigParser()
+        # Preserve case-sensitivity of keys/values
+        config.optionxform = lambda option: option
+        # Ensure that DECIMAL postgres data type is casted by default to Float and not Decimal
+        DEC2FLOAT = psycopg2.extensions.new_type(
+            psycopg2.extensions.DECIMAL.values,
+            'DEC2FLOAT',
+            lambda value, curs: float(value) if value is not None else None)
+        psycopg2.extensions.register_type(DEC2FLOAT)
+
+        # Read config file
+        configFilePath = pathlib.Path(__file__).parents[1].joinpath('config','postgresConfig.ini')
+        config.read(configFilePath)
+        # Read separate config sections and extract key-value pairs
+        postgresConfig = {}
+        try:
+            for key in config['postgresql']:
+                postgresConfig[key] = config['postgresql'][key]
+        except:
+            raise Exception('Unexpected postgresConfig.ini formatting') 
+
+        with psycopg2.connect(**postgresConfig) as connection:
             with connection.cursor() as cursor:
-                yield connection, cursor
+                yield cls(connection, cursor)
         connection.close()
 
     def __init__(self, connection, cursor):
-        self.transactionTable: str = 'transactions'
-        self.userTable: str = 'users'
-        self.bankTable: str = 'banks'
-        self.upsertReq = 'upsert_constraint' # Internal postgresql constraint for record uniqueness
-
         self.conn = connection
         self.cur = cursor
-        self._decToFloat()
+
+        self.tableMaps: dict[str, tuple[str, dict[str, str]]] = self._loadTableMaps()
         self._bankMap: dict[str, int] = self._parseBankID()
+        self.upsertReq = 'upsert_constraint' # Internal postgresql constraint for Transaction record uniqueness
 
-    def _decToFloat(self) -> None:
-        """Cast decimal database type to Python float type, instead of the default Decimal"""
+    def _loadTableMaps(self) -> dict[str, tuple[str, dict[str, str]]]:
+        """Create data structure containing dicts mapping columnNames to Transaction attributes.
 
-        DEC2FLOAT = psycopg2.extensions.new_type(
-        psycopg2.extensions.DECIMAL.values,
-        'DEC2FLOAT',
-        lambda value, curs: float(value) if value is not None else None)
-        psycopg2.extensions.register_type(DEC2FLOAT)
+        tableMaps['name (in code)'] = ('tableName (from .ini)', {columnName (in code) : column_name (from .ini)})
+        e.g.
+        tableMaps['transactions'] = ('transactions', {'name':'info', 'srcAmount':'src_amount', ...})
+        tableMaps['users'] = ('users', {'firstName':'first_name', 'lastName':'last_name', ...})
+
+        Raises:
+            Exception: raised in case of unexpected config file formatting
+
+        Returns:
+            dict[str, tuple[str, dict]]: 
+        """
+        config = configparser.ConfigParser()
+        config.optionxform = lambda option: option # preserve case-sensitivity of keys/values
+
+        configFilePath = pathlib.Path(__file__).parents[1].joinpath('config','tableMaps.ini')
+        config.read(configFilePath)
+
+        mapList: list[dict] = []
+        # transactionsTableMap - map transactions table columns to Transaction class
+        transactionsTableMap: dict = {}
+        # usersTableMap - map users table columns to Transaction class
+        usersTableMap: dict = {}
+        # banksTableMap - map banks table columns to Transaction class
+        banksTableMap: dict = {}
+
+        # Read separate config blocks and extract key-value pairs
+        try:
+            for key in config['transactions']:
+                transactionsTableMap[key] = config['transactions'][key]
+            mapList.append(transactionsTableMap)
+
+            for key in config['users']:
+                usersTableMap[key] = config['users'][key]
+            mapList.append(usersTableMap)
+
+            for key in config['banks']:
+                banksTableMap[key] = config['banks'][key]
+            mapList.append(banksTableMap)
+        except:
+            raise Exception('Unexpected tableMaps.ini formatting') 
+
+        tableMaps: dict[str, tuple[str, dict]] = {} # data structure explained in docstring
+        callNames = ['transactions', 'users', 'banks']
+        for callName, name, tableMap in zip(callNames, config.sections(), mapList):
+            tableMaps[callName] = (name, tableMap)
+
+        return tableMaps
 
     def _parseBankID(self) -> dict[str, int]:
         """Query mapping of all existing bank names to their ID from DB
@@ -192,8 +220,8 @@ class TransactionRepo:
         """
 
         query = self.cur.mogrify(SQL("""SELECT * FROM {} WHERE {} = %s;""").format(
-                Identifier(self.userTable),
-                Identifier(self.USERMAP['username'])),
+                Identifier(self.tableMaps['users'][0]),
+                Identifier(self.tableMaps['users'][1]['username'])),
             (username,))
         self.cur.execute(query)
         print(query.decode())
@@ -206,7 +234,6 @@ class TransactionRepo:
             temp.password = result[2]
             temp.firstName = result[3]
             temp.lastName = result[4]
-
             return temp
         else:
             print('Your username is invalid.')
@@ -226,12 +253,12 @@ class TransactionRepo:
                                                 {} = {},
                                                 {} = {}
                                             WHERE {} = {};""").format(
-                                                Identifier(self.transactionTable), 
-                                                Identifier(self.TRANSACTIONMAP['name']), Placeholder(name='name'),
-                                                Identifier(self.TRANSACTIONMAP['title']), Placeholder(name='title'),
-                                                Identifier(self.TRANSACTIONMAP['place']), Placeholder(name='place'),
-                                                Identifier(self.TRANSACTIONMAP['category']), Placeholder(name='category'),
-                                                Identifier(self.TRANSACTIONMAP['id']), Placeholder(name='id')),
+                                                Identifier(self.tableMaps['transactions'][0]), 
+                                                Identifier(self.tableMaps['transactions'][1]['name']), Placeholder(name='name'),
+                                                Identifier(self.tableMaps['transactions'][1]['title']), Placeholder(name='title'),
+                                                Identifier(self.tableMaps['transactions'][1]['place']), Placeholder(name='place'),
+                                                Identifier(self.tableMaps['transactions'][1]['category']), Placeholder(name='category'),
+                                                Identifier(self.tableMaps['transactions'][1]['id']), Placeholder(name='id')),
                                             {'name': transaction.name, 'title': transaction.title, 'place': transaction.place, 
                                             'category': transaction.category, 'id': transaction.transactionId})
             print(query.decode())
@@ -245,7 +272,7 @@ class TransactionRepo:
             transactions (list[Transaction]): List of transactions to be upserted
         """
 
-        tempMap = copy.copy(self.TRANSACTIONMAP)
+        tempMap = copy.copy(self.tableMaps['transactions'][1])
         tempMap.pop('transactionId')
 
         for transaction in transactions:
@@ -253,7 +280,7 @@ class TransactionRepo:
                                                 VALUES ({})
                                                 ON CONFLICT ON CONSTRAINT {}
                                                 DO NOTHING;""").format(
-                                                    Identifier(self.transactionTable), 
+                                                    Identifier(self.tableMaps['transactions'][0]), 
                                                     SQL(', ').join(map(Identifier, tuple(tempMap.values()))), 
                                                     SQL(', ').join(Placeholder() * len(transaction.queryList())), 
                                                     Identifier(self.upsertReq)), 
@@ -286,7 +313,7 @@ class TransactionRepo:
 
         # userId - 'userId = %s'
         userFilter = SQL("{} = %s").format(
-            Identifier(self.TRANSACTIONMAP['userId']))
+            Identifier(self.tableMaps['transactions'][1]['userId']))
 
         filters.append(userFilter)
         filterValues.append(user.userId)
@@ -294,7 +321,7 @@ class TransactionRepo:
         # amount - 'amount BETWEEN %s AND %s'
         if 'amount' in kwarg.keys():
             amountFilter = SQL("{} BETWEEN %s AND %s").format(
-                Identifier(self.TRANSACTIONMAP['amount']))
+                Identifier(self.tableMaps['transactions'][1]['amount']))
 
             filters.append(amountFilter)
             filterValues.extend(kwarg['amount'])
@@ -302,7 +329,7 @@ class TransactionRepo:
         # currency - 'currency IN (%s, ...)'
         if 'currency' in kwarg.keys():
             currencyFilter = SQL("{} IN ({})").format(
-                Identifier(self.TRANSACTIONMAP['currency']),
+                Identifier(self.tableMaps['transactions'][1]['currency']),
                 SQL(', ').join(Placeholder() * len(kwarg['currency'])))
 
             filters.append(currencyFilter)
@@ -311,7 +338,7 @@ class TransactionRepo:
         # srcAmount - 'src_amount BETWEEN %s AND %s'
         if 'srcAmount' in kwarg.keys():
             srcAmountFilter = SQL("{} BETWEEN %s AND %s").format(
-                Identifier(self.TRANSACTIONMAP['srcAmount']))
+                Identifier(self.tableMaps['transactions'][1]['srcAmount']))
 
             filters.append(srcAmountFilter)
             filterValues.extend(kwarg['srcAmount'])
@@ -319,7 +346,7 @@ class TransactionRepo:
         # srcCurrency - 'src_currency IN (%s, ...)'
         if 'srcCurrency' in kwarg.keys():
             srcCurrencyFilter = SQL("{} IN ({})").format(
-                Identifier(self.TRANSACTIONMAP['srcCurrency']),
+                Identifier(self.tableMaps['transactions'][1]['srcCurrency']),
                 SQL(', ').join(Placeholder() * len(kwarg['srcCurrency'])))
 
             filters.append(srcCurrencyFilter)
@@ -328,7 +355,7 @@ class TransactionRepo:
         # date - 'transaction_date BETWEEN %s AND %s'
         if 'date' in kwarg.keys():
             dateFilter = SQL("{} BETWEEN %s AND %s").format(
-                Identifier(self.TRANSACTIONMAP['date']))
+                Identifier(self.tableMaps['transactions'][1]['date']))
 
             filters.append(dateFilter)
             filterValues.extend(kwarg['date'])
@@ -336,7 +363,7 @@ class TransactionRepo:
         # category - 'category IN (%s, ...)'
         if 'category' in kwarg.keys():
             categoryFilter = SQL("{} IN ({})").format(
-                Identifier(self.TRANSACTIONMAP['category']),
+                Identifier(self.tableMaps['transactions'][1]['category']),
                 SQL(', ').join(Placeholder() * len(kwarg['category'])))
 
             filters.append(categoryFilter)
@@ -351,7 +378,7 @@ class TransactionRepo:
 
             # build query using bankIds instead of bankNames
             bankFilter = SQL("{} IN ({})").format(
-                Identifier(self.TRANSACTIONMAP['bankId']),
+                Identifier(self.tableMaps['transactions'][1]['bankId']),
                 SQL(', ').join(Placeholder() * len(kwarg['bank'])))
 
             filters.append(bankFilter)
@@ -360,7 +387,7 @@ class TransactionRepo:
 
         temp: list[Transaction] = []
         query = self.cur.mogrify(SQL("SELECT * FROM {} WHERE {};").format(
-                                                Identifier(self.transactionTable),
+                                                Identifier(self.tableMaps['transactions'][0]),
                                                 SQL(' AND ').join(
                                                     [Composed(filter) for filter in filters])),
                                             filterValues)       
@@ -394,10 +421,10 @@ class TransactionRepo:
 
         # Extract the newest and oldest transaction in the DB
         query = self.cur.mogrify(SQL("SELECT MIN({}), MAX({}) FROM {} WHERE {} = %s;").format(
-                Identifier(self.TRANSACTIONMAP['date']),
-                Identifier(self.TRANSACTIONMAP['date']),
-                Identifier(self.transactionTable),
-                Identifier(self.TRANSACTIONMAP['userId'])),
+                Identifier(self.tableMaps['transactions'][1]['date']),
+                Identifier(self.tableMaps['transactions'][1]['date']),
+                Identifier(self.tableMaps['transactions'][0]),
+                Identifier(self.tableMaps['transactions'][1]['userId'])),
             (user.userId,))
         print(query.decode())
         self.cur.execute(query)
@@ -432,10 +459,10 @@ class TransactionRepo:
                                                     BETWEEN %s AND %s
                                                 AND
                                                     {} = %s;""").format(
-                                                        *[Identifier(self.TRANSACTIONMAP['amount'])]*5,
-                                                        Identifier(self.transactionTable),
-                                                        Identifier(self.TRANSACTIONMAP['date']),
-                                                        Identifier(self.TRANSACTIONMAP['userId'])), 
+                                                        *[Identifier(self.tableMaps['transactions'][1]['amount'])]*5,
+                                                        Identifier(self.tableMaps['transactions'][0]),
+                                                        Identifier(self.tableMaps['transactions'][1]['date']),
+                                                        Identifier(self.tableMaps['transactions'][1]['userId'])), 
                                                     (str(date),
                                                     str(date + relativedelta(months=+1)),
                                                     user.userId))
@@ -620,8 +647,7 @@ def login(username: str, password: str, sessions: dict[str, Session]) -> bool:
 
 if __name__ == "__main__":
 
-    with TransactionRepo.establishConnection() as connection:
-        repo = TransactionRepo(*connection)
+    with TransactionRepo.establishConnection() as repo:
 
         #repo = TransactionRepo()
         sessions: dict[str, Session] = {}
