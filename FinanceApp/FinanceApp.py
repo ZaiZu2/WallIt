@@ -8,6 +8,7 @@ import tkinter as tk
 from tkinter import filedialog
 import pprint
 
+from contextlib import contextmanager
 import pathlib
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, MONTHLY
@@ -94,28 +95,20 @@ class Transaction:
 
 class TransactionRepo:
     """Class cointaining temporary transaction data and handling connection and queries to the DB during session"""
+    
+    # POSTGRESCONFIG - contains DB connection keywords
+    POSTGRESCONFIG: dict = {}
+    # TRANSACTIONMAP - map TRANSACTION table columns to Transaction class
+    TRANSACTIONMAP: dict = {}
+    # USERMAP - map USER table columns to Transaction class
+    USERMAP: dict = {}
 
-    def __init__(self):
-        # POSTGRESCONFIG - contains DB connection keywords
-        # USERMAP - map USER table columns to Transaction class
-        # TRANSACTIONMAP - map TRANSACTION table columns to Transaction class
-        self.POSTGRESCONFIG, self.USERMAP, self.TRANSACTIONMAP = self._readDatabaseConfig()
+    @classmethod
+    def _readDatabaseConfig(cls) -> None:
+        """Read .ini file and load database config parameters and database column name mappings
 
-        self.transactionTable: str = 'transactions'
-        self.userTable: str = 'users'
-        self.bankTable: str = 'banks'
-        self.upsertReq = 'upsert_constraint' # Internal postgresql constraint for record uniqueness
-
-        # Create a database connection with data from .ini file
-        self.conn, self.cur = self._connectDB(self.POSTGRESCONFIG)
-        self._decToFloat()
-        self.bankMap: dict[str, int] = self._parseBankID()
-
-    def _readDatabaseConfig(self) -> tuple[dict, dict, dict]:
-        """Read .ini file and load DB config parameters and DB column name mappings
-
-        Returns:
-            tuple[dict, dict, dict]: key-value maps for DB config and DB column mappings
+        Raises:
+            Exception: Exception raised in case of corrupted config file
         """
 
         config = configparser.RawConfigParser()
@@ -124,46 +117,46 @@ class TransactionRepo:
         configFilePath = pathlib.Path(__file__).parents[1].joinpath('config','db.ini')
         config.read(configFilePath)
 
-        postgresConfig: dict = {}
-        transactionMap: dict = {}
-        userMap: dict = {}
         # Read separate config blocks and extract key-value pairs
         try:
             for key in config['postgresql']:
-                postgresConfig[key] = config['postgresql'][key]
+                cls.POSTGRESCONFIG[key] = config['postgresql'][key]
 
             for key in config['transactions']:
-                transactionMap[key] = config['transactions'][key]
+                cls.TRANSACTIONMAP[key] = config['transactions'][key]
 
             for key in config['users']:
-                userMap[key] = config['users'][key]
-
-            #for key in config['banks']:
-            #    userMap[key] = config['banks'][key]
+                cls.USERMAP[key] = config['users'][key]
         except:
-            print('Corrupted db.ini file')
+            raise Exception('Corrupted db.ini file') 
 
-        return postgresConfig, userMap, transactionMap    
+    @classmethod
+    @contextmanager
+    def establishConnection(cls): # -> Generator[psycopg2.connection, psycopg2.cursor]:
+        """Create ContextManager handling connection with the database
 
-    def _connectDB(self, config: dict): #-> tuple[psycopg2.cursor, psycopg2.connection]:
-        """Initialize connection to the DB
-
-        Args:
-            config (dict): Dictionary holding connection key-value parameters  
-
-        Returns:
-            tuple[psycopg2.cursor, psycopg2.connection]: curson and connection elements
+        Yields:
+            connection (psycopg2.connection): connection object
+            cursor (psycopg2.cursor): cursor object
         """
+        
+        cls._readDatabaseConfig()
 
-        # Create DB connection object based on config file
-        try:
-            conn = psycopg2.connect(**config)
-            cur = conn.cursor()
-            print('Succesfully connected to the database.')
-        except:
-            print('Cannot connect to the database.')
+        with psycopg2.connect(**cls.POSTGRESCONFIG) as connection:
+            with connection.cursor() as cursor:
+                yield connection, cursor
+        connection.close()
 
-        return conn, cur
+    def __init__(self, connection, cursor):
+        self.transactionTable: str = 'transactions'
+        self.userTable: str = 'users'
+        self.bankTable: str = 'banks'
+        self.upsertReq = 'upsert_constraint' # Internal postgresql constraint for record uniqueness
+
+        self.conn = connection
+        self.cur = cursor
+        self._decToFloat()
+        self._bankMap: dict[str, int] = self._parseBankID()
 
     def _decToFloat(self) -> None:
         """Cast decimal database type to Python float type, instead of the default Decimal"""
@@ -354,7 +347,7 @@ class TransactionRepo:
             # map bankIds to bankNames and use them as a filtering value to keep the query simple (without a join)
             bankIdList: list = []
             for bankName in kwarg['bank']:
-                bankIdList.append(self.bankMap[bankName])
+                bankIdList.append(self._bankMap[bankName])
 
             # build query using bankIds instead of bankNames
             bankFilter = SQL("{} IN ({})").format(
@@ -485,7 +478,7 @@ class TransactionRepo:
                     temp[i].srcAmount = float(row['Amount'])
                     temp[i].srcCurrency = row['Currency']
                     temp[i].date = datetime.datetime.strptime(row['Completed Date'], '%Y-%m-%d %H:%M:%S')
-                    temp[i].bankId = self.bankMap['Revolut']
+                    temp[i].bankId = self._bankMap['Revolut']
                     temp[i].userId = user.userId
         return temp
 
@@ -557,7 +550,7 @@ class TransactionRepo:
                     if temp[i].srcAmount:
                         temp[i].srcAmount = -temp[i].srcAmount
 
-                temp[i].bankId = self.bankMap['Equabank']
+                temp[i].bankId = self._bankMap['Equabank']
                 temp[i].userId = user.userId
                 
             # PARSING CHECKS
@@ -626,27 +619,31 @@ def login(username: str, password: str, sessions: dict[str, Session]) -> bool:
         return False
 
 if __name__ == "__main__":
-    repo = TransactionRepo()
-    sessions: dict[str, Session] = {}
 
-    loggedIn = login('ZaiZu', 'poop', sessions)
-    zaizu = sessions['ZaiZu']
-    #zaizu.tempTransactions = repo.loadRevolutStatement(zaizu.user)
-    #repo.upsertRepo(zaizu.tempTransactions)
+    with TransactionRepo.establishConnection() as connection:
+        repo = TransactionRepo(*connection)
 
-    do = repo.monthlySummary(zaizu.user)
-    [print(repr(dod)) for dod in do]
+        #repo = TransactionRepo()
+        sessions: dict[str, Session] = {}
 
-    #po = repo.filterRepo(zaizu.user, bank=('Revolut',))
-    #[print(repr(pop)) for pop in po]
+        loggedIn = login('ZaiZu', 'poop', sessions)
+        zaizu = sessions['ZaiZu']
+        #zaizu.tempTransactions = repo.loadRevolutStatement(zaizu.user)
+        #repo.upsertRepo(zaizu.tempTransactions)
 
-    print('a')
-    #repo.updateRepo()
-    #repo.upsertRepo()
-    #repo.monthlySummary()
+        do = repo.monthlySummary(zaizu.user)
+        [print(repr(dod)) for dod in do]
 
-    #print(len(table.table))
-    #table.saveToCSV()
-    #filt = table.filterTable(None, 350, 400)
+        #po = repo.filterRepo(zaizu.user, bank=('Revolut',))
+        #[print(repr(pop)) for pop in po]
 
-    #[print(record) for record in filt]
+        print('a')
+        #repo.updateRepo()
+        #repo.upsertRepo()
+        #repo.monthlySummary()
+
+        #print(len(table.table))
+        #table.saveToCSV()
+        #filt = table.filterTable(None, 350, 400)
+
+        #[print(record) for record in filt]
