@@ -1,5 +1,6 @@
 #! python3
 
+from __future__ import annotations
 import xml.etree.ElementTree as ET
 import copy
 import csv
@@ -99,7 +100,7 @@ class TransactionRepo:
 
     @classmethod
     @contextmanager
-    def establishConnection(cls): #-> Generator[TransactionRepo, None, None]:
+    def establishConnection(cls) -> Generator[TransactionRepo, None, None]:
         """Read .ini file and load database config parameters and database column name mappings.
         Create ContextManager handling connection with the database.
 
@@ -131,21 +132,24 @@ class TransactionRepo:
         except:
             raise Exception('Unexpected postgresConfig.ini formatting') 
 
-        with psycopg2.connect(**postgresConfig) as connection:
-            with connection.cursor() as cursor:
-                yield cls(connection, cursor)
-        connection.close()
+        a = psycopg2.connect(**postgresConfig)
+        try:
+            with a as connection:
+                with connection.cursor() as cursor:
+                    yield cls(connection, cursor)
+        finally:
+            connection.close()
 
-    def __init__(self, connection, cursor):
-        self.conn = connection
-        self.cur = cursor
+    def __init__(self, connection: psycopg2.connection, cursor: psycopg2.cursor):
+        self.conn: psycopg2.connection = connection
+        self.cur: psycopg2.cursor  = cursor
 
         self.tableMaps: dict[str, tuple[str, dict[str, str]]] = self._loadTableMaps()
         self._bankMap: dict[str, int] = self._parseBankID()
         self.upsertReq = 'upsert_constraint' # Internal postgresql constraint for Transaction record uniqueness
 
     def _loadTableMaps(self) -> dict[str, tuple[str, dict[str, str]]]:
-        """Create data structure containing dicts mapping columnNames to Transaction attributes.
+        """Create data structure containing dicts mapping tableNames/columnNames to Transaction attributes.
 
         tableMaps['name (in code)'] = ('tableName (from .ini)', {columnName (in code) : column_name (from .ini)})
         e.g.
@@ -158,6 +162,7 @@ class TransactionRepo:
         Returns:
             dict[str, tuple[str, dict]]: 
         """
+        
         config = configparser.ConfigParser()
         config.optionxform = lambda option: option # preserve case-sensitivity of keys/values
 
