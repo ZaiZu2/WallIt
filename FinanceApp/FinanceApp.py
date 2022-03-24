@@ -129,6 +129,11 @@ class TransactionRepo:
         try:
             for key in config['postgresql']:
                 postgresConfig[key] = config['postgresql'][key]
+
+            # Check if all necessary keywords for DB connection are present
+            if not {'host', 'database', 'user', 'password', 'port'} <= set(postgresConfig):
+                raise Exception
+
         except:
             raise Exception('Unexpected postgresConfig.ini formatting') 
 
@@ -207,7 +212,7 @@ class TransactionRepo:
             dict[str, int]: dictionary of ['bankName': 'bankId']
         """
 
-        query = self.cur.mogrify(SQL("""SELECT * FROM {};""").format(Identifier(self.bankTable)))
+        query = self.cur.mogrify(SQL("""SELECT * FROM {};""").format(Identifier(self.tableMaps['banks'][0])))
         print(query.decode())
         self.cur.execute(query)
 
