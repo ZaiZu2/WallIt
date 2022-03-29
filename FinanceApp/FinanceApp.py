@@ -1,24 +1,43 @@
 #! python3
 
 from __future__ import annotations
+from distutils.command.config import config
 import xml.etree.ElementTree as ET
 import copy
 import csv
 import datetime
-import tkinter as tk
 from tkinter import filedialog
 import pprint
+import functools
 
 from typing import Generator
 from contextlib import contextmanager
 import pathlib
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, MONTHLY
-import psycopg2
+import psycopg2, psycopg2.extensions
 from psycopg2.sql import SQL, Identifier, Placeholder, Composed
 import configparser
+from typing import TypeVar
 
-# TODO: Modify queries to search in linked tables user.id/bank.id
+T = TypeVar("T")
+
+def _dec2float(value: str | None, cur: object) -> float | None:
+    return None if value is None else float(value)
+
+@functools.lru_cache(maxsize=0)
+def _dec2floatType() -> object:
+    return psycopg2.extensions.new_type(
+        psycopg2.extensions.DECIMAL.values, "DEC2FLOAT", _dec2float
+    )
+
+class CaseSensitiveConfigParser(configparser.ConfigParser):
+    def optionxform(self, value: T) -> T:
+        """Preserve case-sensitivity of keys/values while reading config file"""
+        return value
+
+class InvalidConfigError(Exception):
+    pass
 
 class Session:
     """Main class holding user session"""
@@ -101,45 +120,38 @@ class TransactionRepo:
     @classmethod
     @contextmanager
     def establishConnection(cls) -> Generator[TransactionRepo, None, None]:
-        """Read .ini file and load database config parameters and database column name mappings.
+        """Load database config parameters.
         Create ContextManager handling connection with the database.
 
         Raises:
-            Exception: raised in case of unexpected config file formatting
+            InvalidConfigError: raised due to unexpected postgresConfig.ini formatting
 
         Yields:
-            Generator[TransactionRepo, None, None]: ????
+            Generator[TransactionRepo, None, None]: generate repo instance
         """
-
-        config = configparser.ConfigParser()
-        # Preserve case-sensitivity of keys/values
-        config.optionxform = lambda option: option
-        # Ensure that DECIMAL postgres data type is casted by default to Float and not Decimal
-        DEC2FLOAT = psycopg2.extensions.new_type(
-            psycopg2.extensions.DECIMAL.values,
-            'DEC2FLOAT',
-            lambda value, curs: float(value) if value is not None else None)
-        psycopg2.extensions.register_type(DEC2FLOAT)
-
+        
         # Read config file
+        config = CaseSensitiveConfigParser()
         configFilePath = pathlib.Path(__file__).parents[1].joinpath('config','postgresConfig.ini')
         config.read(configFilePath)
-        # Read separate config sections and extract key-value pairs
-        postgresConfig = {}
+
         try:
-            for key in config['postgresql']:
-                postgresConfig[key] = config['postgresql'][key]
+            # Read separate config sections and extract key-value pairs
+            postgresConfig = {}
+            section = config['postgresql']
+            postgresConfig['host'] = section['host']
+            postgresConfig['database'] = section['database']
+            postgresConfig['user'] = section['user']
+            postgresConfig['password'] = section['password']
+            postgresConfig['port'] = section['port']
+        except KeyError as error:
+            raise InvalidConfigError('Unexpected postgresConfig.ini formatting') from error
 
-            # Check if all necessary keywords for DB connection are present
-            if not {'host', 'database', 'user', 'password', 'port'} <= set(postgresConfig):
-                raise Exception
-
-        except:
-            raise Exception('Unexpected postgresConfig.ini formatting') 
-
-        a = psycopg2.connect(**postgresConfig)
+        a = psycopg2.connect(**postgresConfig) # Temporary variable to not handle connect() with try block
         try:
             with a as connection:
+                # Ensure that DECIMAL postgres data type is cast by default to Float and not Decimal
+                psycopg2.extensions.register_type(_dec2floatType(), connection)
                 with connection.cursor() as cursor:
                     yield cls(connection, cursor)
         finally:
