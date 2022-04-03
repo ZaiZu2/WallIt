@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from distutils.command.config import config
+from xml.dom import InvalidAccessErr
 import xml.etree.ElementTree as ET
 import copy
 import csv
@@ -144,8 +145,8 @@ class TransactionRepo:
             postgresConfig['user'] = section['user']
             postgresConfig['password'] = section['password']
             postgresConfig['port'] = section['port']
-        except KeyError as error:
-            raise InvalidConfigError('Unexpected postgresConfig.ini formatting') from error
+        except KeyError as e:
+            raise InvalidConfigError('Unexpected postgresConfig.ini formatting') from e
 
         a = psycopg2.connect(**postgresConfig) # Temporary variable to not handle connect() with try block
         try:
@@ -164,7 +165,9 @@ class TransactionRepo:
         self.tableMaps: dict[str, tuple[str, dict[str, str]]] = self._loadTableMaps()
         self._bankMap: dict[str, int] = self._parseBankID()
         self.upsertReq = 'upsert_constraint' # Internal postgresql constraint for Transaction record uniqueness
-
+ 
+    # TODO: Current data structure (and it's creation process) is very clunky, 
+    #       needs to be redone somewhat smarter
     def _loadTableMaps(self) -> dict[str, tuple[str, dict[str, str]]]:
         """Create data structure containing dicts mapping tableNames/columnNames to Transaction attributes.
 
@@ -180,40 +183,69 @@ class TransactionRepo:
             dict[str, tuple[str, dict]]: 
         """
         
-        config = configparser.ConfigParser()
-        config.optionxform = lambda option: option # preserve case-sensitivity of keys/values
+        def checkPostgresMaps(value: str) -> None:
+            """Ensure that given string is written in snake_case
 
+            Args:
+                value (str): evaluated string
+
+            Raises:
+                InvalidConfigError: due to wrong string formatting
+            """
+
+            # check if string starts or ends with '_'
+            if value.startswith('_') or value.endswith('_'):
+                raise InvalidConfigError('Wrong DB column map - trailing or proceeding underscore not allowed')
+            # check if there are only letters and '_'
+            if not value.replace('_', '').isalpha():
+                raise InvalidConfigError('Wrong DB column map - non-alpha signs present')
+            # check if all letter are lowercase
+            if value.isupper():
+                raise InvalidConfigError('Wrong DB column map - uppercase letters present')
+            # check if there is a double underscore '__' in string
+            for sign in value:
+                repeated = 0
+                if sign == '_': 
+                    repeated += 1
+                    if repeated == 2:
+                        raise InvalidConfigError('Wrong DB column map - double underscore present')
+                else: 
+                    repeated = 0
+
+        config = CaseSensitiveConfigParser()
         configFilePath = pathlib.Path(__file__).parents[1].joinpath('config','tableMaps.ini')
         config.read(configFilePath)
 
-        mapList: list[dict] = []
+        mappedDicts: list[dict] = []
         # transactionsTableMap - map transactions table columns to Transaction class
-        transactionsTableMap: dict = {}
+        transactionsTableMap = {}
         # usersTableMap - map users table columns to Transaction class
-        usersTableMap: dict = {}
+        usersTableMap = {}
         # banksTableMap - map banks table columns to Transaction class
-        banksTableMap: dict = {}
-
+        banksTableMap = {}
+        # callNames - in-app reference names used for calling specific tables
+        callNames = ['transactions', 'users', 'banks']
         # Read separate config blocks and extract key-value pairs
         try:
             for key in config['transactions']:
+                checkPostgresMaps(config['transactions'][key])
                 transactionsTableMap[key] = config['transactions'][key]
-            mapList.append(transactionsTableMap)
-
+            mappedDicts.append(transactionsTableMap)
             for key in config['users']:
+                checkPostgresMaps(config['users'][key])
                 usersTableMap[key] = config['users'][key]
-            mapList.append(usersTableMap)
+            mappedDicts.append(usersTableMap)
 
             for key in config['banks']:
+                checkPostgresMaps(config['banks'][key])
                 banksTableMap[key] = config['banks'][key]
-            mapList.append(banksTableMap)
-        except:
-            raise Exception('Unexpected tableMaps.ini formatting') 
+            mappedDicts.append(banksTableMap)
+        except KeyError:
+            raise InvalidConfigError('Unexpected tableMaps.ini formatting') 
 
         tableMaps: dict[str, tuple[str, dict]] = {} # data structure explained in docstring
-        callNames = ['transactions', 'users', 'banks']
-        for callName, name, tableMap in zip(callNames, config.sections(), mapList):
-            tableMaps[callName] = (name, tableMap)
+        for callName, postgresName, mappedDict in zip(callNames, config.sections(), mappedDicts):
+            tableMaps[callName] = (postgresName, mappedDict)
 
         return tableMaps
 
