@@ -166,8 +166,6 @@ class TransactionRepo:
         self._bankMap: dict[str, int] = self._parseBankID()
         self.upsertReq = 'upsert_constraint' # Internal postgresql constraint for Transaction record uniqueness
  
-    # TODO: Current data structure (and it's creation process) is very clunky, 
-    #       needs to be redone somewhat smarter
     def _loadTableMaps(self) -> dict[str, tuple[str, dict[str, str]]]:
         """Create data structure containing dicts mapping tableNames/columnNames to Transaction attributes.
 
@@ -182,7 +180,10 @@ class TransactionRepo:
         Returns:
             dict[str, tuple[str, dict]]: 
         """
-        
+        # TODO: Current data structure (and it's creation process) is very clunky, 
+        #       needs to be redone somewhat smarter
+        # TODO: Current config parsing is section order sensitive. That's stupid!
+    
         def checkPostgresMaps(value: str) -> None:
             """Ensure that given string is written in snake_case
 
@@ -250,18 +251,27 @@ class TransactionRepo:
         return tableMaps
 
     def _parseBankID(self) -> dict[str, int]:
-        """Query mapping of all existing bank names to their ID from DB
+        """Query mapping of all existing bank names to their Id from DB
 
         Returns:
             dict[str, int]: dictionary of ['bankName': 'bankId']
         """
 
-        query = self.cur.mogrify(SQL("""SELECT * FROM {};""").format(Identifier(self.tableMaps['banks'][0])))
+        query = self.cur.mogrify(SQL("""SELECT {} FROM {};""").format(
+                SQL(',').join(
+                    Identifier(n) for n in [
+                        self.tableMaps['banks'][1]['bankId'],
+                        self.tableMaps['banks'][1]['bankName']
+                    ]
+                ),
+                Identifier(self.tableMaps['banks'][0])
+            ),
+        )
         print(query.decode())
         self.cur.execute(query)
 
-        temp = dict((row[1], row[0]) for row in self.cur.fetchall())
-        return temp
+        bankMap = dict((row[1], row[0]) for row in self.cur.fetchall())
+        return bankMap
 
     def userQuery(self, username: str) -> User | None:
         """Query the DB with username to check if corresponding user exists
