@@ -1,8 +1,6 @@
 #! python3
 
 from __future__ import annotations
-from distutils.command.config import config
-from xml.dom import InvalidAccessErr
 import xml.etree.ElementTree as ET
 import copy
 import csv
@@ -41,12 +39,19 @@ class CaseSensitiveConfigParser(configparser.ConfigParser):
         return value
 
 
+class LoginFailedError(Exception):
+    pass
+
+
 class InvalidConfigError(Exception):
     pass
 
 
 class Session:
     """Main class holding user session"""
+
+    # Dictionary holding all active user sessions
+    openSessions: dict[str, Session] = {}
 
     def __init__(self, user):
         self.user: User = user
@@ -190,9 +195,8 @@ class TransactionRepo:
         except KeyError as e:
             raise InvalidConfigError("Unexpected postgresConfig.ini formatting") from e
 
-        a = psycopg2.connect(
-            **postgresConfig
-        )  # Temporary variable to not handle connect() with try block
+        # Temporary variable to not handle connect() with try block
+        a = psycopg2.connect(**postgresConfig)
         try:
             with a as connection:
                 # Ensure that DECIMAL postgres data type is cast by default to Float and not Decimal
@@ -207,8 +211,9 @@ class TransactionRepo:
         self.cur: psycopg2.cursor = cursor
 
         self.tableMaps: dict[str, tuple[str, dict[str, str]]] = self._loadTableMaps()
-        self._bankMap: dict[str, int] = self._parseBankID()
-        self.upsertReq = "upsert_constraint"  # Internal postgresql constraint for Transaction record uniqueness
+        self._bankMap: dict[str, int] = self._parseBankId()
+        # Internal postgresql constraint for Transaction record uniqueness
+        self.upsertReq = "upsert_constraint"
 
     def _loadTableMaps(self) -> dict[str, tuple[str, dict[str, str]]]:
         """Create data structure containing dicts mapping tableNames/columnNames to Transaction attributes.
@@ -308,7 +313,7 @@ class TransactionRepo:
 
         return tableMaps
 
-    def _parseBankID(self) -> dict[str, int]:
+    def _parseBankId(self) -> dict[str, int]:
         """Query mapping of all existing bank names to their Id from DB
 
         Returns:
@@ -318,10 +323,10 @@ class TransactionRepo:
         query = self.cur.mogrify(
             SQL("""SELECT {} FROM {};""").format(
                 SQL(",").join(
-                    Identifier(n)
-                    for n in [
-                        self.tableMaps["banks"][1]["bankId"],
+                    Identifier(column)
+                    for column in [
                         self.tableMaps["banks"][1]["bankName"],
+                        self.tableMaps["banks"][1]["bankId"],
                     ]
                 ),
                 Identifier(self.tableMaps["banks"][0]),
@@ -330,21 +335,37 @@ class TransactionRepo:
         print(query.decode())
         self.cur.execute(query)
 
-        bankMap = dict((row[1], row[0]) for row in self.cur.fetchall())
+        bankMap = dict((row[0], row[1]) for row in self.cur.fetchall())
         return bankMap
 
-    def userQuery(self, username: str) -> User | None:
+    def userQuery(self, username: str) -> User:
         """Query the DB with username to check if corresponding user exists
 
         Args:
-            username (str): username
+            username (str): username used during login
+
+        Raises:
+            LoginFailedError: exception raised due to wrong username
 
         Returns:
-            User | None: User class if user exists, None if not
+            User: class instance filled with queried user details
         """
+
+        # TODO: query returns username while using username to find correct user in the DB.
+        # Pointless.
 
         query = self.cur.mogrify(
             SQL("""SELECT {} FROM {} WHERE {} = %s;""").format(
+                SQL(", ").join(
+                    Identifier(n)
+                    for n in [
+                        self.tableMaps["users"][1]["userId"],
+                        self.tableMaps["users"][1]["username"],
+                        self.tableMaps["users"][1]["password"],
+                        self.tableMaps["users"][1]["firstName"],
+                        self.tableMaps["users"][1]["lastName"],
+                    ]
+                ),
                 Identifier(self.tableMaps["users"][0]),
                 Identifier(self.tableMaps["users"][1]["username"]),
             ),
@@ -363,8 +384,7 @@ class TransactionRepo:
             temp.lastName = result[4]
             return temp
         else:
-            print("Your username is invalid.")
-            return None
+            raise LoginFailedError("Your username is invalid.")
 
     def updateRepo(self, transactions: list[Transaction]) -> None:
         """Update the DB with modified transactions with the use of common transaction ID
@@ -601,26 +621,26 @@ class TransactionRepo:
                 query = self.cur.mogrify(
                     SQL(
                         """SELECT
-                                                    COALESCE(
-                                                        SUM(
-                                                            CASE
-                                                                WHEN {} >= 0 THEN {}
-                                                                ELSE 0
-                                                            END), 
-                                                        0)  AS incoming,
-                                                    COALESCE(                                                        
-                                                        SUM(
-                                                            CASE
-                                                                WHEN {} < 0 THEN {}
-                                                                ELSE 0
-                                                            END),
-                                                        0) AS outgoing,
-                                                    COALESCE(SUM({}), 0) AS difference
-                                                FROM {}
-                                                WHERE {}  
-                                                    BETWEEN %s AND %s
-                                                AND
-                                                    {} = %s;"""
+                                COALESCE(
+                                    SUM(
+                                        CASE
+                                            WHEN {} >= 0 THEN {}
+                                            ELSE 0
+                                        END), 
+                                    0)  AS incoming,
+                                COALESCE(                                                        
+                                    SUM(
+                                        CASE
+                                            WHEN {} < 0 THEN {}
+                                            ELSE 0
+                                        END),
+                                    0) AS outgoing,
+                                COALESCE(SUM({}), 0) AS difference
+                            FROM {}
+                            WHERE {}  
+                                BETWEEN %s AND %s
+                            AND
+                                {} = %s;"""
                     ).format(
                         *[Identifier(self.tableMaps["transactions"][1]["amount"])] * 5,
                         Identifier(self.tableMaps["transactions"][0]),
@@ -793,36 +813,40 @@ def fileOpen(type: str) -> tuple[str]:
             )
 
 
-def login(username: str, password: str, sessions: dict[str, Session]) -> bool:
+def login(
+    username: str, password: str, sessions: dict[str, Session], repo: TransactionRepo
+) -> None:
     """Handle user log-in procedure
 
     Args:
         username (str): username to be verified in the log-in procedure
         password (str): password to be verified in the log-in procedure
         sessions (dict[str, Session]): dictionary of logged-in user sessions {'username': Session}
+        repo (TransactionRepo): repo used for DB queries
 
-    Returns:
-        bool: Return True if log-in process was successful
+    Raises:
+        LoginFailedError: raised during unsuccessful login process
     """
+    # TODO: In case a user is already logged in, subsequent login will be impossible.
+    # Need to implement mechanism to tackle this - e.g. terminate the old session.
 
-    global repo
+    try:
+        # Create a session object if there's no session opened for 'username'
+        if username not in sessions.keys():
+            # Check if username exists in the DB
+            tempUser = repo.userQuery(username)
+        else:
+            raise LoginFailedError("User already logged in.")
 
-    # Create a session object if there's no session opened for 'username'
-    if username not in sessions.keys():
-        tempUser: User | None = repo.userQuery(username)
-    else:
-        print("User already logged in.")
-        return False
+        # Confirm password correctness and add user to active sessions
+        if tempUser and password == tempUser.password:
+            sessions[username] = Session(tempUser)
+            print("User logged in.")
+        else:
+            raise LoginFailedError("Password invalid.")
 
-    # Delete session object in case username/password check (repo.userQuery()) returned None and was unsuccessful
-    if tempUser and password == tempUser.password:
-        sessions[username] = Session(tempUser)
-        print("User logged in.")
-        return True
-    else:
-        print("Password invalid.")
-        del sessions[username]
-        return False
+    except LoginFailedError:
+        raise
 
 
 if __name__ == "__main__":
@@ -830,10 +854,9 @@ if __name__ == "__main__":
     with TransactionRepo.establishConnection() as repo:
 
         # repo = TransactionRepo()
-        sessions: dict[str, Session] = {}
 
-        loggedIn = login("ZaiZu", "poop", sessions)
-        zaizu = sessions["ZaiZu"]
+        login("ZaiZu", "poop", Session.openSessions, repo)
+        zaizu = Session.openSessions["ZaiZu"]
         # zaizu.tempTransactions = repo.loadRevolutStatement(zaizu.user)
         # repo.upsertRepo(zaizu.tempTransactions)
 
