@@ -9,7 +9,7 @@ from tkinter import filedialog
 import pprint
 import functools
 
-from typing import Generator
+from typing import Generator, Any, Optional, Union, TypeVar
 from contextlib import contextmanager
 import pathlib
 from dateutil.relativedelta import relativedelta
@@ -17,7 +17,6 @@ from dateutil.rrule import rrule, MONTHLY
 import psycopg2, psycopg2.extensions
 from psycopg2.sql import SQL, Identifier, Placeholder, Composed
 import configparser
-from typing import TypeVar
 
 T = TypeVar("T")
 
@@ -63,12 +62,12 @@ class Session:
 class User:
     """Class representing logged-in user"""
 
-    def __init__(self):
-        self.userId: int | None = None
-        self.username: str | None = None
-        self.password: str = None
-        self.firstName: str | None = None
-        self.lastName: str | None = None
+    def __init__(self, userId, username, password, firstName, lastName):
+        self.userId: int = userId
+        self.username: str = username
+        self.password: str = password
+        self.firstName: str = firstName
+        self.lastName: str = lastName
 
     def __repr__(self) -> str:
         return f"{self.firstName} {self.lastName} under username {self.username}"
@@ -376,12 +375,13 @@ class TransactionRepo:
         result = self.cur.fetchone()
 
         if result:
-            temp = User()
-            temp.userId = result[0]
-            temp.username = result[1]
-            temp.password = result[2]
-            temp.firstName = result[3]
-            temp.lastName = result[4]
+            temp = User(
+                userId = result[0],
+                username = result[1],
+                password = result[2],
+                firstName = result[3],
+                lastName = result[4]
+            )
             return temp
         else:
             raise LoginFailedError("Your username is invalid.")
@@ -397,11 +397,11 @@ class TransactionRepo:
             query = self.cur.mogrify(
                 SQL(
                     """UPDATE {}
-                                            SET {} = {},
-                                                {} = {},
-                                                {} = {},
-                                                {} = {}
-                                            WHERE {} = {};"""
+                            SET {} = {},
+                                {} = {},
+                                {} = {},
+                                {} = {}
+                            WHERE {} = {};"""
                 ).format(
                     Identifier(self.tableMaps["transactions"][0]),
                     Identifier(self.tableMaps["transactions"][1]["name"]),
@@ -441,9 +441,9 @@ class TransactionRepo:
             query = self.cur.mogrify(
                 SQL(
                     """INSERT INTO {}({})
-                                                VALUES ({})
-                                                ON CONFLICT ON CONSTRAINT {}
-                                                DO NOTHING;"""
+                            VALUES ({})
+                            ON CONFLICT ON CONSTRAINT {}
+                            DO NOTHING;"""
                 ).format(
                     Identifier(self.tableMaps["transactions"][0]),
                     SQL(", ").join(map(Identifier, tuple(tempMap.values()))),
@@ -456,115 +456,129 @@ class TransactionRepo:
             self.cur.execute(query)
         self.conn.commit()
 
-    def filterRepo(self, user: User, **kwarg) -> list[Transaction]:
+    def filterRepo(
+        self,
+        user: User,
+        *,
+        amount: tuple[float, float] = None,
+        currency: tuple = None,
+        srcAmount: tuple[float, float] = None,
+        srcCurrency: tuple = None,
+        date: tuple[datetime.datetime, datetime.datetime] = None,
+        category: tuple = None,
+        bank: tuple = None,
+    ) -> list[Transaction]:
         """Query and filter the DB for specific records
 
         Args:
             user (User): user for whom the query is constructed
-
-            filtering parameters:
-            amount=(min: float, max: float)
-            currency=('CZK': str, ...)
-            srcAmount=(min: float, max: float)
-            srcCurrency=('CZK': str, ...)
-            date = (min: datetime.datetime, max: datetime.datetime)
-            category=('grocery': str, ...)
-            bank=('Revolut': str, ...)
+            amount (tuple[float, float], optional): (MIN, MAX). Defaults to None.
+            currency (tuple, optional): list of currencies. Defaults to None.
+            srcAmount (tuple[float, float], optional): (MIN, MAX). Defaults to None.
+            srcCurrency (tuple, optional): list of currencies. Defaults to None.
+            date (tuple[datetime.datetime, datetime.datetime], optional): _description_. Defaults to None.
+            category (tuple, optional): list of categories. Defaults to None.
+            bank (tuple, optional): list of bank names. Defaults to None.
 
         Returns:
             list[Transaction]: filtered list of transactions
         """
+        # TODO: Instead of bank names, use bankIds as a filtering input.
+        # This will remove unnecessary code.
+        # TODO: Wierd collection process of different filters. At zleast it works.
+        # Can be done in a smarter way?
 
-        filters = []
-        filterValues = []
+        # list appended with generated SQL excerpts
+        filters: list[Composed] = []
+        # list containing values used for above exerpts
+        filterValues: list[int | float | str | datetime.datetime] = []
 
         # userId - 'userId = %s'
         userFilter = SQL("{} = %s").format(
             Identifier(self.tableMaps["transactions"][1]["userId"])
         )
-
         filters.append(userFilter)
         filterValues.append(user.userId)
 
         # amount - 'amount BETWEEN %s AND %s'
-        if "amount" in kwarg.keys():
+        if amount:
             amountFilter = SQL("{} BETWEEN %s AND %s").format(
                 Identifier(self.tableMaps["transactions"][1]["amount"])
             )
-
             filters.append(amountFilter)
-            filterValues.extend(kwarg["amount"])
+            filterValues.extend(amount)
 
         # currency - 'currency IN (%s, ...)'
-        if "currency" in kwarg.keys():
+        if currency:
             currencyFilter = SQL("{} IN ({})").format(
                 Identifier(self.tableMaps["transactions"][1]["currency"]),
-                SQL(", ").join(Placeholder() * len(kwarg["currency"])),
+                SQL(", ").join(Placeholder() * len(currency)),
             )
-
             filters.append(currencyFilter)
-            filterValues.extend(kwarg["currency"])
+            filterValues.extend(currency)
 
         # srcAmount - 'src_amount BETWEEN %s AND %s'
-        if "srcAmount" in kwarg.keys():
+        if srcAmount:
             srcAmountFilter = SQL("{} BETWEEN %s AND %s").format(
                 Identifier(self.tableMaps["transactions"][1]["srcAmount"])
             )
-
             filters.append(srcAmountFilter)
-            filterValues.extend(kwarg["srcAmount"])
+            filterValues.extend(srcAmount)
 
         # srcCurrency - 'src_currency IN (%s, ...)'
-        if "srcCurrency" in kwarg.keys():
+        if srcCurrency:
             srcCurrencyFilter = SQL("{} IN ({})").format(
                 Identifier(self.tableMaps["transactions"][1]["srcCurrency"]),
-                SQL(", ").join(Placeholder() * len(kwarg["srcCurrency"])),
+                SQL(", ").join(Placeholder() * len(srcCurrency)),
             )
-
             filters.append(srcCurrencyFilter)
-            filterValues.extend(kwarg["srcCurrency"])
+            filterValues.extend(srcCurrency)
 
         # date - 'transaction_date BETWEEN %s AND %s'
-        if "date" in kwarg.keys():
+        if date:
             dateFilter = SQL("{} BETWEEN %s AND %s").format(
                 Identifier(self.tableMaps["transactions"][1]["date"])
             )
-
             filters.append(dateFilter)
-            filterValues.extend(kwarg["date"])
+            filterValues.extend(date)
 
         # category - 'category IN (%s, ...)'
-        if "category" in kwarg.keys():
+        if category:
             categoryFilter = SQL("{} IN ({})").format(
                 Identifier(self.tableMaps["transactions"][1]["category"]),
-                SQL(", ").join(Placeholder() * len(kwarg["category"])),
+                SQL(", ").join(Placeholder() * len(category)),
             )
-
             filters.append(categoryFilter)
-            filterValues.extend(kwarg["category"])
+            filterValues.extend(category)
 
         # bank - 'bank_id IN (%s, ...)'
-        if "bank" in kwarg.keys():
-            # map bankIds to bankNames and use them as a filtering value to keep the query simple (without a join)
-            bankIdList: list = []
-            for bankName in kwarg["bank"]:
+        if bank:
+            # map bankIds to bankNames and use them as a filtering value
+            # to keep the query simple (without a join)
+            bankIdList: list[int] = []
+            for bankName in bank:
                 bankIdList.append(self._bankMap[bankName])
 
             # build query using bankIds instead of bankNames
             bankFilter = SQL("{} IN ({})").format(
                 Identifier(self.tableMaps["transactions"][1]["bankId"]),
-                SQL(", ").join(Placeholder() * len(kwarg["bank"])),
+                SQL(", ").join(Placeholder() * len(bank)),
             )
-
             filters.append(bankFilter)
             # use mapped bankIds as the filtering values
             filterValues.extend(bankIdList)
 
         temp: list[Transaction] = []
         query = self.cur.mogrify(
-            SQL("SELECT * FROM {} WHERE {};").format(
+            SQL("SELECT {} FROM {} WHERE {};").format(
+                SQL(", ").join(
+                    [
+                        Identifier(column)
+                        for column in self.tableMaps["transactions"][1].values()
+                    ]
+                ),
                 Identifier(self.tableMaps["transactions"][0]),
-                SQL(" AND ").join([Composed(filter) for filter in filters]),
+                SQL(" AND ").join([filter for filter in filters]),
             ),
             filterValues,
         )
@@ -625,16 +639,16 @@ class TransactionRepo:
                                     SUM(
                                         CASE
                                             WHEN {} >= 0 THEN {}
-                                            ELSE 0
-                                        END), 
-                                    0)  AS incoming,
+                                        ELSE 0
+                                    END), 
+                                0)  AS incoming,
                                 COALESCE(                                                        
                                     SUM(
                                         CASE
                                             WHEN {} < 0 THEN {}
-                                            ELSE 0
-                                        END),
-                                    0) AS outgoing,
+                                        ELSE 0
+                                    END),
+                                0) AS outgoing,
                                 COALESCE(SUM({}), 0) AS difference
                             FROM {}
                             WHERE {}  
@@ -860,11 +874,16 @@ if __name__ == "__main__":
         # zaizu.tempTransactions = repo.loadRevolutStatement(zaizu.user)
         # repo.upsertRepo(zaizu.tempTransactions)
 
-        do = repo.monthlySummary(zaizu.user)
-        [print(repr(dod)) for dod in do]
+        # do = repo.monthlySummary(zaizu.user)
+        # [print(repr(dod)) for dod in do]
 
-        # po = repo.filterRepo(zaizu.user, bank=('Revolut',))
-        # [print(repr(pop)) for pop in po]
+        po = repo.filterRepo(
+            zaizu.user,
+            amount=(50, 2000),
+            currency=("EUR", "CZK"),
+            date=(datetime.datetime(2021, 1, 1), datetime.datetime(2022, 10, 1)),
+        )
+        [print(pop) for pop in po]
 
         print("a")
         # repo.updateRepo()

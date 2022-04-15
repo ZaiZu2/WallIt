@@ -1,6 +1,7 @@
 #! python3
+from datetime import datetime
 from unittest import mock
-import pytest, sys, pathlib
+import pytest, sys, pathlib, typing
 
 PROJECT_ROOT = pathlib.Path(__file__).parents[1].resolve()
 sys.path.append(str(PROJECT_ROOT))
@@ -9,11 +10,14 @@ from unittest.mock import patch
 import FinanceApp.FinanceApp
 from FinanceApp.FinanceApp import (
     TransactionRepo,
+    User,
     InvalidConfigError,
+    LoginFailedError,
     CaseSensitiveConfigParser,
 )
 
-# TODO: Methods called in TransactionRepo __init__ are called again with mocked config files in subsequent test cases
+# Methods called in TransactionRepo __init__ (during this fixture) are redundant. 
+# They called again with mocked config files in subsequent test cases
 @pytest.fixture()
 def instantiateRepo():
     with (
@@ -22,6 +26,10 @@ def instantiateRepo():
     ):
         with TransactionRepo.establishConnection() as repo:
             return repo
+
+@pytest.fixture()
+def createUser():
+    return User('1', 'ZaiZu', 'passcode', 'John', 'Smith')
 
 class TestRepoInstantiation:
     """Test TransactionRepo's __init__ method and methods called within it"""
@@ -167,7 +175,7 @@ class TestRepoInstantiation:
             return_value=createTempConfigFile,
         ):
             tableMaps = instantiateRepo._loadTableMaps()
-            print("a")
+
             # Assert
             assert tableMaps["transactions"][0] == "transactions"
             assert tableMaps["transactions"][1]["name"] == "val_a"
@@ -177,6 +185,117 @@ class TestRepoInstantiation:
             assert tableMaps["users"][1]["password"] == "val_c"
             assert tableMaps["users"][1]["lastName"] == "val_d"
 
-    # Not much to unit test, a pure QUERY method 
-    def test_parseBankId(self, instantiateRepo):
+
+class TestQueryProcessing:
+    """Test methods responsible for querying and postprocessing queries"""
+
+    def test_parseBankId(self, instantiateRepo: TransactionRepo) -> None:
+        """Check if query return values are correctly cast to dict
+
+        Args:
+            instantiateRepo (TransactionRepo): fixture instantiating repo
+        """
+
+        # Arrange
+        expected = instantiateRepo.cur.fetchall.return_value = [
+            ("Equabank", 1),
+            ("Revolut", 2),
+            ("CityBank", 3),
+        ]
+
+        # Act
+        bankMap = instantiateRepo._parseBankId()
+
+        # Assert
+        for i, (bankName, bankId) in enumerate(bankMap.items()):
+            assert isinstance(bankName, str)
+            assert isinstance(bankId, int)
+
+            # Check if 'expected' values are same as values cast to dict
+            assert bankName == expected[i][0]
+            assert bankId == expected[i][1]
+
+    def test_successfulUserQuery(self, instantiateRepo: TransactionRepo) -> None:
+        """Check if query return values are correctly cast to User class instance
+
+        Args:
+            instantiateRepo (TransactionRepo): fixture instantiating repo
+        """
+
+        # Arrange
+        expected = instantiateRepo.cur.fetchone.return_value = (
+            1,
+            "ZaiZu",
+            "password",
+            "John",
+            "Smith",
+        )
+
+        # Act
+        user = instantiateRepo.userQuery(expected[1])
+
+        # Assert
+        assert isinstance(user.userId, int)
+        assert user.userId == expected[0]
+        assert isinstance(user.username, str)
+        assert user.username == expected[1]
+        assert isinstance(user.password, str)
+        assert user.password == expected[2]
+        assert isinstance(user.firstName, str)
+        assert user.firstName == expected[3]
+        assert isinstance(user.lastName, str)
+        assert user.lastName == expected[4]
+
+    def test_emptyUserQuery(self, instantiateRepo: TransactionRepo) -> None:
+        """Check if query return values are correctly cast to User class instance
+
+        Args:
+            instantiateRepo (TransactionRepo): fixture instantiating repo
+        """
+
+        # Arrange
+        expected = instantiateRepo.cur.fetchone.return_value = ()
+
+        # Assert
+        with pytest.raises(LoginFailedError):
+            # Act
+            user = instantiateRepo.userQuery("wrongUsername")
+
+
+class TestStatementImports:
+    """Test methods used for importing statements from various banks"""
+
+    def test_RevolutImport(self, tmp_path) -> None:
         pass
+
+
+
+
+
+
+
+
+'''
+    def test_filterRepo(self, instantiateRepo: TransactionRepo, createUser: User) -> None:
+
+        # Arrange
+        amount = (50, 200)
+        currency = ('CZK', 'EUR')
+        srcAmount = (50, 200)
+        srcCurrency = ('CZK', 'EUR')
+        date = (datetime(2020, 2, 1), datetime(2021, 10, 11))
+        category = ('savings', 'bills')
+        bank = ('Revolut', 'Equabank')
+
+        # Act
+        instantiateRepo.filterRepo(
+            createUser,
+            amount=amount,
+            currency=currency,
+            srcAmount=srcAmount,
+            srcCurrency=srcCurrency,
+            date=date,
+            category=category,
+            bank=bank
+        )
+'''
