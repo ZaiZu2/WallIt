@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import xml.etree.ElementTree as ET
+
 import copy
 import csv
 import datetime
@@ -46,6 +47,10 @@ class InvalidConfigError(Exception):
     pass
 
 
+class FileError(Exception):
+    pass
+
+
 class Session:
     """Main class holding user session"""
 
@@ -80,6 +85,20 @@ class TransactionService:
 class Transaction:
     """Class cointaining a transaction record"""
 
+    categories: tuple = (
+        "savings",
+        "grocery",
+        "rent",
+        "bills",
+        "restaurants",
+        "holidays",
+        "hobbies",
+        "experiences",
+        "presents",
+        "petty expenses",
+        None,
+    )
+
     def __init__(self):
         self.transactionId: int | None = None
         self.name: str | None = None
@@ -94,20 +113,6 @@ class Transaction:
         self.userId: int | None = None
         self.bankId: int | None = None
         self.bankName: str | None = None
-
-        self.categories: tuple = (
-            "savings",
-            "grocery",
-            "rent",
-            "bills",
-            "restaurants",
-            "holidays",
-            "hobbies",
-            "experiences",
-            "presents",
-            "petty expenses",
-            None,
-        )
 
     def __repr__(self) -> str:
         return f"{self.__class__.__qualname__}: {self.name}, {self.amount} {self.currency}, {self.date}"
@@ -376,11 +381,11 @@ class TransactionRepo:
 
         if result:
             temp = User(
-                userId = result[0],
-                username = result[1],
-                password = result[2],
-                firstName = result[3],
-                lastName = result[4]
+                userId=result[0],
+                username=result[1],
+                password=result[2],
+                firstName=result[3],
+                lastName=result[4],
             )
             return temp
         else:
@@ -476,7 +481,7 @@ class TransactionRepo:
             currency (tuple, optional): list of currencies. Defaults to None.
             srcAmount (tuple[float, float], optional): (MIN, MAX). Defaults to None.
             srcCurrency (tuple, optional): list of currencies. Defaults to None.
-            date (tuple[datetime.datetime, datetime.datetime], optional): _description_. Defaults to None.
+            date (tuple[datetime.datetime, datetime.datetime], optional): (BEFORE, AFTER). Defaults to None.
             category (tuple, optional): list of categories. Defaults to None.
             bank (tuple, optional): list of bank names. Defaults to None.
 
@@ -675,156 +680,189 @@ class TransactionRepo:
         """Load Transactions from Revolut monthly bank statement in .csv file format
 
         Args:
-            user (User): user for whom the query is constructed
+            user (User): user for whom the Transactions are loaded
 
         Returns:
             list[Transaction]: list of Transactions which were loaded
         """
 
-        # Maps Revolut CSV columns to Transaction class
-        revolutColumnMap: dict = {
-            "name": "Type",
-            "date": "Completed Date",
-            "title": "Description",
-            "amount": "Amount",
-            "currency": "Currency",
-        }
-
         CSVpaths = fileOpen(".csv")
-
         temp: list[Transaction] = []
+
         for path in CSVpaths:
             with open(path, "r", newline="") as csvFile:
                 reader = csv.DictReader(csvFile)
-                for i, row in enumerate(reader):
-                    temp.append(copy.deepcopy(Transaction()))
-                    temp[i].name = row["Description"]
-                    temp[i].title = row["Type"]
-                    temp[i].srcAmount = float(row["Amount"])
-                    temp[i].srcCurrency = row["Currency"]
-                    temp[i].date = datetime.datetime.strptime(
-                        row["Completed Date"], "%Y-%m-%d %H:%M:%S"
+                try:
+                    for row in reader:
+                        temp.append(copy.deepcopy(Transaction()))
+                        temp[-1].name = row["Type"]
+                        temp[-1].title = row["Description"]
+                        temp[-1].srcAmount = float(row["Amount"])
+                        temp[-1].srcCurrency = row["Currency"]
+                        temp[-1].date = datetime.datetime.strptime(
+                            row["Completed Date"], "%Y-%m-%d %H:%M:%S"
+                        )
+                        temp[-1].bankId = self._bankMap["Revolut"]
+                        temp[-1].userId = user.userId
+                except (KeyError, ValueError):
+                    raise FileError(
+                        f"Error while reading {path.name}. Wrong .csv file structure. Import aborted."
                     )
-                    temp[i].bankId = self._bankMap["Revolut"]
-                    temp[i].userId = user.userId
         return temp
 
     def loadEquabankStatement(self, user: User) -> list[Transaction]:
         """Load Transactions from Equabank monthly bank statement in .xml file format
 
         Args:
-            user (User): user for whom the query is constructed
+            user (User): user for whom the Transactions are loaded
 
         Returns:
             list[Transaction]: list of Transactions which were loaded
         """
 
         # TODO: Handling multiple transactions which are not unique by DB standards (UNIQUE amount, currency, date)
-        #       Due to incomplete/generalized transaction date in Equabank XML, it's not possible to clearly define transaction uniqueness
-        #       Solution1: providing additional column in DB which indexes transactions having same (amount, currency, date) combo?
-        #       Solution2: requirement from the user to manually modify date or other UNIQUEness parameter during XML loading process
+        # Due to incomplete/generalized transaction date in Equabank XML,
+        # it's not possible to clearly define transaction uniqueness
+        # Solution1: providing additional column in DB which indexes transactions
+        # having same (amount, currency, date) combo?
+        # Solution2: requirement from the user to manually modify date or other UNIQUEness
+        # parameter during XML loading process
 
-        def parseRecord(rootObj, XPath):
-            try:
-                value = rootObj.find(XPath, namespace).text.capitalize()
-            except AttributeError:
-                value = None
-            return value
+        def parseRecord(rootObj: ET.Element, XPath: str) -> str | None:
+            """Parse record string from XML Ntry element"""
 
-        def parseAmount(rootObj, XPath):
-            """Parse list [Amount, Currency] from Equabank XML"""
-            value = []
             try:
-                value.append(float(rootObj.find(XPath, namespace).text))
-                value.append(rootObj.find(XPath, namespace).get("Ccy"))
-            except AttributeError:
-                value = [None, None]
-            return value
+                foundElement = rootObj.find(XPath, namespace)
+                if isinstance(foundElement, ET.Element) and isinstance(foundElement.text, str):
+                    return foundElement.text.capitalize()
+                else:
+                    return None
+            except (TypeError, ValueError):
+                return None
 
-        def parseDate(rootObj, XPath):
-            """Parse date to datatime object from Equabank XML"""
+        def parseAmount(
+            rootObj: ET.Element, XPath: str
+        ) -> tuple[float | None, str | None]:
+            """Parse tuple (Amount, Currency) from XML Ntry element"""
+
             try:
-                date = datetime.datetime.strptime(
-                    rootObj.find(XPath, namespace).text, "%Y-%m-%d+%H:%M"
-                )
-            except AttributeError:
-                date = None
-            return date
+                foundElement = rootObj.find(XPath, namespace)
+                if isinstance(foundElement, ET.Element) and isinstance(foundElement.text, str):
+                    return (float(foundElement.text), foundElement.get("Ccy"))
+                else:
+                    return (None, None)
+            except (TypeError, ValueError):
+                return (None, None)
+
+        def parseDate(rootObj: ET.Element, XPath: str) -> datetime.datetime | None:
+            """Parse date string to datatime object from XML Ntry element"""
+            try:
+                foundElement = rootObj.find(XPath, namespace)
+                if isinstance(foundElement, ET.Element) and isinstance(foundElement.text, str):
+                    return datetime.datetime.strptime(
+                        foundElement.text, "%Y-%m-%d+%H:%M"
+                    )
+                else:
+                    return None
+            except (TypeError, ValueError):
+                return None
+
+        temp: list[Transaction] = []  # temp list holding loaded Transactions
+        calculatedSum: float = 0.0
 
         XMLfiles = fileOpen(".xml")
-
-        temp: list[Transaction] = []
         for file in XMLfiles:
-            tree = ET.parse(file)
-            root = tree.getroot()
-            namespace = {"nms": "urn:iso:std:iso:20022:tech:xsd:camt.053.001.06"}
+            try:
+                tree = ET.parse(file)
+                root = tree.getroot()
+                namespace = {"nms": "urn:iso:std:iso:20022:tech:xsd:camt.053.001.06"}
 
-            for i, rootDir in enumerate(
-                root.findall(".//nms:Ntry", namespace)
-            ):  # Parsing transaction records
-                temp.append(copy.deepcopy(Transaction()))
+                # iterate through <Ntry> nodes in the element tree
+                for rootDir in root.findall(".//nms:Ntry", namespace):
 
-                temp[i].name = parseRecord(rootDir, ".//nms:RltdPties//nms:Nm")
-                temp[i].title = parseRecord(rootDir, ".//nms:Ustrd")
-                temp[i].place = parseRecord(rootDir, ".//nms:PstlAdr/nms:TwnNm")
+                    # Parsing transaction data to the latest record
+                    temp.append(copy.deepcopy(Transaction()))
 
-                temp[i].date = parseDate(rootDir, ".//nms:BookgDt/nms:Dt")
+                    temp[-1].name = parseRecord(rootDir, ".//nms:RltdPties//nms:Nm")
+                    temp[-1].title = parseRecord(rootDir, ".//nms:Ustrd")
+                    temp[-1].place = parseRecord(rootDir, ".//nms:PstlAdr/nms:TwnNm")
+                    temp[-1].date = parseDate(rootDir, ".//nms:BookgDt/nms:Dt")
+                    temp[-1].amount, temp[-1].currency = parseAmount(rootDir, "./nms:Amt")
+                    temp[-1].srcAmount, temp[-1].srcCurrency = parseAmount(
+                        rootDir, ".//nms:InstdAmt/nms:Amt"
+                    )
 
-                temp[i].amount, temp[i].currency = parseAmount(rootDir, "./nms:Amt")
-                temp[i].srcAmount, temp[i].srcCurrency = parseAmount(
-                    rootDir, ".//nms:InstdAmt/nms:Amt"
+                    # Parse just 'DBIT' or 'CRDT' from statement.
+                    # This specifies whether the payment was incoming or outgoing.
+                    # Change the amount sign accordingly.
+                    dir = parseRecord(rootDir, "./nms:CdtDbtInd")
+                    if dir == "Dbit":
+                        if temp[-1].amount:
+                            temp[-1].amount = -temp[-1].amount
+                        if temp[-1].srcAmount:
+                            temp[-1].srcAmount = -temp[-1].srcAmount
+
+                    # Transaction attributes which are not parsed from statement,
+                    # but provided by repo or user loading statement
+                    temp[-1].bankId = self._bankMap["Equabank"]
+                    temp[-1].userId = user.userId
+
+                    calculatedSum += (
+                        temp[-1].amount if isinstance(temp[-1].amount, float) else 0
+                    )
+            except (KeyError, ValueError, ET.ParseError):
+                raise FileError(
+                    f"Error while reading {file.name}. Wrong .csv file structure. Import aborted."
                 )
 
-                # Parsing just 'DBIT' or 'CRDT', then changing Amount sign if needed
-                dir = parseRecord(rootDir, "./nms:CdtDbtInd")
-                if dir == "Dbit":
-                    if temp[i].amount:
-                        temp[i].amount = -temp[i].amount
-                    if temp[i].srcAmount:
-                        temp[i].srcAmount = -temp[i].srcAmount
-
-                temp[i].bankId = self._bankMap["Equabank"]
-                temp[i].userId = user.userId
-
-            # PARSING CHECKS
-            # Check for correct expenses amounts to balance
-            incSum = round(sum([transaction.amount for transaction in temp]), 2)
-            if incSum == round(
-                float(root.find(".//nms:TtlNtries/nms:Sum", namespace).text), 2
-            ):
+        # PARSING CHECKS
+        # Check if sum of all parsed Transactions equals to sum provided in statement
+        parsedSum = parseRecord(root, ".//nms:TtlNtries/nms:Sum")
+        if isinstance(parsedSum, str):
+            parsedSum = float(parsedSum)
+        if isinstance(parsedSum, str):
+            if round(calculatedSum, 2) == float(parsedSum):
                 print(f"Successfully loaded {len(temp)} records.")
+                return temp
             else:
-                print("Records were loaded incorrectly.")
+                raise FileError(
+                    f"Error while reading {path.name}. Wrong .xml file structure. Import aborted."
+                )
+        else:
+            raise FileError("Monthly expense summary not included in the statements.")
 
-        return temp
 
-
-def fileOpen(type: str) -> tuple[str]:
-    """Open multiple files and checks their type. If not all files are as specified, require to select them again.
+def fileOpen(type: str) -> list[pathlib.Path]:
+    """Open multiple files and checks their type. Discard files which have incorrect format.
 
     Args:
-        type (str): expected type of files stated in '.xml' format
+        type (str): expected type of files stated in e.g. '.xml' format
 
     Returns:
-        tuple[str]: _description_
+        list[pathlib.Path]: list of files with a correct format
     """
 
-    while True:
-        tupleOfPaths: tuple[
-            str,
-        ] = filedialog.askopenfilenames()
-        correctFileInt = 0
+    filePaths = filedialog.askopenfilenames()
+    correctFilePaths: list[pathlib.Path] = []
+    numberOfFiles = len(filePaths)
+    correctFilesCount = 0
 
-        for path in tupleOfPaths:
-            if str(pathlib.Path(path)).endswith(type):
-                correctFileInt += 1
+    for path in filePaths:
+        tempPath = pathlib.Path(path)
+        if tempPath.suffix == type:
+            correctFilePaths.append(tempPath)
+            correctFilesCount += 1
 
-        if correctFileInt == len(tupleOfPaths):
-            return tupleOfPaths
-        else:
-            print(
-                f"{len(tupleOfPaths) - correctFileInt} files have incorrect extension. Repeat."
-            )
+    if correctFilesCount == 0:
+        print(f"You can only select {type} files.")
+        raise FileError("All selected files have wrong format.")
+    elif correctFilesCount <= numberOfFiles:
+        print(
+            f"{numberOfFiles-correctFilesCount} files had incorrect format and were discarded."
+        )
+        return correctFilePaths
+    else:  # All files had correct format
+        return correctFilePaths
 
 
 def login(
@@ -871,12 +909,13 @@ if __name__ == "__main__":
 
         login("ZaiZu", "poop", Session.openSessions, repo)
         zaizu = Session.openSessions["ZaiZu"]
-        # zaizu.tempTransactions = repo.loadRevolutStatement(zaizu.user)
+        zaizu.tempTransactions = repo.loadEquabankStatement(zaizu.user)
         # repo.upsertRepo(zaizu.tempTransactions)
 
         # do = repo.monthlySummary(zaizu.user)
         # [print(repr(dod)) for dod in do]
 
+        """
         po = repo.filterRepo(
             zaizu.user,
             amount=(50, 2000),
@@ -884,6 +923,7 @@ if __name__ == "__main__":
             date=(datetime.datetime(2021, 1, 1), datetime.datetime(2022, 10, 1)),
         )
         [print(pop) for pop in po]
+        """
 
         print("a")
         # repo.updateRepo()
