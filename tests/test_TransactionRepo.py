@@ -7,14 +7,11 @@ PROJECT_ROOT = pathlib.Path(__file__).parents[1].resolve()
 sys.path.append(str(PROJECT_ROOT))
 
 from unittest.mock import patch
-import FinanceApp.FinanceApp
+from FinanceApp.Exceptions import InvalidConfigError, LoginFailedError, FileError
 from FinanceApp.FinanceApp import (
     TransactionRepo,
     Transaction,
     User,
-    InvalidConfigError,
-    LoginFailedError,
-    FileError,
 )
 
 from FinanceApp.FinanceApp import fileOpen

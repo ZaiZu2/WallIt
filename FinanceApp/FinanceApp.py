@@ -1,16 +1,16 @@
 #! python3
 
 from __future__ import annotations
-import xml.etree.ElementTree as ET
+from FinanceApp.Exceptions import LoginFailedError, InvalidConfigError, FileError
 
 import copy
 import csv
 import datetime
 from tkinter import filedialog
-import pprint
 import functools
 
-from typing import Generator, Any, Optional, Union, TypeVar
+import xml.etree.ElementTree as ET
+from typing import Generator, TypeVar
 from contextlib import contextmanager
 import pathlib
 from dateutil.relativedelta import relativedelta
@@ -37,19 +37,6 @@ class CaseSensitiveConfigParser(configparser.ConfigParser):
     def optionxform(self, value: T) -> T:
         """Preserve case-sensitivity of keys/values while reading config file"""
         return value
-
-
-class LoginFailedError(Exception):
-    pass
-
-
-class InvalidConfigError(Exception):
-    pass
-
-
-class FileError(Exception):
-    pass
-
 
 class Session:
     """Main class holding user session"""
