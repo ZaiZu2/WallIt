@@ -1,4 +1,5 @@
 #! python3
+import py
 import pytest, sys, pathlib, csv
 from datetime import datetime
 
@@ -396,6 +397,13 @@ class TestStatementImports:
     def test_EquabankCorrectImport(
         self, instantiateRepo: TransactionRepo, createUser: User, tmp_path: pathlib.Path
     ) -> None:
+        """Test import process behavior when provided with correct input files
+
+        Args:
+            instantiateRepo (TransactionRepo): fixture instantiating repo
+            createUser (User): fixture instantiating user
+            tmp_path (pathlib.Path): path to internal pytest directory holding temporary files
+        """
 
         # TODO: .xml test files as strings listed below. 
         # Messy Jesus Christ. No clue how it should be done, 
@@ -460,7 +468,7 @@ class TestStatementImports:
                                     <Cd>PRCD</Cd>
                                 </CdOrPrtry>
                             </Tp>
-                            <Amt Ccy="CZK">137612.38</Amt>
+                            <Amt Ccy="CZK">323.32</Amt>
                             <CdtDbtInd>CRDT</CdtDbtInd>
                             <Dt>
                                 <Dt>2020-04-01+02:00</Dt>
@@ -472,7 +480,7 @@ class TestStatementImports:
                                     <Cd>CLBD</Cd>
                                 </CdOrPrtry>
                             </Tp>
-                            <Amt Ccy="CZK">177719.33</Amt>
+                            <Amt Ccy="CZK">323.32</Amt>
                             <CdtDbtInd>CRDT</CdtDbtInd>
                             <Dt>
                                 <Dt>2020-04-30+02:00</Dt>
@@ -480,20 +488,20 @@ class TestStatementImports:
                         </Bal>
                         <TxsSummry>
                             <TtlNtries>
-                                <NbOfNtries>4</NbOfNtries>
+                                <NbOfNtries>7</NbOfNtries>
                                 <Sum>25</Sum>
                                 <TtlNetNtry>
                                     <Amt>25</Amt>
-                                    <CdtDbtInd>DBIT</CdtDbtInd>
+                                    <CdtDbtInd>CRDT</CdtDbtInd>
                                 </TtlNetNtry>
                             </TtlNtries>
                             <TtlCdtNtries>
-                                <NbOfNtries>2</NbOfNtries>
-                                <Sum>40</Sum>
+                                <NbOfNtries>3</NbOfNtries>
+                                <Sum>55</Sum>
                             </TtlCdtNtries>
                             <TtlDbtNtries>
-                                <NbOfNtries>2</NbOfNtries>
-                                <Sum>-15</Sum>
+                                <NbOfNtries>4</NbOfNtries>
+                                <Sum>30</Sum>
                             </TtlDbtNtries>
                         </TxsSummry>
                         <Ntry>
@@ -727,7 +735,7 @@ class TestStatementImports:
                         <TxsSummry>
                             <TtlNtries>
                                 <NbOfNtries>1</NbOfNtries>
-                                <Sum>25</Sum>
+                                <Sum>11.11</Sum>
                                 <TtlNetNtry>
                                     <Amt>11.11</Amt>
                                     <CdtDbtInd>DBIT</CdtDbtInd>
@@ -796,7 +804,1141 @@ class TestStatementImports:
         ):
             # Act
             results += instantiateRepo.loadEquabankStatement(createUser)        
-            print('a')
+
+        # Assert
+        assert results[0].name == "TON KIN"
+        assert results[0].title == None
+        assert results[0].srcAmount == None
+        assert results[0].srcCurrency == None
+
+        assert results[1].amount == -5
+        assert results[1].currency == 'CZK'        
+
+        assert results[2].date == datetime(2020, 4, 13, 2, 0)
+        assert results[2].bankId == instantiateRepo._bankMap["Equabank"]
+        assert results[2].userId == createUser.userId
+
+    def test_EquabankWrongSum(
+        self, instantiateRepo: TransactionRepo, createUser: User, tmp_path: pathlib.Path
+    ) -> None:
+        """Test when statement has incorrectly stated Transaction amount sum
+
+        Wrong parts:
+        ...
+        <TtlNetNtry>
+            <Amt>0</Amt> (!= 25)
+        ...
+        <TtlNetNtry>
+            <Amt>0</Amt> (!= 11.11)
+        Args:
+            instantiateRepo (TransactionRepo): fixture instantiating repo
+            createUser (User): fixture instantiating user
+            tmp_path (pathlib.Path): path to internal pytest directory holding temporary files
+        """
+
+        # TODO: .xml test files as strings listed below. 
+        # Messy Jesus Christ. No clue how it should be done, 
+        # I think it's not the scope of unittests, but better than no tests.
+        
+        # Arrange
+        files = (
+            """<?xml version='1.0' encoding='UTF-8'?>
+            <Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.06">
+                <BkToCstmrStmt>
+                    <GrpHdr>
+                        <MsgId>camt.053-2020-04-30-4</MsgId>
+                        <CreDtTm>2021-12-25T13:00:36.705+01:00</CreDtTm>
+                        <MsgRcpt>
+                            <Nm>John Smith</Nm>
+                            <PstlAdr>
+                                <StrtNm>Pork street</StrtNm>
+                                <BldgNb>582</BldgNb>
+                                <PstCd>1200</PstCd>
+                                <TwnNm>Praha</TwnNm>
+                                <Ctry>Zimbabwe</Ctry>
+                            </PstlAdr>
+                        </MsgRcpt>
+                    </GrpHdr>
+                    <Stmt>
+                        <Id>CZ7461000003423429823417-2020-04-30</Id>
+                        <ElctrncSeqNb>4</ElctrncSeqNb>
+                        <LglSeqNb>4</LglSeqNb>
+                        <CreDtTm>2020-04-30T00:00:00.000+02:00</CreDtTm>
+                        <FrToDt>
+                            <FrDtTm>2020-04-01T00:00:00.000+02:00</FrDtTm>
+                            <ToDtTm>2020-04-30T00:00:00.000+02:00</ToDtTm>
+                        </FrToDt>
+                        <Acct>
+                            <Id>
+                                <IBAN>CZ7213000000001029236436</IBAN>
+                            </Id>
+                            <Ccy>CZK</Ccy>
+                            <Ownr>
+                                <Nm>John Smith</Nm>
+                                <PstlAdr>
+                                    <StrtNm>Pork street</StrtNm>
+                                    <BldgNb>582</BldgNb>
+                                    <PstCd>1200</PstCd>
+                                    <TwnNm>Praha</TwnNm>
+                                    <Ctry>Zimbabwe</Ctry>
+                                </PstlAdr>
+                            </Ownr>
+                            <Svcr>
+                                <FinInstnId>
+                                    <BICFI>EQBKCZPP</BICFI>
+                                    <Nm>Equa bank a.s.</Nm>
+                                    <Othr>
+                                        <Id>6100</Id>
+                                    </Othr>
+                                </FinInstnId>
+                            </Svcr>
+                        </Acct>
+                        <Bal>
+                            <Tp>
+                                <CdOrPrtry>
+                                    <Cd>PRCD</Cd>
+                                </CdOrPrtry>
+                            </Tp>
+                            <Amt Ccy="CZK">323.32</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Dt>
+                                <Dt>2020-04-01+02:00</Dt>
+                            </Dt>
+                        </Bal>
+                        <Bal>
+                            <Tp>
+                                <CdOrPrtry>
+                                    <Cd>CLBD</Cd>
+                                </CdOrPrtry>
+                            </Tp>
+                            <Amt Ccy="CZK">323.32</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Dt>
+                                <Dt>2020-04-30+02:00</Dt>
+                            </Dt>
+                        </Bal>
+                        <TxsSummry>
+                            <TtlNtries>
+                                <NbOfNtries>2</NbOfNtries>
+                                <Sum>0</Sum>
+                                <TtlNetNtry>
+                                    <Amt>0</Amt>
+                                    <CdtDbtInd>CRDT</CdtDbtInd>
+                                </TtlNetNtry>
+                            </TtlNtries>
+                            <TtlCdtNtries>
+                                <NbOfNtries>2</NbOfNtries>
+                                <Sum>40</Sum>
+                            </TtlCdtNtries>
+                            <TtlDbtNtries>
+                                <NbOfNtries>0</NbOfNtries>
+                                <Sum>0</Sum>
+                            </TtlDbtNtries>
+                        </TxsSummry>
+                        <Ntry>
+                            <Amt Ccy="CZK">15</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Sts>BOOK</Sts>
+                            <BookgDt>
+                                <Dt>2020-04-13+02:00</Dt>
+                            </BookgDt>
+                            <ValDt>
+                                <Dt>2020-04-13+02:00</Dt>
+                            </ValDt>
+                            <BkTxCd>
+                                <Prtry>
+                                    <Cd>555</Cd>
+                                </Prtry>
+                            </BkTxCd>
+                            <NtryDtls>
+                                <TxDtls>
+                                    <Refs>
+                                        <ChqNb>************6579</ChqNb>
+                                    </Refs>
+                                    <Amt Ccy="CZK">15</Amt>
+                                    <CdtDbtInd>CRDT</CdtDbtInd>
+                                    <RltdPties>
+                                        <Cdtr>
+                                            <Nm>Billa Praha Blox</Nm>
+                                            <PstlAdr>
+                                                <TwnNm>Praha 6</TwnNm>
+                                            </PstlAdr>
+                                        </Cdtr>
+                                    </RltdPties>
+                                </TxDtls>
+                            </NtryDtls>
+                        </Ntry>
+                        <Ntry>
+                            <Amt Ccy="CZK">25</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Sts>BOOK</Sts>
+                            <BookgDt>
+                                <Dt>2020-04-16+02:00</Dt>
+                            </BookgDt>
+                            <ValDt>
+                                <Dt>2020-04-16+02:00</Dt>
+                            </ValDt>
+                            <BkTxCd>
+                                <Prtry>
+                                    <Cd>555</Cd>
+                                </Prtry>
+                            </BkTxCd>
+                            <NtryDtls>
+                                <TxDtls>
+                                    <Refs>
+                                        <ChqNb>************6579</ChqNb>
+                                    </Refs>
+                                    <Amt Ccy="CZK">25</Amt>
+                                    <CdtDbtInd>CRDT</CdtDbtInd>
+                                    <RltdPties>
+                                        <Cdtr>
+                                            <Nm>CESKA SPORITELNA, A.S.</Nm>
+                                            <PstlAdr>
+                                                <TwnNm>PRAHA 6</TwnNm>
+                                            </PstlAdr>
+                                        </Cdtr>
+                                        <CdtrAcct>
+                                            <Id>
+                                                <Othr>
+                                                    <Id>1011071271</Id>
+                                                </Othr>
+                                            </Id>
+                                            <Nm>NOSTRO - CARD TRANSA</Nm>
+                                        </CdtrAcct>
+                                    </RltdPties>
+                                    <RltdAgts>
+                                        <CdtrAgt>
+                                            <FinInstnId>
+                                                <Nm>Equa bank a.s.</Nm>
+                                                <Othr>
+                                                    <Id>6100</Id>
+                                                </Othr>
+                                            </FinInstnId>
+                                        </CdtrAgt>
+                                    </RltdAgts>
+                                </TxDtls>
+                            </NtryDtls>
+                        </Ntry>
+                    </Stmt>
+                </BkToCstmrStmt>
+            </Document>""",
+            """<?xml version='1.0' encoding='UTF-8'?>
+            <Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.06">
+                <BkToCstmrStmt>
+                    <GrpHdr>
+                        <MsgId>camt.053-2020-04-30-4</MsgId>
+                        <CreDtTm>2021-12-25T13:00:36.705+01:00</CreDtTm>
+                        <MsgRcpt>
+                            <Nm>John Smith</Nm>
+                            <PstlAdr>
+                                <StrtNm>Pork street</StrtNm>
+                                <BldgNb>582</BldgNb>
+                                <PstCd>1200</PstCd>
+                                <TwnNm>Praha</TwnNm>
+                                <Ctry>Zimbabwe</Ctry>
+                            </PstlAdr>
+                        </MsgRcpt>
+                    </GrpHdr>
+                    <Stmt>
+                        <Id>CZ7461000003423429823417-2020-04-30</Id>
+                        <ElctrncSeqNb>4</ElctrncSeqNb>
+                        <LglSeqNb>4</LglSeqNb>
+                        <CreDtTm>2020-04-30T00:00:00.000+02:00</CreDtTm>
+                        <FrToDt>
+                            <FrDtTm>2020-04-01T00:00:00.000+02:00</FrDtTm>
+                            <ToDtTm>2020-04-30T00:00:00.000+02:00</ToDtTm>
+                        </FrToDt>
+                        <Acct>
+                            <Id>
+                                <IBAN>CZ7213000000001029236436</IBAN>
+                            </Id>
+                            <Ccy>CZK</Ccy>
+                            <Ownr>
+                                <Nm>John Smith</Nm>
+                                <PstlAdr>
+                                    <StrtNm>Pork street</StrtNm>
+                                    <BldgNb>582</BldgNb>
+                                    <PstCd>1200</PstCd>
+                                    <TwnNm>Praha</TwnNm>
+                                    <Ctry>Zimbabwe</Ctry>
+                                </PstlAdr>
+                            </Ownr>
+                            <Svcr>
+                                <FinInstnId>
+                                    <BICFI>EQBKCZPP</BICFI>
+                                    <Nm>Equa bank a.s.</Nm>
+                                    <Othr>
+                                        <Id>6100</Id>
+                                    </Othr>
+                                </FinInstnId>
+                            </Svcr>
+                        </Acct>
+                        <Bal>
+                            <Tp>
+                                <CdOrPrtry>
+                                    <Cd>PRCD</Cd>
+                                </CdOrPrtry>
+                            </Tp>
+                            <Amt Ccy="CZK">11.11</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Dt>
+                                <Dt>2020-04-01+02:00</Dt>
+                            </Dt>
+                        </Bal>
+                        <Bal>
+                            <Tp>
+                                <CdOrPrtry>
+                                    <Cd>CLBD</Cd>
+                                </CdOrPrtry>
+                            </Tp>
+                            <Amt Ccy="CZK">11.11</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Dt>
+                                <Dt>2020-04-30+02:00</Dt>
+                            </Dt>
+                        </Bal>
+                        <TxsSummry>
+                            <TtlNtries>
+                                <NbOfNtries>1</NbOfNtries>
+                                <Sum>0</Sum>
+                                <TtlNetNtry>
+                                    <Amt>0</Amt>
+                                    <CdtDbtInd>DBIT</CdtDbtInd>
+                                </TtlNetNtry>
+                            </TtlNtries>
+                            <TtlCdtNtries>
+                                <NbOfNtries>0</NbOfNtries>
+                                <Sum>0</Sum>
+                            </TtlCdtNtries>
+                            <TtlDbtNtries>
+                                <NbOfNtries>1</NbOfNtries>
+                                <Sum>11.11</Sum>
+                            </TtlDbtNtries>
+                        </TxsSummry>
+                        <Ntry>
+                            <Amt Ccy="CZK">11.11</Amt>
+                            <CdtDbtInd>DBIT</CdtDbtInd>
+                            <Sts>BOOK</Sts>
+                            <BookgDt>
+                                <Dt>2020-04-10+02:00</Dt>
+                            </BookgDt>
+                            <ValDt>
+                                <Dt>2020-04-10+02:00</Dt>
+                            </ValDt>
+                            <BkTxCd>
+                                <Prtry>
+                                    <Cd>555</Cd>
+                                </Prtry>
+                            </BkTxCd>
+                            <NtryDtls>
+                                <TxDtls>
+                                    <Refs>
+                                        <ChqNb>************6579</ChqNb>
+                                    </Refs>
+                                    <Amt Ccy="CZK">11.11</Amt>
+                                    <CdtDbtInd>DBIT</CdtDbtInd>
+                                    <RltdPties>
+                                        <Cdtr>
+                                            <Nm>TON KIN</Nm>
+                                            <PstlAdr>
+                                                <TwnNm>PRAHA 6</TwnNm>
+                                            </PstlAdr>
+                                        </Cdtr>
+                                    </RltdPties>
+                                </TxDtls>
+                            </NtryDtls>
+                        </Ntry>
+                    </Stmt>
+                </BkToCstmrStmt>
+            </Document>"""
+        )
+
+        filePaths: list[pathlib.Path] = []
+        for i, file in enumerate(files):
+            filePaths.append(
+                TestStatementImports.createEquabankStatement(
+                    self, tmp_path, f"incorrectEquabankStatement{i}.xml", file
+                )
+            )
+
+        results: list[Transaction] = []
+
+        with patch(
+            "tkinter.filedialog.askopenfilenames",
+            return_value=filePaths,
+        ):
+            # Assert
+            with pytest.raises(FileError):
+                # Act
+                results += instantiateRepo.loadEquabankStatement(createUser)  
+    
+    def test_EquabankWrongFormat(
+        self, instantiateRepo: TransactionRepo, createUser: User, tmp_path: pathlib.Path
+    ) -> None:
+        """Test when statement has completely wrong .xml formating
+
+        Deleted '</BkToCstmrStmt>'
+
+        Args:
+            instantiateRepo (TransactionRepo): fixture instantiating repo
+            createUser (User): fixture instantiating user
+            tmp_path (pathlib.Path): path to internal pytest directory holding temporary files
+        """
+
+        # TODO: .xml test files as strings listed below. 
+        # Messy Jesus Christ. No clue how it should be done, 
+        # I think it's not the scope of unittests, but better than no tests.
+        
+        # Arrange
+        files = (
+            """<?xml version='1.0' encoding='UTF-8'?>
+            <Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.06">
+                    <GrpHdr>
+                        <MsgId>camt.053-2020-04-30-4</MsgId>
+                        <CreDtTm>2021-12-25T13:00:36.705+01:00</CreDtTm>
+                        <MsgRcpt>
+                            <Nm>John Smith</Nm>
+                            <PstlAdr>
+                                <StrtNm>Pork street</StrtNm>
+                                <BldgNb>582</BldgNb>
+                                <PstCd>1200</PstCd>
+                                <TwnNm>Praha</TwnNm>
+                                <Ctry>Zimbabwe</Ctry>
+                            </PstlAdr>
+                        </MsgRcpt>
+                    </GrpHdr>
+                    <Stmt>
+                        <Id>CZ7461000003423429823417-2020-04-30</Id>
+                        <ElctrncSeqNb>4</ElctrncSeqNb>
+                        <LglSeqNb>4</LglSeqNb>
+                        <CreDtTm>2020-04-30T00:00:00.000+02:00</CreDtTm>
+                        <FrToDt>
+                            <FrDtTm>2020-04-01T00:00:00.000+02:00</FrDtTm>
+                            <ToDtTm>2020-04-30T00:00:00.000+02:00</ToDtTm>
+                        </FrToDt>
+                        <Acct>
+                            <Id>
+                                <IBAN>CZ7213000000001029236436</IBAN>
+                            </Id>
+                            <Ccy>CZK</Ccy>
+                            <Ownr>
+                                <Nm>John Smith</Nm>
+                                <PstlAdr>
+                                    <StrtNm>Pork street</StrtNm>
+                                    <BldgNb>582</BldgNb>
+                                    <PstCd>1200</PstCd>
+                                    <TwnNm>Praha</TwnNm>
+                                    <Ctry>Zimbabwe</Ctry>
+                                </PstlAdr>
+                            </Ownr>
+                            <Svcr>
+                                <FinInstnId>
+                                    <BICFI>EQBKCZPP</BICFI>
+                                    <Nm>Equa bank a.s.</Nm>
+                                    <Othr>
+                                        <Id>6100</Id>
+                                    </Othr>
+                                </FinInstnId>
+                            </Svcr>
+                        </Acct>
+                        <Bal>
+                            <Tp>
+                                <CdOrPrtry>
+                                    <Cd>PRCD</Cd>
+                                </CdOrPrtry>
+                            </Tp>
+                            <Amt Ccy="CZK">323.32</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Dt>
+                                <Dt>2020-04-01+02:00</Dt>
+                            </Dt>
+                        </Bal>
+                        <Bal>
+                            <Tp>
+                                <CdOrPrtry>
+                                    <Cd>CLBD</Cd>
+                                </CdOrPrtry>
+                            </Tp>
+                            <Amt Ccy="CZK">323.32</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Dt>
+                                <Dt>2020-04-30+02:00</Dt>
+                            </Dt>
+                        </Bal>
+                        <TxsSummry>
+                            <TtlNtries>
+                                <NbOfNtries>2</NbOfNtries>
+                                <Sum>0</Sum>
+                                <TtlNetNtry>
+                                    <Amt>0</Amt>
+                                    <CdtDbtInd>CRDT</CdtDbtInd>
+                                </TtlNetNtry>
+                            </TtlNtries>
+                            <TtlCdtNtries>
+                                <NbOfNtries>2</NbOfNtries>
+                                <Sum>40</Sum>
+                            </TtlCdtNtries>
+                            <TtlDbtNtries>
+                                <NbOfNtries>0</NbOfNtries>
+                                <Sum>0</Sum>
+                            </TtlDbtNtries>
+                        </TxsSummry>
+                        <Ntry>
+                            <Amt Ccy="CZK">15</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Sts>BOOK</Sts>
+                            <BookgDt>
+                                <Dt>2020-04-13+02:00</Dt>
+                            </BookgDt>
+                            <ValDt>
+                                <Dt>2020-04-13+02:00</Dt>
+                            </ValDt>
+                            <BkTxCd>
+                                <Prtry>
+                                    <Cd>555</Cd>
+                                </Prtry>
+                            </BkTxCd>
+                            <NtryDtls>
+                                <TxDtls>
+                                    <Refs>
+                                        <ChqNb>************6579</ChqNb>
+                                    </Refs>
+                                    <Amt Ccy="CZK">15</Amt>
+                                    <CdtDbtInd>CRDT</CdtDbtInd>
+                                    <RltdPties>
+                                        <Cdtr>
+                                            <Nm>Billa Praha Blox</Nm>
+                                            <PstlAdr>
+                                                <TwnNm>Praha 6</TwnNm>
+                                            </PstlAdr>
+                                        </Cdtr>
+                                    </RltdPties>
+                                </TxDtls>
+                            </NtryDtls>
+                        </Ntry>
+                        <Ntry>
+                            <Amt Ccy="CZK">25</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Sts>BOOK</Sts>
+                            <BookgDt>
+                                <Dt>2020-04-16+02:00</Dt>
+                            </BookgDt>
+                            <ValDt>
+                                <Dt>2020-04-16+02:00</Dt>
+                            </ValDt>
+                            <BkTxCd>
+                                <Prtry>
+                                    <Cd>555</Cd>
+                                </Prtry>
+                            </BkTxCd>
+                            <NtryDtls>
+                                <TxDtls>
+                                    <Refs>
+                                        <ChqNb>************6579</ChqNb>
+                                    </Refs>
+                                    <Amt Ccy="CZK">25</Amt>
+                                    <CdtDbtInd>CRDT</CdtDbtInd>
+                                    <RltdPties>
+                                        <Cdtr>
+                                            <Nm>CESKA SPORITELNA, A.S.</Nm>
+                                            <PstlAdr>
+                                                <TwnNm>PRAHA 6</TwnNm>
+                                            </PstlAdr>
+                                        </Cdtr>
+                                        <CdtrAcct>
+                                            <Id>
+                                                <Othr>
+                                                    <Id>1011071271</Id>
+                                                </Othr>
+                                            </Id>
+                                            <Nm>NOSTRO - CARD TRANSA</Nm>
+                                        </CdtrAcct>
+                                    </RltdPties>
+                                    <RltdAgts>
+                                        <CdtrAgt>
+                                            <FinInstnId>
+                                                <Nm>Equa bank a.s.</Nm>
+                                                <Othr>
+                                                    <Id>6100</Id>
+                                                </Othr>
+                                            </FinInstnId>
+                                        </CdtrAgt>
+                                    </RltdAgts>
+                                </TxDtls>
+                            </NtryDtls>
+                        </Ntry>
+                    </Stmt>
+                </BkToCstmrStmt>
+            </Document>""",
+            """<?xml version='1.0' encoding='UTF-8'?>
+            <Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.06">
+                <BkToCstmrStmt>
+                    <GrpHdr>
+                        <MsgId>camt.053-2020-04-30-4</MsgId>
+                        <CreDtTm>2021-12-25T13:00:36.705+01:00</CreDtTm>
+                        <MsgRcpt>
+                            <Nm>John Smith</Nm>
+                            <PstlAdr>
+                                <StrtNm>Pork street</StrtNm>
+                                <BldgNb>582</BldgNb>
+                                <PstCd>1200</PstCd>
+                                <TwnNm>Praha</TwnNm>
+                                <Ctry>Zimbabwe</Ctry>
+                            </PstlAdr>
+                        </MsgRcpt>
+                    </GrpHdr>
+                    <Stmt>
+                        <Id>CZ7461000003423429823417-2020-04-30</Id>
+                        <ElctrncSeqNb>4</ElctrncSeqNb>
+                        <LglSeqNb>4</LglSeqNb>
+                        <CreDtTm>2020-04-30T00:00:00.000+02:00</CreDtTm>
+                        <FrToDt>
+                            <FrDtTm>2020-04-01T00:00:00.000+02:00</FrDtTm>
+                            <ToDtTm>2020-04-30T00:00:00.000+02:00</ToDtTm>
+                        </FrToDt>
+                        <Acct>
+                            <Id>
+                                <IBAN>CZ7213000000001029236436</IBAN>
+                            </Id>
+                            <Ccy>CZK</Ccy>
+                            <Ownr>
+                                <Nm>John Smith</Nm>
+                                <PstlAdr>
+                                    <StrtNm>Pork street</StrtNm>
+                                    <BldgNb>582</BldgNb>
+                                    <PstCd>1200</PstCd>
+                                    <TwnNm>Praha</TwnNm>
+                                    <Ctry>Zimbabwe</Ctry>
+                                </PstlAdr>
+                            </Ownr>
+                            <Svcr>
+                                <FinInstnId>
+                                    <BICFI>EQBKCZPP</BICFI>
+                                    <Nm>Equa bank a.s.</Nm>
+                                    <Othr>
+                                        <Id>6100</Id>
+                                    </Othr>
+                                </FinInstnId>
+                            </Svcr>
+                        </Acct>
+                        <Bal>
+                            <Tp>
+                                <CdOrPrtry>
+                                    <Cd>PRCD</Cd>
+                                </CdOrPrtry>
+                            </Tp>
+                            <Amt Ccy="CZK">11.11</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Dt>
+                                <Dt>2020-04-01+02:00</Dt>
+                            </Dt>
+                        </Bal>
+                        <Bal>
+                            <Tp>
+                                <CdOrPrtry>
+                                    <Cd>CLBD</Cd>
+                                </CdOrPrtry>
+                            </Tp>
+                            <Amt Ccy="CZK">11.11</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Dt>
+                                <Dt>2020-04-30+02:00</Dt>
+                            </Dt>
+                        </Bal>
+                        <TxsSummry>
+                            <TtlNtries>
+                                <NbOfNtries>1</NbOfNtries>
+                                <Sum>0</Sum>
+                                <TtlNetNtry>
+                                    <Amt>0</Amt>
+                                    <CdtDbtInd>DBIT</CdtDbtInd>
+                                </TtlNetNtry>
+                            </TtlNtries>
+                            <TtlCdtNtries>
+                                <NbOfNtries>0</NbOfNtries>
+                                <Sum>0</Sum>
+                            </TtlCdtNtries>
+                            <TtlDbtNtries>
+                                <NbOfNtries>1</NbOfNtries>
+                                <Sum>11.11</Sum>
+                            </TtlDbtNtries>
+                        </TxsSummry>
+                        <Ntry>
+                            <Amt Ccy="CZK">11.11</Amt>
+                            <CdtDbtInd>DBIT</CdtDbtInd>
+                            <Sts>BOOK</Sts>
+                            <BookgDt>
+                                <Dt>2020-04-10+02:00</Dt>
+                            </BookgDt>
+                            <ValDt>
+                                <Dt>2020-04-10+02:00</Dt>
+                            </ValDt>
+                            <BkTxCd>
+                                <Prtry>
+                                    <Cd>555</Cd>
+                                </Prtry>
+                            </BkTxCd>
+                            <NtryDtls>
+                                <TxDtls>
+                                    <Refs>
+                                        <ChqNb>************6579</ChqNb>
+                                    </Refs>
+                                    <Amt Ccy="CZK">11.11</Amt>
+                                    <CdtDbtInd>DBIT</CdtDbtInd>
+                                    <RltdPties>
+                                        <Cdtr>
+                                            <Nm>TON KIN</Nm>
+                                            <PstlAdr>
+                                                <TwnNm>PRAHA 6</TwnNm>
+                                            </PstlAdr>
+                                        </Cdtr>
+                                    </RltdPties>
+                                </TxDtls>
+                            </NtryDtls>
+                        </Ntry>
+                    </Stmt>
+                </BkToCstmrStmt>
+            </Document>"""
+        )
+
+        filePaths: list[pathlib.Path] = []
+        for i, file in enumerate(files):
+            filePaths.append(
+                TestStatementImports.createEquabankStatement(
+                    self, tmp_path, f"incorrectEquabankStatement{i}.xml", file
+                )
+            )
+
+        results: list[Transaction] = []
+
+        with patch(
+            "tkinter.filedialog.askopenfilenames",
+            return_value=filePaths,
+        ):
+            # Assert
+            with pytest.raises(FileError):
+                # Act
+                results += instantiateRepo.loadEquabankStatement(createUser)  
+
+    def test_EquabankWrongValues(
+        self, instantiateRepo: TransactionRepo, createUser: User, tmp_path: pathlib.Path
+    ) -> None:
+        """Test import process behavior when provided with correct input files
+            
+            Wrong parts:
+            ...
+            <Amt Ccy="CZK">10WRONG</Amt>
+            ...
+            <BookgDt>
+                <Dt>WRONG</Dt>
+            ...
+        
+        Args:
+            instantiateRepo (TransactionRepo): fixture instantiating repo
+            createUser (User): fixture instantiating user
+            tmp_path (pathlib.Path): path to internal pytest directory holding temporary files
+        """
+
+        # TODO: .xml test files as strings listed below. 
+        # Messy Jesus Christ. No clue how it should be done, 
+        # I think it's not the scope of unittests, but better than no tests.
+        
+        # Arrange
+        files = (
+            """<?xml version='1.0' encoding='UTF-8'?>
+            <Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.06">
+                <BkToCstmrStmt>
+                    <GrpHdr>
+                        <MsgId>camt.053-2020-04-30-4</MsgId>
+                        <CreDtTm>2021-12-25T13:00:36.705+01:00</CreDtTm>
+                        <MsgRcpt>
+                            <Nm>John Smith</Nm>
+                            <PstlAdr>
+                                <StrtNm>Pork street</StrtNm>
+                                <BldgNb>582</BldgNb>
+                                <PstCd>1200</PstCd>
+                                <TwnNm>Praha</TwnNm>
+                                <Ctry>Zimbabwe</Ctry>
+                            </PstlAdr>
+                        </MsgRcpt>
+                    </GrpHdr>
+                    <Stmt>
+                        <Id>CZ7461000003423429823417-2020-04-30</Id>
+                        <ElctrncSeqNb>4</ElctrncSeqNb>
+                        <LglSeqNb>4</LglSeqNb>
+                        <CreDtTm>2020-04-30T00:00:00.000+02:00</CreDtTm>
+                        <FrToDt>
+                            <FrDtTm>2020-04-01T00:00:00.000+02:00</FrDtTm>
+                            <ToDtTm>2020-04-30T00:00:00.000+02:00</ToDtTm>
+                        </FrToDt>
+                        <Acct>
+                            <Id>
+                                <IBAN>CZ7213000000001029236436</IBAN>
+                            </Id>
+                            <Ccy>CZK</Ccy>
+                            <Ownr>
+                                <Nm>John Smith</Nm>
+                                <PstlAdr>
+                                    <StrtNm>Pork street</StrtNm>
+                                    <BldgNb>582</BldgNb>
+                                    <PstCd>1200</PstCd>
+                                    <TwnNm>Praha</TwnNm>
+                                    <Ctry>Zimbabwe</Ctry>
+                                </PstlAdr>
+                            </Ownr>
+                            <Svcr>
+                                <FinInstnId>
+                                    <BICFI>EQBKCZPP</BICFI>
+                                    <Nm>Equa bank a.s.</Nm>
+                                    <Othr>
+                                        <Id>6100</Id>
+                                    </Othr>
+                                </FinInstnId>
+                            </Svcr>
+                        </Acct>
+                        <Bal>
+                            <Tp>
+                                <CdOrPrtry>
+                                    <Cd>PRCD</Cd>
+                                </CdOrPrtry>
+                            </Tp>
+                            <Amt Ccy="CZK">323.32</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Dt>
+                                <Dt>2020-04-01+02:00</Dt>
+                            </Dt>
+                        </Bal>
+                        <Bal>
+                            <Tp>
+                                <CdOrPrtry>
+                                    <Cd>CLBD</Cd>
+                                </CdOrPrtry>
+                            </Tp>
+                            <Amt Ccy="CZK">323.32</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Dt>
+                                <Dt>2020-04-30+02:00</Dt>
+                            </Dt>
+                        </Bal>
+                        <TxsSummry>
+                            <TtlNtries>
+                                <NbOfNtries>7</NbOfNtries>
+                                <Sum>25</Sum>
+                                <TtlNetNtry>
+                                    <Amt>25</Amt>
+                                    <CdtDbtInd>CRDT</CdtDbtInd>
+                                </TtlNetNtry>
+                            </TtlNtries>
+                            <TtlCdtNtries>
+                                <NbOfNtries>3</NbOfNtries>
+                                <Sum>55</Sum>
+                            </TtlCdtNtries>
+                            <TtlDbtNtries>
+                                <NbOfNtries>4</NbOfNtries>
+                                <Sum>30</Sum>
+                            </TtlDbtNtries>
+                        </TxsSummry>
+                        <Ntry>
+                            <Amt Ccy="CZK">10</Amt>
+                            <CdtDbtInd>DBIT</CdtDbtInd>
+                            <Sts>BOOK</Sts>
+                            <BookgDt>
+                                <Dt>2020-04-10+02:00</Dt>
+                            </BookgDt>
+                            <ValDt>
+                                <Dt>2020-04-10+02:00</Dt>
+                            </ValDt>
+                            <BkTxCd>
+                                <Prtry>
+                                    <Cd>555</Cd>
+                                </Prtry>
+                            </BkTxCd>
+                            <NtryDtls>
+                                <TxDtls>
+                                    <Refs>
+                                        <ChqNb>************6579</ChqNb>
+                                    </Refs>
+                                    <Amt Ccy="CZK">10WRONG</Amt>
+                                    <CdtDbtInd>DBIT</CdtDbtInd>
+                                    <RltdPties>
+                                        <Cdtr>
+                                            <Nm>TON KIN</Nm>
+                                            <PstlAdr>
+                                                <TwnNm>PRAHA 6</TwnNm>
+                                            </PstlAdr>
+                                        </Cdtr>
+                                    </RltdPties>
+                                </TxDtls>
+                            </NtryDtls>
+                        </Ntry>
+                        <Ntry>
+                            <Amt Ccy="CZK">5</Amt>
+                            <CdtDbtInd>DBIT</CdtDbtInd>
+                            <Sts>BOOK</Sts>
+                            <BookgDt>
+                                <Dt>2020-04-11+02:00</Dt>
+                            </BookgDt>
+                            <ValDt>
+                                <Dt>2020-04-11+02:00</Dt>
+                            </ValDt>
+                            <BkTxCd>
+                                <Prtry>
+                                    <Cd>555</Cd>
+                                </Prtry>
+                            </BkTxCd>
+                            <NtryDtls>
+                                <TxDtls>
+                                    <Refs>
+                                        <ChqNb>************6579</ChqNb>
+                                    </Refs>
+                                    <Amt Ccy="CZK">5</Amt>
+                                    <CdtDbtInd>DBIT</CdtDbtInd>
+                                    <RltdPties>
+                                        <Cdtr>
+                                            <Nm>ALBERT VAM DEKUJE</Nm>
+                                            <PstlAdr>
+                                                <TwnNm>PRAHA 6</TwnNm>
+                                            </PstlAdr>
+                                        </Cdtr>
+                                    </RltdPties>
+                                </TxDtls>
+                            </NtryDtls>
+                        </Ntry>
+                        <Ntry>
+                            <Amt Ccy="CZK">15</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Sts>BOOK</Sts>
+                            <BookgDt>
+                                <Dt>2020-04-13+02:00</Dt>
+                            </BookgDt>
+                            <ValDt>
+                                <Dt>2020-04-13+02:00</Dt>
+                            </ValDt>
+                            <BkTxCd>
+                                <Prtry>
+                                    <Cd>555</Cd>
+                                </Prtry>
+                            </BkTxCd>
+                            <NtryDtls>
+                                <TxDtls>
+                                    <Refs>
+                                        <ChqNb>************6579</ChqNb>
+                                    </Refs>
+                                    <Amt Ccy="CZK">15</Amt>
+                                    <CdtDbtInd>CRDT</CdtDbtInd>
+                                    <RltdPties>
+                                        <Cdtr>
+                                            <Nm>Billa Praha Blox</Nm>
+                                            <PstlAdr>
+                                                <TwnNm>Praha 6</TwnNm>
+                                            </PstlAdr>
+                                        </Cdtr>
+                                    </RltdPties>
+                                </TxDtls>
+                            </NtryDtls>
+                        </Ntry>
+                        <Ntry>
+                            <Amt Ccy="CZK">25</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Sts>BOOK</Sts>
+                            <BookgDt>
+                                <Dt>2020-04-16+02:00</Dt>
+                            </BookgDt>
+                            <ValDt>
+                                <Dt>2020-04-16+02:00</Dt>
+                            </ValDt>
+                            <BkTxCd>
+                                <Prtry>
+                                    <Cd>555</Cd>
+                                </Prtry>
+                            </BkTxCd>
+                            <NtryDtls>
+                                <TxDtls>
+                                    <Refs>
+                                        <ChqNb>************6579</ChqNb>
+                                    </Refs>
+                                    <Amt Ccy="CZK">25</Amt>
+                                    <CdtDbtInd>CRDT</CdtDbtInd>
+                                    <RltdPties>
+                                        <Cdtr>
+                                            <Nm>CESKA SPORITELNA, A.S.</Nm>
+                                            <PstlAdr>
+                                                <TwnNm>PRAHA 6</TwnNm>
+                                            </PstlAdr>
+                                        </Cdtr>
+                                        <CdtrAcct>
+                                            <Id>
+                                                <Othr>
+                                                    <Id>1011071271</Id>
+                                                </Othr>
+                                            </Id>
+                                            <Nm>NOSTRO - CARD TRANSA</Nm>
+                                        </CdtrAcct>
+                                    </RltdPties>
+                                    <RltdAgts>
+                                        <CdtrAgt>
+                                            <FinInstnId>
+                                                <Nm>Equa bank a.s.</Nm>
+                                                <Othr>
+                                                    <Id>6100</Id>
+                                                </Othr>
+                                            </FinInstnId>
+                                        </CdtrAgt>
+                                    </RltdAgts>
+                                </TxDtls>
+                            </NtryDtls>
+                        </Ntry>
+                    </Stmt>
+                </BkToCstmrStmt>
+            </Document>""",
+            """<?xml version='1.0' encoding='UTF-8'?>
+            <Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.06">
+                <BkToCstmrStmt>
+                    <GrpHdr>
+                        <MsgId>camt.053-2020-04-30-4</MsgId>
+                        <CreDtTm>2021-12-25T13:00:36.705+01:00</CreDtTm>
+                        <MsgRcpt>
+                            <Nm>John Smith</Nm>
+                            <PstlAdr>
+                                <StrtNm>Pork street</StrtNm>
+                                <BldgNb>582</BldgNb>
+                                <PstCd>1200</PstCd>
+                                <TwnNm>Praha</TwnNm>
+                                <Ctry>Zimbabwe</Ctry>
+                            </PstlAdr>
+                        </MsgRcpt>
+                    </GrpHdr>
+                    <Stmt>
+                        <Id>CZ7461000003423429823417-2020-04-30</Id>
+                        <ElctrncSeqNb>4</ElctrncSeqNb>
+                        <LglSeqNb>4</LglSeqNb>
+                        <CreDtTm>2020-04-30T00:00:00.000+02:00</CreDtTm>
+                        <FrToDt>
+                            <FrDtTm>2020-04-01T00:00:00.000+02:00</FrDtTm>
+                            <ToDtTm>2020-04-30T00:00:00.000+02:00</ToDtTm>
+                        </FrToDt>
+                        <Acct>
+                            <Id>
+                                <IBAN>CZ7213000000001029236436</IBAN>
+                            </Id>
+                            <Ccy>CZK</Ccy>
+                            <Ownr>
+                                <Nm>John Smith</Nm>
+                                <PstlAdr>
+                                    <StrtNm>Pork street</StrtNm>
+                                    <BldgNb>582</BldgNb>
+                                    <PstCd>1200</PstCd>
+                                    <TwnNm>Praha</TwnNm>
+                                    <Ctry>Zimbabwe</Ctry>
+                                </PstlAdr>
+                            </Ownr>
+                            <Svcr>
+                                <FinInstnId>
+                                    <BICFI>EQBKCZPP</BICFI>
+                                    <Nm>Equa bank a.s.</Nm>
+                                    <Othr>
+                                        <Id>6100</Id>
+                                    </Othr>
+                                </FinInstnId>
+                            </Svcr>
+                        </Acct>
+                        <Bal>
+                            <Tp>
+                                <CdOrPrtry>
+                                    <Cd>PRCD</Cd>
+                                </CdOrPrtry>
+                            </Tp>
+                            <Amt Ccy="CZK">11.11</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Dt>
+                                <Dt>2020-04-01+02:00</Dt>
+                            </Dt>
+                        </Bal>
+                        <Bal>
+                            <Tp>
+                                <CdOrPrtry>
+                                    <Cd>CLBD</Cd>
+                                </CdOrPrtry>
+                            </Tp>
+                            <Amt Ccy="CZK">11.11</Amt>
+                            <CdtDbtInd>CRDT</CdtDbtInd>
+                            <Dt>
+                                <Dt>2020-04-30+02:00</Dt>
+                            </Dt>
+                        </Bal>
+                        <TxsSummry>
+                            <TtlNtries>
+                                <NbOfNtries>1</NbOfNtries>
+                                <Sum>11.11</Sum>
+                                <TtlNetNtry>
+                                    <Amt>11.11</Amt>
+                                    <CdtDbtInd>DBIT</CdtDbtInd>
+                                </TtlNetNtry>
+                            </TtlNtries>
+                            <TtlCdtNtries>
+                                <NbOfNtries>0</NbOfNtries>
+                                <Sum>0</Sum>
+                            </TtlCdtNtries>
+                            <TtlDbtNtries>
+                                <NbOfNtries>1</NbOfNtries>
+                                <Sum>11.11</Sum>
+                            </TtlDbtNtries>
+                        </TxsSummry>
+                        <Ntry>
+                            <Amt Ccy="CZK">11.11</Amt>
+                            <CdtDbtInd>DBIT</CdtDbtInd>
+                            <Sts>BOOK</Sts>
+                            <BookgDt>
+                                <Dt>WRONG</Dt>
+                            </BookgDt>
+                            <ValDt>
+                                <Dt>2020-04-10+02:00</Dt>
+                            </ValDt>
+                            <BkTxCd>
+                                <Prtry>
+                                    <Cd>555</Cd>
+                                </Prtry>
+                            </BkTxCd>
+                            <NtryDtls>
+                                <TxDtls>
+                                    <Refs>
+                                        <ChqNb>************6579</ChqNb>
+                                    </Refs>
+                                    <Amt Ccy="CZK">11.11</Amt>
+                                    <CdtDbtInd>DBIT</CdtDbtInd>
+                                    <RltdPties>
+                                        <Cdtr>
+                                            <Nm>TON KIN</Nm>
+                                            <PstlAdr>
+                                                <TwnNm>PRAHA 6</TwnNm>
+                                            </PstlAdr>
+                                        </Cdtr>
+                                    </RltdPties>
+                                </TxDtls>
+                            </NtryDtls>
+                        </Ntry>
+                    </Stmt>
+                </BkToCstmrStmt>
+            </Document>"""
+        )
+
+        filePaths: list[pathlib.Path] = []
+        for i, file in enumerate(files):
+            filePaths.append(
+                TestStatementImports.createEquabankStatement(
+                    self, tmp_path, f"correctEquabankStatement{i}.xml", file
+                )
+            )
+
+        with patch(
+            "tkinter.filedialog.askopenfilenames",
+            return_value=filePaths,
+        ):
+            # Assert
+            with pytest.raises(FileError): 
+                # Act
+                results = instantiateRepo.loadEquabankStatement(createUser)        
+
 
 def test_fileOpenAllIncorrect(tmp_path: pathlib.Path) -> None:
     """Test file handling while all file formats are incorrect
