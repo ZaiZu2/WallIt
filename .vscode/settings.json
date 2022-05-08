@@ -1,7 +1,7 @@
 {
     "python.formatting.provider": "black",
 
-    "python.venvPath": "${workspaceRoot}/FinanceApp_env/Scripts/python3.10.exe",
+    "python.venvPath": "${workspaceRoot}",
     "files.autoSave": "afterDelay",
     "python.linting.enabled": true,
     "python.linting.mypyEnabled": true,

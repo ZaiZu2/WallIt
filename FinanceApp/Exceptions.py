@@ -1,5 +1,6 @@
 #! python3
 
+
 class LoginFailedError(Exception):
     pass
 

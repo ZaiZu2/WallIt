@@ -38,6 +38,7 @@ class CaseSensitiveConfigParser(configparser.ConfigParser):
         """Preserve case-sensitivity of keys/values while reading config file"""
         return value
 
+
 class Session:
     """Main class holding user session"""
 
@@ -67,6 +68,7 @@ class User:
 
 class TransactionService:
     pass
+
 
 class Transaction:
     """Class cointaining a transaction record"""
@@ -631,9 +633,9 @@ class TransactionRepo:
                                         CASE
                                             WHEN {} >= 0 THEN {}
                                         ELSE 0
-                                    END), 
+                                    END),
                                 0)  AS incoming,
-                                COALESCE(                                                        
+                                COALESCE(
                                     SUM(
                                         CASE
                                             WHEN {} < 0 THEN {}
@@ -642,7 +644,7 @@ class TransactionRepo:
                                 0) AS outgoing,
                                 COALESCE(SUM({}), 0) AS difference
                             FROM {}
-                            WHERE {}  
+                            WHERE {}
                                 BETWEEN %s AND %s
                             AND
                                 {} = %s;"""
@@ -719,7 +721,9 @@ class TransactionRepo:
             """Parse record string from XML Ntry element"""
 
             foundElement = rootObj.find(XPath, namespace)
-            if isinstance(foundElement, ET.Element) and isinstance(foundElement.text, str):
+            if isinstance(foundElement, ET.Element) and isinstance(
+                foundElement.text, str
+            ):
                 return foundElement.text.upper()
             else:
                 return None
@@ -730,7 +734,9 @@ class TransactionRepo:
             """Parse tuple (Amount, Currency) from XML Ntry element"""
 
             foundElement = rootObj.find(XPath, namespace)
-            if isinstance(foundElement, ET.Element) and isinstance(foundElement.text, str):
+            if isinstance(foundElement, ET.Element) and isinstance(
+                foundElement.text, str
+            ):
                 return (float(foundElement.text), foundElement.get("Ccy"))
             else:
                 return (None, None)
@@ -739,18 +745,20 @@ class TransactionRepo:
             """Parse date string to datatime object from XML Ntry element"""
 
             foundElement = rootObj.find(XPath, namespace)
-            if isinstance(foundElement, ET.Element) and isinstance(foundElement.text, str):
-                return datetime.datetime.strptime(
-                    foundElement.text, "%Y-%m-%d+%H:%M"
-                )
+            if isinstance(foundElement, ET.Element) and isinstance(
+                foundElement.text, str
+            ):
+                return datetime.datetime.strptime(foundElement.text, "%Y-%m-%d+%H:%M")
             else:
-                raise FileError(f"Error while reading .xml file - transaction does not have date item. Import aborted.")
-        
+                raise FileError(
+                    f"Error while reading .xml file - transaction does not have date item. Import aborted."
+                )
+
         temp: list[Transaction] = []  # temp list holding loaded Transactions
 
         XMLfiles = fileOpen(".xml")
         for file in XMLfiles:
-            
+
             # Variable holding sum of all parsed expenses from a single, iterated file
             calculatedSum = 0.0
             try:
@@ -768,7 +776,9 @@ class TransactionRepo:
                     temp[-1].title = parseRecord(rootDir, ".//nms:Ustrd")
                     temp[-1].place = parseRecord(rootDir, ".//nms:PstlAdr/nms:TwnNm")
                     temp[-1].date = parseDate(rootDir, ".//nms:BookgDt/nms:Dt")
-                    tempAmount, _ = temp[-1].amount, temp[-1].currency = parseAmount(rootDir, "./nms:Amt")
+                    tempAmount, _ = temp[-1].amount, temp[-1].currency = parseAmount(
+                        rootDir, "./nms:Amt"
+                    )
                     temp[-1].srcAmount, temp[-1].srcCurrency = parseAmount(
                         rootDir, ".//nms:InstdAmt/nms:Amt"
                     )
@@ -788,18 +798,18 @@ class TransactionRepo:
                     temp[-1].bankId = self._bankMap["Equabank"]
                     temp[-1].userId = user.userId
 
-                    calculatedSum += (
-                        tempAmount if isinstance(tempAmount, float) else 0
-                    )
+                    calculatedSum += tempAmount if isinstance(tempAmount, float) else 0
             except (KeyError, ValueError, ET.ParseError) as e:
                 raise FileError(
                     f"Error while reading {file.name}. Wrong .xml file structure. Import aborted."
                 ) from e
 
             # PARSING CHECK
-            # Check if sum of parsed transaction 'amounts' from each file is the same 
+            # Check if sum of parsed transaction 'amounts' from each file is the same
             # as Sum stated in the statement
-            parsedSumString = parseRecord(root, ".//nms:TtlNtries/nms:TtlNetNtry/nms:Amt")
+            parsedSumString = parseRecord(
+                root, ".//nms:TtlNtries/nms:TtlNetNtry/nms:Amt"
+            )
             if isinstance(parsedSumString, str):
                 dir = parseRecord(root, ".//nms:TtlNtries/nms:TtlNetNtry/nms:CdtDbtInd")
                 if isinstance(dir, str) and dir == "DBIT":
@@ -812,10 +822,11 @@ class TransactionRepo:
                         f"Error while reading {file.name}. Sum of parsed transactions does not equal to the Sum on the statement."
                     )
             else:
-                raise FileError("Monthly expense summary not included in the statements.")
-            
-        return temp
+                raise FileError(
+                    "Monthly expense summary not included in the statements."
+                )
 
+        return temp
 
 
 def fileOpen(type: str) -> list[pathlib.Path]:

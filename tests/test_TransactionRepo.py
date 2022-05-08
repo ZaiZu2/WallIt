@@ -1,6 +1,5 @@
 #! python3
-import py
-import pytest, sys, pathlib, csv
+import pytest, sys, pathlib
 from datetime import datetime
 
 PROJECT_ROOT = pathlib.Path(__file__).parents[1].resolve()
@@ -16,8 +15,7 @@ from FinanceApp.FinanceApp import (
 
 from FinanceApp.FinanceApp import fileOpen
 
-# Methods called in TransactionRepo __init__ (during this fixture) are redundant.
-# They called again with mocked config files in subsequent test cases
+
 @pytest.fixture()
 def instantiateRepo():
     with (
@@ -330,7 +328,7 @@ class TestStatementImports:
     def test_RevolutIncorrectImport(
         self, instantiateRepo: TransactionRepo, createUser: User, tmp_path: pathlib.Path
     ) -> None:
-        """Test import process behaviour when provided with incorrect .csv file structure 
+        """Test import process behaviour when provided with incorrect .csv file structure
         (wrong header/columns)
 
         Args:
@@ -338,7 +336,6 @@ class TestStatementImports:
             createUser (User): fixture instantiating user
             tmp_path (pathlib.Path): path to internal pytest directory holding temporary files
         """
-
 
         # Arrange
         files = (
@@ -370,11 +367,12 @@ class TestStatementImports:
         ):
             # Assert
             with pytest.raises(FileError):
-                    # Act
-                    results += instantiateRepo.loadRevolutStatement(createUser)
+                # Act
+                results += instantiateRepo.loadRevolutStatement(createUser)
 
     def createEquabankStatement(
-        self, dirPath: pathlib.Path, fileName: str, content: str) -> pathlib.Path:
+        self, dirPath: pathlib.Path, fileName: str, content: str
+    ) -> pathlib.Path:
         """Create a temporary .xml Equabank statement used for tests
 
         Args:
@@ -402,10 +400,10 @@ class TestStatementImports:
             tmp_path (pathlib.Path): path to internal pytest directory holding temporary files
         """
 
-        # TODO: .xml test files as strings listed below. 
-        # Messy Jesus Christ. No clue how it should be done, 
-        # I think it's not the scope of unittests, but better than no tests.
-        
+        # TODO: .xml test files as strings listed below.
+        # This should be integration test, but I lack knowledge to implement them now.
+        # For now it's stays as unit test, altho very messy with this long string.
+
         # Arrange
         files = (
             """<?xml version='1.0' encoding='UTF-8'?>
@@ -782,7 +780,7 @@ class TestStatementImports:
                         </Ntry>
                     </Stmt>
                 </BkToCstmrStmt>
-            </Document>"""
+            </Document>""",
         )
 
         filePaths: list[pathlib.Path] = []
@@ -800,7 +798,7 @@ class TestStatementImports:
             return_value=filePaths,
         ):
             # Act
-            results += instantiateRepo.loadEquabankStatement(createUser)        
+            results += instantiateRepo.loadEquabankStatement(createUser)
 
         # Assert
         assert results[0].name == "TON KIN"
@@ -809,7 +807,7 @@ class TestStatementImports:
         assert results[0].srcCurrency == None
 
         assert results[1].amount == -5
-        assert results[1].currency == 'CZK'        
+        assert results[1].currency == "CZK"
 
         assert results[2].date == datetime(2020, 4, 13, 2, 0)
         assert results[2].bankId == instantiateRepo._bankMap["Equabank"]
@@ -833,10 +831,10 @@ class TestStatementImports:
             tmp_path (pathlib.Path): path to internal pytest directory holding temporary files
         """
 
-        # TODO: .xml test files as strings listed below. 
-        # Messy Jesus Christ. No clue how it should be done, 
-        # I think it's not the scope of unittests, but better than no tests.
-        
+        # TODO: .xml test files as strings listed below.
+        # This should be integration test, but I lack knowledge to implement them now.
+        # For now it's stays as unit test, altho very messy with this long string.
+
         # Arrange
         files = (
             """<?xml version='1.0' encoding='UTF-8'?>
@@ -1147,7 +1145,7 @@ class TestStatementImports:
                         </Ntry>
                     </Stmt>
                 </BkToCstmrStmt>
-            </Document>"""
+            </Document>""",
         )
 
         filePaths: list[pathlib.Path] = []
@@ -1167,8 +1165,8 @@ class TestStatementImports:
             # Assert
             with pytest.raises(FileError):
                 # Act
-                results += instantiateRepo.loadEquabankStatement(createUser)  
-    
+                results += instantiateRepo.loadEquabankStatement(createUser)
+
     def test_EquabankWrongFormat(
         self, instantiateRepo: TransactionRepo, createUser: User, tmp_path: pathlib.Path
     ) -> None:
@@ -1182,10 +1180,10 @@ class TestStatementImports:
             tmp_path (pathlib.Path): path to internal pytest directory holding temporary files
         """
 
-        # TODO: .xml test files as strings listed below. 
-        # Messy Jesus Christ. No clue how it should be done, 
-        # I think it's not the scope of unittests, but better than no tests.
-        
+        # TODO: .xml test files as strings listed below.
+        # This should be integration test, but I lack knowledge to implement them now.
+        # For now it's stays as unit test, altho very messy with this long string.
+
         # Arrange
         files = (
             """<?xml version='1.0' encoding='UTF-8'?>
@@ -1495,7 +1493,7 @@ class TestStatementImports:
                         </Ntry>
                     </Stmt>
                 </BkToCstmrStmt>
-            </Document>"""
+            </Document>""",
         )
 
         filePaths: list[pathlib.Path] = []
@@ -1515,13 +1513,13 @@ class TestStatementImports:
             # Assert
             with pytest.raises(FileError):
                 # Act
-                results += instantiateRepo.loadEquabankStatement(createUser)  
+                results += instantiateRepo.loadEquabankStatement(createUser)
 
     def test_EquabankWrongValues(
         self, instantiateRepo: TransactionRepo, createUser: User, tmp_path: pathlib.Path
     ) -> None:
         """Test import process behavior when provided with correct input files
-            
+
             Wrong parts:
             ...
             <Amt Ccy="CZK">10WRONG</Amt>
@@ -1529,17 +1527,17 @@ class TestStatementImports:
             <BookgDt>
                 <Dt>WRONG</Dt>
             ...
-        
+
         Args:
             instantiateRepo (TransactionRepo): fixture instantiating repo
             createUser (User): fixture instantiating user
             tmp_path (pathlib.Path): path to internal pytest directory holding temporary files
         """
 
-        # TODO: .xml test files as strings listed below. 
-        # Messy Jesus Christ. No clue how it should be done, 
-        # I think it's not the scope of unittests, but better than no tests.
-        
+        # TODO: .xml test files as strings listed below.
+        # This should be integration test, but I lack knowledge to implement them now.
+        # For now it's stays as unit test, altho very messy with this long string.
+
         # Arrange
         files = (
             """<?xml version='1.0' encoding='UTF-8'?>
@@ -1916,7 +1914,7 @@ class TestStatementImports:
                         </Ntry>
                     </Stmt>
                 </BkToCstmrStmt>
-            </Document>"""
+            </Document>""",
         )
 
         filePaths: list[pathlib.Path] = []
@@ -1932,9 +1930,9 @@ class TestStatementImports:
             return_value=filePaths,
         ):
             # Assert
-            with pytest.raises(FileError): 
+            with pytest.raises(FileError):
                 # Act
-                results = instantiateRepo.loadEquabankStatement(createUser)        
+                results = instantiateRepo.loadEquabankStatement(createUser)
 
 
 def test_fileOpenAllIncorrect(tmp_path: pathlib.Path) -> None:
