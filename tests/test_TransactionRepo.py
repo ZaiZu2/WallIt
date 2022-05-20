@@ -1,28 +1,24 @@
 #! python3
 import pytest, sys, pathlib
 from datetime import datetime
-
-PROJECT_ROOT = pathlib.Path(__file__).parents[1].resolve()
-sys.path.append(str(PROJECT_ROOT))
-
 from unittest.mock import patch
 from FinanceApp.Exceptions import InvalidConfigError, LoginFailedError, FileError
-from FinanceApp.FinanceApp import (
+from FinanceApp.Database import (
     TransactionRepo,
     Transaction,
     User,
 )
 
-from FinanceApp.FinanceApp import fileOpen
+from FinanceApp.Database import fileOpen
 
 
 @pytest.fixture()
 def instantiateRepo():
     with (
-        patch("FinanceApp.FinanceApp.psycopg2.connect"),
-        patch("FinanceApp.FinanceApp.psycopg2.extensions.register_type"),
+        patch("FinanceApp.Database.psycopg2.connect"),
+        patch("FinanceApp.Database.psycopg2.extensions.register_type"),
         patch(
-            "FinanceApp.FinanceApp.TransactionRepo._parseBankId",
+            "FinanceApp.Database.TransactionRepo._parseBankId",
             return_value={"Equabank": 1, "Revolut": 2},
         ),
     ):
@@ -75,7 +71,7 @@ class TestRepoInstantiation:
     )
     def test_establishConnection(self, createTempConfigFile: pathlib.Path) -> None:
         with patch(
-            "FinanceApp.FinanceApp.pathlib.Path.joinpath",
+            "FinanceApp.Database.pathlib.Path.joinpath",
             return_value=createTempConfigFile,
         ):
             # Assert
@@ -118,7 +114,7 @@ class TestRepoInstantiation:
         """
 
         with patch(
-            "FinanceApp.FinanceApp.pathlib.Path.joinpath",
+            "FinanceApp.Database.pathlib.Path.joinpath",
             return_value=createTempConfigFile,
         ):
             # Assert
@@ -157,7 +153,7 @@ class TestRepoInstantiation:
 
         # Act
         with patch(
-            "FinanceApp.FinanceApp.pathlib.Path.joinpath",
+            "FinanceApp.Database.pathlib.Path.joinpath",
             return_value=createTempConfigFile,
         ):
             tableMaps = instantiateRepo._loadTableMaps()

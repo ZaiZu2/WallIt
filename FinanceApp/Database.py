@@ -1,4 +1,5 @@
 #! python3
+# Database.py
 
 from __future__ import annotations
 from FinanceApp.Exceptions import LoginFailedError, InvalidConfigError, FileError
@@ -12,7 +13,7 @@ import functools
 import xml.etree.ElementTree as ET
 from typing import Generator, TypeVar
 from contextlib import contextmanager
-import pathlib
+import pathlib, sys
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, MONTHLY
 import psycopg2, psycopg2.extensions
