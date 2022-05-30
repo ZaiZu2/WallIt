@@ -3,8 +3,10 @@
     --color-base-bg: rgb(46, 46, 46);
     --color-btn-bg: rgb(36, 36, 36);
 
+    --button-padding: 14px;
+
     --color-base-text: rgb(240, 240, 240);
-    --small-font-size: 20px;
+    --small-font-size: 1.2rem;
     --main-font: "Times New Roman', Times, serif";
 }
 
@@ -31,13 +33,13 @@ body {
     max-width: 1024px;
     height: 1024px;
     background-color: rgba(0, 0, 0, .5);
-    border-radius: 20px;
+    border-radius: 3rem;
     overflow: hidden;
     margin: 50px 0px;
 
-    -webkit-box-shadow: 15px 15px 20px -15px rgba(0, 0, 0, 1);
-    -moz-box-shadow: 15px 15px 20px -15px rgba(0, 0, 0, 1);
-    box-shadow: 15px 15px 20px -15px rgba(0, 0, 0, 1);
+    -webkit-box-shadow: 25px 25px 25px -25px rgba(0, 0, 0, 1);
+    -moz-box-shadow: 25px 25px 25px -25px rgba(0, 0, 0, 1);
+    box-shadow: 25px 25px 25px -25px rgba(0, 0, 0, 1);
 
     display: flex;
     justify-content: center;
@@ -60,41 +62,45 @@ body {
 
     display: flex;
     flex-direction: column;
-    justify-content: center;
 }
 
-.login-form {
-    padding: 12px;
-    margin-top: 100%;
+.sub-menu {
+    flex: 1;
+    justify-self: center;
 
     display: flex;
     flex-direction: column;
     justify-content: center;
-    list-style-type: none;
 }
 
-.login-form li {
+.form {
     padding: 12px;
+    padding-bottom: 0px;
+
 
     display: flex;
+    flex-direction: column;
     justify-content: center;
-    list-style-type: none;
-
 }
 
 input {
     background: none;
-    height: 36px;
+    height: 3rem;
     margin: 12px;
     padding-left: 12px;
     box-sizing: border-box;
     border: 1px solid white;
-    border-radius: 8px;
+    border-radius: 1rem;
 
 
     color: var(--color-base-text);
     font-size: var(--small-font-size);
     font-family: var(--main-font);
+}
+
+input:not(:placeholder-shown):invalid {
+    border-width: 2px;
+    border-color: red;
 }
 
 input::placeholder {
@@ -110,31 +116,53 @@ input:active {
     box-shadow: 1px;
 }
 
-button {
+.button-list {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
+button {
+    position: relative;
     background: none;
     border: 1px solid white;
-    border-radius: 8px;
-    width: 100px;
-    height: 50px;
-    margin: 12px auto;
-    padding-left: 6px;
+    border-radius: 1rem;
+
+    width: fit-content;
+    min-width: 80px;
+    height: 3rem;
+    margin: 12px 12px;
+    padding: var(--button-padding);
 
     color: var(--color-base-text);
     font-size: var(--small-font-size);
     font-family: var(--main-font);
 }
 
+.button-label {
+    position: absolute;
+    top: 12px;
+    bottom: calc((3rem - var(--small-font-size))/2);
+    left: var(--button-padding);
+    right: var(--button-padding);
+}
+
+button:before {
+    content: attr(data-label);
+    font-weight: bold;
+    visibility: hidden;
+}
+
 button:hover {
     border-width: 2px;
-    font-weight: bolder;
+    font-weight: bold;
 }
 
 button:active {
     background-color: var(--color-base-text);
     border-width: 2px;
     color: black;
-    font-weight: bolder;
+    font-weight: bold;
 }
 
 .menu a,
@@ -156,12 +184,10 @@ a:visited {
 
 a:hover,
 a:active {
-    font-weight: bolder;
+    font-weight: bold;
 }
 
 .author-references {
-    flex: 1;
-
     display: flex;
     flex-direction: row-reverse;
     justify-content: flex-start;

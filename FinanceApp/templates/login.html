@@ -6,10 +6,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <meta name="author" content="Jakub Kawecki">
+    <meta name="description" content="An easy way to have an eye on your change.">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz@8..144&display=swap" rel="stylesheet">
+    <script src="../static/js/login.js" defer></script>
+
     <!-- CSS -->
     <link rel="stylesheet" href="../static/css/css_reset.css">
     <link rel="stylesheet" href="../static/css/styles.css">
@@ -23,19 +24,60 @@
     <div class="window">
         <div class="logo">FinanceApp</div>
         <div class="menu">
-            <form class="login-form" name="loginData" action="./login" method="post">
-                <input type="email" name="email" id="email" placeholder="E-mail" autofocus>
-                <input type="password" name="password" id="password" placeholder="Password">
-                <button type="submit">Sign in</button>
+            <div class="sub-menu">
+                <form class="form" name="loginForm" action="./login" method="post">
+                    <input type="text" name="username" id="username" placeholder="Username" autofocus required>
+                    <input type="password" name="password" id="password" placeholder="Password" required>
+
+                    <div class="button-list">
+                        <button type="submit" data-label="Sign in">
+                            <span class="button-label">Sign in</span>
+                        </button>
+                    </div>
+                </form>
                 <a href="login.html"> Forgot password?</a>
                 <a href="login.html">New here? Sign up.</a>
-            </form>
+            </div>
+
+            <div class="sub-menu">
+                <form class="form" name="passResetForm" action="./login" method="get">
+                    <input type="email" name="email" id="email" placeholder="E-mail" autofocus required>
+
+                    <div class="button-list">
+                        <button type="submit" data-label="Reset password">
+                            <span class="button-label">Reset password</span>
+                        </button>
+                        <button type="button" data-label="Back">
+                            <span class="button-label">Back</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="sub-menu">
+                <form class="form" name="signUpForm" action="./login" method="get">
+                    <input type="email" name="email" id="email" placeholder="E-mail" autofocus required>
+                    <input type="username" name="username" id="username" placeholder="Username" required>
+                    <input type="password" name="password" id="password" placeholder="Password" required>
+                    <input type="repeatPassword" name="repeatPassword" id="repeatPassword" placeholder="Repeat password"
+                        required>
+
+                    <div class="button-list">
+                        <button type="submit" data-label="Sign up">
+                            <span class="button-label">Sign up</span>
+                        </button>
+                        <button type="button" data-label="Back">
+                            <span class="button-label">Back</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
 
             <div class="author-references">
                 <a href="https://github.com/ZaiZu2/FinanceApp"><img src="../static/img/icons8-github.svg"
                         alt="github"></a>
                 <a href="https://www.linkedin.com/in/jakub-kawecki"><img src="../static/img/icons8-linkedin.svg"
-                        alt="github"></a>
+                        alt="linkedIn"></a>
             </div>
         </div>
     </div>
