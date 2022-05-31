@@ -24,7 +24,7 @@
     <div class="window">
         <div class="logo">FinanceApp</div>
         <div class="menu">
-            <div class="sub-menu">
+            <div id="login" class="sub-menu">
                 <form class="form" name="loginForm" action="./login" method="post">
                     <input type="text" name="username" id="username" placeholder="Username" autofocus required>
                     <input type="password" name="password" id="password" placeholder="Password" required>
@@ -35,11 +35,11 @@
                         </button>
                     </div>
                 </form>
-                <a href="login.html"> Forgot password?</a>
-                <a href="login.html">New here? Sign up.</a>
+                <a id="reset-password-menu" role="button"> Forgot password?</a>
+                <a id="sign-up-menu" role="button">New here? Sign up.</a>
             </div>
 
-            <div class="sub-menu">
+            <div id="reset-password" class="sub-menu hide">
                 <form class="form" name="passResetForm" action="./login" method="get">
                     <input type="email" name="email" id="email" placeholder="E-mail" autofocus required>
 
@@ -54,7 +54,7 @@
                 </form>
             </div>
 
-            <div class="sub-menu">
+            <div id="sign-up" class="sub-menu hide">
                 <form class="form" name="signUpForm" action="./login" method="get">
                     <input type="email" name="email" id="email" placeholder="E-mail" autofocus required>
                     <input type="username" name="username" id="username" placeholder="Username" required>
@@ -72,6 +72,7 @@
                     </div>
                 </form>
             </div>
+
 
             <div class="author-references">
                 <a href="https://github.com/ZaiZu2/FinanceApp"><img src="../static/img/icons8-github.svg"

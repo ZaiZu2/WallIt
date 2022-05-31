@@ -1,59 +1,36 @@
-const logoColor = function(color, size) {
-    const logo = document.querySelector('.logo');
-
-    logo.style.color = color;
-
-    logo.setAttribute('align-self', 'top')
-
-    //logo.style.cssText = `color: green; font-size:${size}px`
+const toggleWindow = function (divId) {
+  const menuNode = document.querySelector(divId);
+  menuNode.classList.toggle('hide');
 }
 
-const replaceLogo = function(imageSource) {
+const backButton = document.querySelectorAll('[data-label="Back"]');
+backButton.forEach((button) => {
+  button.addEventListener('click', () => {
+    toggleWindow('#login');
 
-    const window = document.querySelector('.window');
-    const menu = document.querySelector('.menu');
-    const logo = document.querySelector('.logo');
-
-    const img = document.createElement('div');
-    img.style.backgroundColor = 'red';
-    img.textContent = 'Replacement';
-
-    window.removeChild(logo);
-    window.insertBefore(img, menu);
-}
-
-const addStuff = function(){
-
-    const div = document.createElement('div');
-    div.style.cssText = 'border: 2px solid black; background-color: pink';
-
-    const h1 = document.createElement('h1');
-    h1.style.backgroundColor = 'black';
-    h1.textContent = 'I AM H1.';
-
-    const p1 = document.createElement('p');
-    p1.textContent = "Hey, I'm Red";
-    p1.style.color = 'Red';
-
-    const p2 = document.createElement('p');
-    p2.textContent = 'IM AM P2.'
-
-    div.append(h1, p1, p2);
-
-    const window = document.querySelector('.window');
-    window.append(div);
-}
-
-/*
-const btn = document.querySelector('#btn2');
-btn.addEventListener('click', function(e) {
-    console.log(e.target.style.backgroundColor = 'blue');
-});*/
-
-// buttons is a node list. It looks and acts much like an array.
-const buttons = document.querySelectorAll('button');
-buttons.forEach((button) => {
-  button.addEventListener('keydown', () => {
-    alert(button.id);
+    let buttonParent = button.parentElement;
+    while (true) {
+      if (buttonParent.id === 'reset-password')
+      {
+        toggleWindow('#reset-password');
+        break;
+      } else if (buttonParent.id === 'sign-up') {
+        toggleWindow('#sign-up');
+        break;
+      };
+      buttonParent = buttonParent.parentElement;
+    };
   });
+});
+
+const resetPassButton = document.querySelector('#reset-password-menu');
+resetPassButton.addEventListener('click', () => {
+    toggleWindow('#login');
+    toggleWindow('#reset-password');
+});
+
+const signUpButton = document.querySelector('#sign-up-menu');
+signUpButton.addEventListener('click', () => {
+    toggleWindow('#login');
+    toggleWindow('#sign-up');
 });

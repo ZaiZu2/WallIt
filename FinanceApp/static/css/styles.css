@@ -73,6 +73,11 @@ body {
     justify-content: center;
 }
 
+.hide {
+    display: none;
+}
+
+
 .form {
     padding: 12px;
     padding-bottom: 0px;
