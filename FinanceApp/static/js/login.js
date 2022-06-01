@@ -1,6 +1,6 @@
 const toggleWindow = function (divId) {
   const menuNode = document.querySelector(divId);
-  menuNode.classList.toggle('hide');
+  menuNode.classList.toggle('hidden');
 }
 
 const backButton = document.querySelectorAll('[data-label="Back"]');

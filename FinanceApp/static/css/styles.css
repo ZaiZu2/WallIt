@@ -1,45 +1,47 @@
 :root {
-    --border-btn: 1px solid rgb(220, 220, 220);
-    --color-base-bg: rgb(46, 46, 46);
-    --color-btn-bg: rgb(36, 36, 36);
+    --main-window-bg-color: rgba(0, 0, 0, .5);
+    --bubble-bg-color: rgb(40, 40, 40);
 
-    --button-padding: 14px;
-
-    --color-base-text: rgb(240, 240, 240);
-    --small-font-size: 1.2rem;
     --main-font: "Times New Roman', Times, serif";
+    --main-font-size: 1.2rem;
+    --main-font-active-color: rgb(240, 240, 240);
+    --main-font-inactive-color: rgb(185, 185, 185);
+
+    --border-inactive: 1px solid white;
+    --border-width-active: 2px;
+
+    --btn-border: 1px solid white;
+    --btn-padding: 14px;
 }
 
 body {
-    font-family: var(--main-font);
-    margin: 0;
     min-height: 100vh;
+    color: var(--main-font-active-color);
+
     background-image: url(../img/alex-shutin-kKvQJ6rK6S4-unsplash.jpg);
-    background-color: #3b3b3b;
+    background-color: var(--main-window-bg-color);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    color: var(--color-base-text);
 
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-
 }
 
 .window {
     width: 80vw;
     max-width: 1024px;
     height: 1024px;
-    background-color: rgba(0, 0, 0, .5);
-    border-radius: 3rem;
+    background-color: var(--main-window-bg-color);
     overflow: hidden;
     margin: 50px 0px;
 
-    -webkit-box-shadow: 25px 25px 25px -25px rgba(0, 0, 0, 1);
-    -moz-box-shadow: 25px 25px 25px -25px rgba(0, 0, 0, 1);
-    box-shadow: 25px 25px 25px -25px rgba(0, 0, 0, 1);
+    border-radius: 3rem;
+    -webkit-box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 1);
+    -moz-box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 1);
+    box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 1);
 
     display: flex;
     justify-content: center;
@@ -48,7 +50,6 @@ body {
 
 .logo {
     flex: 1;
-    padding: 100px;
     overflow: hidden;
 
     font-size: 96px;
@@ -56,7 +57,7 @@ body {
 }
 
 .menu {
-    width: 350px;
+    min-width: 350px;
     height: 100%;
     background-color: rgba(0, 0, 0, .6);
 
@@ -73,7 +74,7 @@ body {
     justify-content: center;
 }
 
-.hide {
+.hidden {
     display: none;
 }
 
@@ -94,31 +95,31 @@ input {
     margin: 12px;
     padding-left: 12px;
     box-sizing: border-box;
-    border: 1px solid white;
+    border: var(--border-inactive);
     border-radius: 1rem;
 
 
-    color: var(--color-base-text);
-    font-size: var(--small-font-size);
+    color: var(--main-font-active-color);
+    font-size: var(--main-font-size);
     font-family: var(--main-font);
 }
 
 input:not(:placeholder-shown):invalid {
-    border-width: 2px;
+    border-width: var(--border-width-active);
     border-color: red;
 }
 
 input::placeholder {
-    color: var(--color-base-text);
-    opacity: 0.8;
+    color: var(--main-font-inactive-color);
 }
 
 input:hover,
 input:focus,
 input:active {
-    border-width: 2px;
-    border-color: var(--color-base-text);
+    border-width: var(--border-width-active);
+    border-color: var(--main-font-active-color);
     box-shadow: 1px;
+    outline: none;
 }
 
 .button-list {
@@ -130,26 +131,26 @@ input:active {
 button {
     position: relative;
     background: none;
-    border: 1px solid white;
+    border: var(--btn-border);
     border-radius: 1rem;
 
     width: fit-content;
     min-width: 80px;
     height: 3rem;
     margin: 12px 12px;
-    padding: var(--button-padding);
+    padding: var(--btn-padding);
 
-    color: var(--color-base-text);
-    font-size: var(--small-font-size);
+    color: var(--main-font-active-color);
+    font-size: var(--main-font-size);
     font-family: var(--main-font);
 }
 
 .button-label {
     position: absolute;
+    /*top: calc((3rem - var(--main-font-size) - var(--border-width-active))/2);*/
     top: 12px;
-    bottom: calc((3rem - var(--small-font-size))/2);
-    left: var(--button-padding);
-    right: var(--button-padding);
+    left: var(--btn-padding);
+    right: var(--btn-padding);
 }
 
 button:before {
@@ -159,36 +160,39 @@ button:before {
 }
 
 button:hover {
-    border-width: 2px;
+    border-width: var(--border-width-active);
     font-weight: bold;
 }
 
 button:active {
-    background-color: var(--color-base-text);
-    border-width: 2px;
+    background-color: var(--main-font-active-color);
+    border-width: var(--border-width-active);
+
     color: black;
     font-weight: bold;
 }
 
 .menu a,
 .menu a:visited {
+    display: block;
     padding: 10px;
-    color: var(--color-base-text);
+
+    color: var(--main-font-active-color);
     text-align: center;
     text-decoration: none;
-    display: block;
 
-    font-size: 1.1rem
+    font-size: calc(var(--main-font-size) - 0.1rem);
 }
 
 a,
 a:visited {
-    color: var(--color-base-text);
+    color: var(--main-font-active-color);
     text-decoration: underline;
 }
 
 a:hover,
 a:active {
+    cursor: pointer;
     font-weight: bold;
 }
 
@@ -217,5 +221,4 @@ img:hover {
     -moz-transform: scale(1.2);
     -ms-transform: scale(1.2);
     transform: scale(1.2);
-
 }
