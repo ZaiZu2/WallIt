@@ -3,8 +3,8 @@ const toggleWindow = function (divId) {
   menuNode.classList.toggle('hidden');
 }
 
-const backButton = document.querySelectorAll('[data-label="Back"]');
-backButton.forEach((button) => {
+const backButtons = document.querySelectorAll('#back');
+backButtons.forEach((button) => {
   button.addEventListener('click', () => {
     toggleWindow('#login');
 

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
@@ -12,11 +13,73 @@
 
     <!-- CSS -->
     <link rel="stylesheet" href="../static/css/css_reset.css">
-    <link rel="stylesheet" href="../static/css/styles.css">
+    <link rel="stylesheet" href="../static/css/index-style.css">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
 
     <title>FinanceApp</title>
 </head>
+
 <body>
+    <div class="window">
+        <div class="side-bar">
+            <h1>WallIt</h1>
+            <div class="menu">
+                <ol>
+                    <li><button id="transactions">
+                            <span class="material-symbols-rounded custom-icon">
+                                view_list
+                            </span>
+                            <h4>Transactions</h4>
+                        </button></li>
+                    <li><button id="monthly">
+                            <span class="material-symbols-rounded custom-icon">
+                                data_exploration
+                            </span>
+                            <h4>Monthly</h4>
+                        </button></li>
+                    <li><button id="statistics">
+                            <span class="material-symbols-rounded custom-icon">
+                                analytics
+                            </span>
+                            <h4>Statistics</h4>
+                        </button></li>
+                    <li><button id="filter">
+                            <span class="material-symbols-rounded custom-icon">
+                                filter_alt
+                            </span>
+                            <h4>Filter</h4>
+                        </button></li>
+                    <li><button id="statements">
+                            <span class="material-symbols-rounded custom-icon">
+                                upload_file
+                            </span>
+                            <h4>Statements</h4>
+                        </button></li>
+                    <li><button id="settings">
+                            <span class="material-symbols-rounded custom-icon">
+                                settings
+                            </span>
+                            <h4>Settings</h4>
+                        </button></li>
+                </ol>
+            </div>
+            <button id="log-out">
+                <span class="material-symbols-rounded custom-icon" style="font-size: 48px !important;">
+                    logout
+                </span>
+                <h3>Log out</h3>
+            </button>
+        </div>
+
+        <div class="bubble-field">
+            <div class="bubble">
+
+            </div>
+        </div>
+    </div>
 
 </body>
+
 </html>

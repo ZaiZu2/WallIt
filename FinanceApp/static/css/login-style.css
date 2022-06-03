@@ -1,18 +1,4 @@
-:root {
-    --main-window-bg-color: rgba(0, 0, 0, .5);
-    --bubble-bg-color: rgb(40, 40, 40);
-
-    --main-font: "Times New Roman', Times, serif";
-    --main-font-size: 1.2rem;
-    --main-font-active-color: rgb(240, 240, 240);
-    --main-font-inactive-color: rgb(185, 185, 185);
-
-    --border-inactive: 1px solid white;
-    --border-width-active: 2px;
-
-    --btn-border: 1px solid white;
-    --btn-padding: 14px;
-}
+@import './custom-variables.css';
 
 body {
     min-height: 100vh;
@@ -39,9 +25,9 @@ body {
     margin: 50px 0px;
 
     border-radius: 3rem;
-    -webkit-box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 1);
-    -moz-box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 1);
-    box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 1);
+    -webkit-box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 0.7);
+    -moz-box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 0.7);
+    box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 0.7);
 
     display: flex;
     justify-content: center;
