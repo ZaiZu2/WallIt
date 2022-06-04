@@ -103,59 +103,51 @@ input:hover,
 input:focus,
 input:active {
     border-width: var(--border-width-active);
-    border-color: var(--main-font-active-color);
     box-shadow: 1px;
     outline: none;
 }
 
 .button-list {
+    padding: 10px;
+
     display: flex;
     justify-content: center;
     align-items: center;
+    gap: 20px;
 }
 
 button {
-    position: relative;
+    width: fit-content;
+    min-width: 90px;
+    height: 3rem;
+    padding: var(--btn-padding);
+
     background: none;
     border: var(--btn-border);
     border-radius: 1rem;
 
-    width: fit-content;
-    min-width: 80px;
-    height: 3rem;
-    margin: 12px 12px;
-    padding: var(--btn-padding);
-
     color: var(--main-font-active-color);
     font-size: var(--main-font-size);
     font-family: var(--main-font);
+    line-height: 1rem;
 }
 
-.button-label {
-    position: absolute;
-    /*top: calc((3rem - var(--main-font-size) - var(--border-width-active))/2);*/
-    top: 12px;
-    left: var(--btn-padding);
-    right: var(--btn-padding);
-}
-
-button:before {
-    content: attr(data-label);
-    font-weight: bold;
-    visibility: hidden;
-}
-
-button:hover {
+button:hover,
+button:focus {
     border-width: var(--border-width-active);
-    font-weight: bold;
 }
 
 button:active {
     background-color: var(--main-font-active-color);
     border-width: var(--border-width-active);
-
+    outline: none;
     color: black;
-    font-weight: bold;
+
+    position: relative;
+    -webkit-transform: scale(0.95);
+    -moz-transform: scale(0.95);
+    -ms-transform: scale(0.95);
+    transform: scale(0.95);
 }
 
 .menu a,
@@ -197,14 +189,23 @@ footer p {
 
 img {
     width: 40px;
-    -webkit-filter: invert(90%);
-    filter: invert(90%);
+    -webkit-filter: invert(100%);
+    filter: invert(100%);
 }
 
 img:hover {
+    transition: 0.1s;
     position: relative;
     -webkit-transform: scale(1.2);
     -moz-transform: scale(1.2);
     -ms-transform: scale(1.2);
     transform: scale(1.2);
+}
+
+img:active {
+    position: relative;
+    -webkit-transform: scale(0.95);
+    -moz-transform: scale(0.95);
+    -ms-transform: scale(0.95);
+    transform: scale(0.95);
 }
