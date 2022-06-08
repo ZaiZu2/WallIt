@@ -75,7 +75,7 @@
 
         <div class="main-window">
             <h2 class="subwindow-outline">Welcome back, Jakub</h2>
-            <div class="subwindow-outline filter-subwindow">
+            <div class="subwindow-outline filter" style="padding-bottom: 0px;">
                 <div class="subwindow-header">
                     <span class="material-symbols-rounded custom-small-icon">
                         filter_alt
@@ -83,15 +83,81 @@
                     <h6>Filtering</h6>
                 </div>
                 <div class="filter-button-list">
-                    <button>Amount</button>
-                    <button>Currency</button>
-                    <button>Date</button>
-                    <button>Category</button>
-                    <button>Banks</button>
+                    <button id="filterAmount">Amount</button>
+                    <button id="filterDate">Date</button>
+                    <button id="filterCurrency">Currency</button>
+                    <button id="filterCategory">Category</button>
+                    <button id="filterBank">Banks</button>
                 </div>
+                <form name="filterForm" action="" method="get">
+                    <div id="filterAmountContent" class="filter-input">
+                        <div class="filterRange">
+                            <input type="number" name="minAmount" id="minAmount" placeholder="Minimum">
+                            <input type="number" name="maxAmount" id="maxAmount" placeholder="Maximum">
+                        </div>
+                    </div>
+                    <div id="filterDateContent" class="filter-input">
+                        <div class="filterRange">
+                            <input type="date" name="minDate" id="minDate">
+                            <input type="date" name="maxDate" id="maxDate">
+                        </div>
+                    </div>
+                    <div id="filterCurrencyContent" class="filter-input">
+                        <div class="filterSet">
+                            <input type="checkbox" name="poop" id="poopID1">
+                            <label for="poopID1">CZK</label>
+
+                            <input type="checkbox" name="poop" id="poopID2">
+                            <label for="poopID2">EUR</label>
+
+                            <input type="checkbox" name="poop" id="poopID3">
+                            <label for="poopID3">USD</label>
+
+                            <input type="checkbox" name="poop" id="poopID4">
+                            <label for="poopID4">PLN</label>
+                        </div>
+                    </div>
+                    <div id="filterCategoryContent" class="filter-input">
+                        <div class="filterSet">
+                            <input type="checkbox" name="poop" id="poopID1">
+                            <label for="poopID1">Groceries</label>
+
+                            <input type="checkbox" name="poop" id="poopID2">
+                            <label for="poopID2">Salary</label>
+
+                            <input type="checkbox" name="poop" id="poopID3">
+                            <label for="poopID3">Entertainment</label>
+
+                            <input type="checkbox" name="poop" id="poopID4">
+                            <label for="poopID4">Hobby</label>
+
+                            <input type="checkbox" name="poop" id="poopID5">
+                            <label for="poopID5">Restaurant</label>
+
+                            <input type="checkbox" name="poop" id="poopID6">
+                            <label for="poopID6">Rent</label>
+                        </div>
+                    </div>
+                    <div id="filterBankContent" class="filter-input">
+                        <div class="filterSet">
+                            <input type="checkbox" name="poop" id="poopID1">
+                            <label for="poopID1">Equabank</label>
+                            <input type="checkbox" name="poop" id="poopID2">
+                            <label for="poopID2">mBank</label>
+                            <input type="checkbox" name="poop" id="poopID3">
+                            <label for="poopID3">Revolut</label>
+                        </div>
+                    </div>
+                    <div id="submitContent" class="filter-input">
+                        <button id="filterSubmit" type="submit">Submit</button>
+                    </div>
+
+
+
+                </form>
             </div>
 
-            <div class="subwindow-outline transaction-subwindow">
+            <div class="subwindow-outline transactions hidden">
                 <div class="subwindow-header">
                     <span class="material-symbols-rounded custom-small-icon">
                         view_list
