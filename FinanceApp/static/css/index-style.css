@@ -274,8 +274,7 @@ h1 {
 
 .filter-button-list {
     height: fit-content;
-    padding-top: 16px;
-    padding-bottom: 16px;
+    padding: 8px 0px;
 
     display: flex;
     justify-content: space-between;
@@ -312,19 +311,24 @@ h1 {
 .filter-input {
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.2s ease-in-out;
+    transition: 0.2s ease-in-out;
+    border-top: none;
 }
 
-.filterRange {
-    padding: 16px 0;
+.filter-input.active {
+    border-top: 1px solid rgb(110, 110, 110);
+}
+
+.filter-range {
+    padding: 8px 0;
 
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
 }
 
-.filterSet {
-    padding: 16px 0;
+.filter-set {
+    padding: 8px 0;
 
     display: grid;
     grid-template-rows: 1.5em;

@@ -89,57 +89,57 @@
                     <button id="filterCategory">Category</button>
                     <button id="filterBank">Banks</button>
                 </div>
-                <form name="filterForm" action="" method="get">
-                    <div id="filterAmountContent" class="filter-input">
-                        <div class="filterRange">
+                <div name="filterForm">
+                    <form name="Amount" class="filter-input">
+                        <div class="filter-range">
                             <input type="number" name="minAmount" id="minAmount" placeholder="Minimum">
                             <input type="number" name="maxAmount" id="maxAmount" placeholder="Maximum">
                         </div>
-                    </div>
-                    <div id="filterDateContent" class="filter-input">
-                        <div class="filterRange">
+                    </form>
+                    <form name="Date" class="filter-input">
+                        <div class="filter-range">
                             <input type="date" name="minDate" id="minDate">
                             <input type="date" name="maxDate" id="maxDate">
                         </div>
-                    </div>
-                    <div id="filterCurrencyContent" class="filter-input">
-                        <div class="filterSet">
-                            <input type="checkbox" name="poop" id="poopID1">
+                    </form>
+                    <form name="Currency" class="filter-input">
+                        <div class="filter-set">
+                            <input type="checkbox" name="CZK" id="poopID1">
                             <label for="poopID1">CZK</label>
 
-                            <input type="checkbox" name="poop" id="poopID2">
+                            <input type="checkbox" name="EUR" id="poopID2">
                             <label for="poopID2">EUR</label>
 
-                            <input type="checkbox" name="poop" id="poopID3">
+                            <input type="checkbox" name="USD" id="poopID3">
                             <label for="poopID3">USD</label>
 
-                            <input type="checkbox" name="poop" id="poopID4">
+                            <input type="checkbox" name="PLN" id="poopID4">
                             <label for="poopID4">PLN</label>
                         </div>
-                    </div>
-                    <div id="filterCategoryContent" class="filter-input">
-                        <div class="filterSet">
-                            <input type="checkbox" name="poop" id="poopID1">
-                            <label for="poopID1">Groceries</label>
-
-                            <input type="checkbox" name="poop" id="poopID2">
-                            <label for="poopID2">Salary</label>
-
-                            <input type="checkbox" name="poop" id="poopID3">
-                            <label for="poopID3">Entertainment</label>
-
-                            <input type="checkbox" name="poop" id="poopID4">
-                            <label for="poopID4">Hobby</label>
-
+                    </form>
+                    <form name="Category" class="filter-input">
+                        <div class="filter-set">
                             <input type="checkbox" name="poop" id="poopID5">
-                            <label for="poopID5">Restaurant</label>
+                            <label for="poopID5">Groceries</label>
 
                             <input type="checkbox" name="poop" id="poopID6">
-                            <label for="poopID6">Rent</label>
+                            <label for="poopID6">Salary</label>
+
+                            <input type="checkbox" name="poop" id="poopID7">
+                            <label for="poopID7">Entertainment</label>
+
+                            <input type="checkbox" name="poop" id="poopID8">
+                            <label for="poopID8">Hobby</label>
+
+                            <input type="checkbox" name="poop" id="poopID9">
+                            <label for="poopID9">Restaurant</label>
+
+                            <input type="checkbox" name="poop" id="poopID10">
+                            <label for="poopID10">Rent</label>
                         </div>
-                    </div>
-                    <div id="filterBankContent" class="filter-input">
-                        <div class="filterSet">
+                    </form>
+                    <form name="Bank" class="filter-input">
+                        <div class="filter-set">
                             <input type="checkbox" name="poop" id="poopID1">
                             <label for="poopID1">Equabank</label>
                             <input type="checkbox" name="poop" id="poopID2">
@@ -147,14 +147,11 @@
                             <input type="checkbox" name="poop" id="poopID3">
                             <label for="poopID3">Revolut</label>
                         </div>
-                    </div>
+                    </form>
                     <div id="submitContent" class="filter-input">
                         <button id="filterSubmit" type="submit">Submit</button>
                     </div>
-
-
-
-                </form>
+                </div>
             </div>
 
             <div class="subwindow-outline transactions hidden">

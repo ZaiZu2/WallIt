@@ -1,3 +1,4 @@
+// Allows button to toggle menu windows ON/OFF with responsive button behavior
 const menuButtons = document.querySelectorAll('.menu button');
 menuButtons.forEach(button => {
     button.addEventListener('click', () => {
@@ -11,33 +12,93 @@ menuButtons.forEach(button => {
     })
 });
 
+
+const toggleCollapsible = function (node) {
+    if (node.style.maxHeight) {
+        node.style.maxHeight = null;
+    } else {
+        node.style.maxHeight = node.scrollHeight + 'px';
+    }
+}
+
+// Allows filtering buttons to extend FILTER menu to make it responsive
 const filterButtons = document.querySelectorAll('.filter-button-list button');
 filterButtons.forEach(button => {
     button.addEventListener('click', () => {
         button.classList.toggle('active');
 
-        const content = document.getElementById(button.id + 'Content');
-        if (content.style.maxHeight) {
-            content.style.maxHeight = null;
-            content.style.border = null;
-        } else {
-            content.style.borderTop = '1px solid rgba(110, 110, 110, 1)'
-            content.style.maxHeight = content.scrollHeight + 'px';
-        }
+        // If button is switched OFF, hide corresponding FILTER menu
+        // If button is switched ON, show corresponding FILTER menu
+        const content = document.getElementsByName(button.id.substring(6))[0];
+        content.classList.toggle('active');
+        if (content.style.maxHeight) content.style.maxHeight = null;
+        else content.style.maxHeight = content.scrollHeight + 'px';
 
-        // Check if any of FilterButtons is ON to toggle on the SUBMIT button
+        //  If any of FilterButtons is OFF, hide the SUBMIT button
+        //  If any of FilterButtons is ON, show the SUBMIT button
         let isActive = false;
         for (let node of [...button.parentNode.children]) {
-            if (node.classList.contains('active')) isActive = true;
+            if (node.classList.contains('active')) {
+                isActive = true;
+                break;
+            };
         };
-
         const submitButton = document.getElementById('submitContent');
         if (isActive === true) {
-            submitButton.style.borderTop = '1px solid rgba(110, 110, 110, 1)'
+            submitButton.classList.add('active');
             submitButton.style.maxHeight = submitButton.scrollHeight + 'px';
         } else {
+            submitButton.classList.remove('active');
             submitButton.style.maxHeight = null;
-            submitButton.style.border = null;
         };
     })
+});
+
+// submit multiple forms and send request with JSONified input
+const filterSubmit = document.getElementById('filterSubmit');
+filterSubmit.addEventListener("click", (e) => {
+    let inputs = {};
+
+    // loop over all filter forms and extract inputs from each one
+    const filterForms = document.querySelectorAll('form.filter-input');
+    [...filterForms].forEach(form => {
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+
+            // Crate object for input values
+            if (form.name === ('Amount' || 'Date')) {
+                let localInputs = {};
+                formData.forEach((value, key) => localInputs[key] = value);
+                inputs[form.name] = localInputs;
+            } else { // Create array for checkbox values
+                let localInputs = [];
+                formData.forEach((value, key) => localInputs.push(key));
+                inputs[form.name] = localInputs;
+            }
+        });
+
+        form.requestSubmit();
+    });
+
+    // Example POST method implementation:
+    async function postData(url = '', data = {}) {
+        // Default options are marked with *
+        const response = await fetch(url, {
+            method: 'POST', // *GET, POST, PUT, DELETE, etc.
+            mode: 'cors', // no-cors, *cors, same-origin
+            cache: 'default', // *default, no-cache, reload, force-cache, only-if-cached
+            credentials: 'same-origin', // include, *same-origin, omit
+            headers: {
+                'Content-Type': 'application/json'
+                // 'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            redirect: 'follow', // manual, *follow, error
+            referrerPolicy: 'no-referrer-when-downgrade', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+            body: JSON.stringify(data) // body data type must match "Content-Type" header
+        });
+        return response.json(); // parses JSON response into native JavaScript objects
+    }
+
+    postData('./index.html', inputs);
 });
