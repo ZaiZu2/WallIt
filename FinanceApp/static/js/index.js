@@ -3,9 +3,9 @@ const menuButtons = document.querySelectorAll('.menu button');
 menuButtons.forEach(button => {
     button.addEventListener('click', () => {
         // Toggle button ON/OFF
-        button.classList.toggle('active-menu-button');
+        button.classList.toggle('active');
         // Toggle icon ON/OFF
-        button.childNodes[1].classList.toggle('active-menu-button');
+        button.childNodes[1].classList.toggle('active');
         // Show/hide windows corresponding to a given button
         const menuWindow = document.getElementsByClassName(button.id);
         menuWindow[0].classList.toggle('hidden');
@@ -77,28 +77,90 @@ filterSubmit.addEventListener("click", (e) => {
                 inputs[form.name] = localInputs;
             }
         });
-
         form.requestSubmit();
     });
 
-    // Example POST method implementation:
-    async function postData(url = '', data = {}) {
-        // Default options are marked with *
-        const response = await fetch(url, {
-            method: 'POST', // *GET, POST, PUT, DELETE, etc.
-            mode: 'cors', // no-cors, *cors, same-origin
-            cache: 'default', // *default, no-cache, reload, force-cache, only-if-cached
-            credentials: 'same-origin', // include, *same-origin, omit
-            headers: {
-                'Content-Type': 'application/json'
-                // 'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            redirect: 'follow', // manual, *follow, error
-            referrerPolicy: 'no-referrer-when-downgrade', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-            body: JSON.stringify(data) // body data type must match "Content-Type" header
-        });
-        return response.json(); // parses JSON response into native JavaScript objects
-    }
-
     postData('./index.html', inputs);
 });
+
+// Example POST method implementation:
+async function postData(url = '', data = {}) {
+    // Default options are marked with *
+    const response = await fetch(url, {
+        method: 'POST', // *GET, POST, PUT, DELETE, etc.
+        mode: 'cors', // no-cors, *cors, same-origin
+        cache: 'default', // *default, no-cache, reload, force-cache, only-if-cached
+        credentials: 'same-origin', // include, *same-origin, omit
+        headers: { 'Content-Type': 'application/json' },
+        redirect: 'follow', // manual, *follow, error
+        referrerPolicy: 'no-referrer-when-downgrade', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+        body: JSON.stringify(data) // body data type must match "Content-Type" header
+    });
+    return response.json(); // parses JSON response into native JavaScript objects
+}
+
+new gridjs.Grid({
+    search: true,
+    columns: [{
+        name: "Name",
+        sort: {
+            enabled: false
+        },
+
+    }, {
+        name: "Title",
+        sort: {
+            enabled: false
+        },
+        search: {
+            enabled: false
+        }
+    }, {
+        name: "Amount",
+    }, {
+        name: "Currency",
+    }, {
+        name: "Category",
+    }, {
+        name: "Date"
+    }, {
+        name: "Bank"
+    }],
+    data: [
+        ["John", "john@example.com", "(353) 01 222 3333", "Afshin", "afshin@mail.com", "(353) 22 87 8356", "(353) 22 87 8356"],
+        ["Mark", "mark@gmail.com", "(01) 22 888 4444", "Afshin", "afshin@mail.com", "(353) 22 87 8356", "(353) 22 87 8356"],
+        ["Eoin", "eoin@gmail.com", "0097 22 654 00033", "Afshin", "afshin@mail.com", "(353) 22 87 8356", "(353) 22 87 8356"],
+        ["Sarah", "sarahcdd@gmail.com", "+322 876 1233", "Afshin", "afshin@mail.com", "(353) 22 87 8356", "(353) 22 87 8356"],
+        ["Afshin", "afshin@mail.com", "(353) 22 87 8356", "Afshin", "afshin@mail.com", "(353) 22 87 8356", "(353) 22 87 8356"],
+        ["John", "john@example.com", "(353) 01 222 3333", "Afshin", "afshin@mail.com", "(353) 22 87 8356", "(353) 22 87 8356"],
+        ["Mark", "mark@gmail.com", "(01) 22 888 4444", "Afshin", "afshin@mail.com", "(353) 22 87 8356", "(353) 22 87 8356"],
+        ["Eoin", "eoin@gmail.com", "0097 22 654 00033", "Afshin", "afshin@mail.com", "(353) 22 87 8356", "(353) 22 87 8356"],
+        ["Sarah", "sarahcdd@gmail.com", "+322 876 1233", "Afshin", "afshin@mail.com", "(353) 22 87 8356", "(353) 22 87 8356"],
+        ["Afshin", "afshin@mail.com", "(353) 22 87 8356", "Afshin", "afshin@mail.com", "(353) 22 87 8356", "(353) 22 87 8356"],
+        ["John", "john@example.com", "(353) 01 222 3333", "Afshin", "afshin@mail.com", "(353) 22 87 8356", "(353) 22 87 8356"],
+        ["Mark", "mark@gmail.com", "(01) 22 888 4444", "Afshin", "afshin@mail.com", "(353) 22 87 8356", "(353) 22 87 8356"],
+        ["Eoin", "eoin@gmail.com", "0097 22 654 00033", "Afshin", "afshin@mail.com", "(353) 22 87 8356", "(353) 22 87 8356"],
+        ["Sarah", "sarahcdd@gmail.com", "+322 876 1233", "Afshin", "afshin@mail.com", "(353) 22 87 8356", "(353) 22 87 8356"],
+        ["Afshin", "afshin@mail.com", "(353) 22 87 8356", "Afshin", "afshin@mail.com", "(353) 22 87 8356", "(353) 22 87 8356"]
+    ],
+    sort: true,
+    pagination: {
+        enabled: true,
+        limit: 10
+    },
+    className: {
+        container: 'custom-container',
+        table: 'custom-table',
+        tbody: 'custom-tbody',
+        thead: 'custom-thead',
+        header: 'custom-header',
+        footer: 'custom-footer',
+        td: 'custom-td',
+        th: 'custom-th',
+        paginationSummary: 'custom-pagination-summary',
+        paginationButton: 'custom-pagination-button',
+        paginationButtonNext: 'custom-pagination-button-next',
+        paginationButtonCurrent: 'custom-pagination-button-current',
+        paginationButtonPrev: 'custom-pagination-button-prev',
+    }
+}).render(document.getElementById("poop"));

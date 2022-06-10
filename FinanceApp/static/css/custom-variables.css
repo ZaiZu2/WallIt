@@ -7,7 +7,7 @@
     --main-font-active-color: rgb(255, 255, 255);
     --main-font-inactive-color: rgb(185, 185, 185);
 
-    --border-inactive: 1px solid white;
+    --border-inactive: 1px solid rgb(110, 110, 110);
     --border-width-active: 2px;
 
     --btn-border: 1px solid white;
