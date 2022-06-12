@@ -437,9 +437,9 @@ input[type="checkbox"]:disabled+label:before {
     color: var(--main-font-inactive-color);
 }
 
-input:hover,
-input:focus,
-input:active {
+.custom-header input:hover,
+.custom-header input:focus,
+.custom-header input:active {
     box-shadow: none;
     outline: none;
     border-color: var(--main-font-active-color);
@@ -468,8 +468,8 @@ input:active {
     color: var(--main-font-active-color) !important;
 }
 
-.custom-pagination-button:active,
-.custom-pagination-button:focus {
+.custom-footer .custom-pagination-button:active,
+.custom-footer .custom-pagination-button:focus {
     background-color: var(--main-font-active-color) !important;
     color: black !important;
     transform: none !important;
@@ -477,7 +477,7 @@ input:active {
     border: none !important;
 }
 
-.custom-pagination-button.custom-pagination-button-current {
+.custom-footer .custom-pagination-button-current {
     background-color: var(--main-font-active-color) !important;
     color: black !important;
 }
