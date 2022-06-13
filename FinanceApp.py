@@ -1,0 +1,1 @@
+from .FinanceApp import app
