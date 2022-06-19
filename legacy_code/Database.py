@@ -103,7 +103,6 @@ class Transaction:
         self.currency: str | None = None
         self.srcAmount: float | None = None
         self.srcCurrency: str | None = None
-        self.date: datetime.datetime | None = None
         self.place: str | None = None
         self._category: str | None = None
         self.userId: int | None = None
@@ -196,9 +195,9 @@ class TransactionRepo:
             raise InvalidConfigError("Unexpected postgresConfig.ini formatting") from e
 
         # Temporary variable to not handle connect() with try block
-        a = psycopg2.connect(**postgresConfig)
+        _ = psycopg2.connect(**postgresConfig)
         try:
-            with a as connection:
+            with _ as connection:
                 # Ensure that DECIMAL postgres data type is cast by default to Float and not Decimal
                 psycopg2.extensions.register_type(_dec2floatType(), connection)
                 with connection.cursor() as cursor:
