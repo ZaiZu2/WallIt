@@ -81,7 +81,7 @@ input {
     margin: 12px;
     padding-left: 12px;
     box-sizing: border-box;
-    border: var(--border-inactive);
+    border: 1px solid rgb(255, 255, 255);
     border-radius: 1rem;
 
 
@@ -105,6 +105,10 @@ input:active {
     border-width: var(--border-width-active);
     box-shadow: 1px;
     outline: none;
+}
+
+input[type="checkbox"] + label {
+    align-self: center;
 }
 
 .button-list {

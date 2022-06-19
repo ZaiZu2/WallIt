@@ -1,0 +1,28 @@
+{% extends "index.html" %}
+
+{% block filterCheckboxes %}
+    <form name="Currency" class="filter-input">
+        <div class="filter-set">
+            {% for currency in currencies %}
+                <input type="checkbox" name="{{ currency }}" id="{{ currency }}">
+                <label for="{{ currency }}">{{ currency }}</label>
+            {% endfor %}
+        </div>
+    </form>
+    <form name="Category" class="filter-input">
+        <div class="filter-set">
+            {% for category in categories %}
+                <input type="checkbox" name="{{ category }}" id="{{ category }}">
+                <label for="{{ category }}">{{ category }}</label>
+            {% endfor %}
+        </div>
+    </form>
+    <form name="Bank" class="filter-input">
+        <div class="filter-set">
+            {% for bank in banks %}
+                <input type="checkbox" name="{{ bank }}" id="{{ bank }}">
+                <label for="{{ bank }}">{{ bank }}</label>
+            {% endfor %}
+        </div>
+    </form>
+{% endblock filterCheckboxes %}
