@@ -67,7 +67,7 @@ filterSubmit.addEventListener("click", (e) => {
             const formData = new FormData(form);
 
             // Crate object for input values
-            if (form.name === ('Amount' || 'Date')) {
+            if (form.name === 'Amount' || form.name === 'Date') {
                 let localInputs = {};
                 formData.forEach((value, key) => localInputs[key] = value);
                 inputs[form.name] = localInputs;
@@ -80,9 +80,12 @@ filterSubmit.addEventListener("click", (e) => {
         form.requestSubmit();
     });
 
-    postData('./index.html', inputs);
+    //postData('./index.html', inputs);
+    console.log(JSON.stringify(inputs));
 });
 
+
+/*
 // Example POST method implementation:
 async function postData(url = '', data = {}) {
     // Default options are marked with *
@@ -98,8 +101,9 @@ async function postData(url = '', data = {}) {
     });
     return response.json(); // parses JSON response into native JavaScript objects
 }
+*/
 
-new gridjs.Grid({
+let transactionsTable = new gridjs.Grid({
     search: true,
     columns: [{
         name: "Name",

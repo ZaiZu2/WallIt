@@ -8,8 +8,61 @@
     --main-font-inactive-color: rgb(185, 185, 185);
 
     --border-inactive: 1px solid rgb(110, 110, 110);
+    --border-active: 2px solid rgb(255, 255, 255);
     --border-width-active: 2px;
 
     --btn-border: 1px solid white;
     --btn-padding: 14px;
+}
+
+/*********** CUSTOM-CHECKBOX ***********/
+
+input[type="checkbox"] {
+    display: none;
+}
+
+input[type="checkbox"]+label {
+    position: relative;
+    cursor: pointer;
+    padding: 0;
+    color: var(--main-font-inactive-color);
+}
+
+input[type="checkbox"]+label:before {
+    content: '';
+    margin-right: 6px;
+    display: inline-block;
+    vertical-align: middle;
+    width: 24px;
+    height: 24px;
+    background-image: url(../img/check_box_outline_blank_FILL0_wght400_GRAD0_opsz24.svg);
+    -webkit-filter: invert(60%);
+    filter: invert(60%);
+}
+
+input[type="checkbox"]:hover+label::before {
+    filter: invert(100%);
+}
+
+input[type="checkbox"]:hover+label {
+    color: var(--main-font-active-color);
+}
+
+input[type="checkbox"]:checked+label:before {
+    background-image: url(../img/check_box_FILL0_wght400_GRAD0_opsz24.svg);
+    filter: invert(100%);
+}
+
+input[type="checkbox"]:checked+label {
+    color: var(--main-font-active-color);
+}
+
+input[type="checkbox"]:disabled+label {
+    color: #b8b8b8;
+    cursor: auto;
+}
+
+input[type="checkbox"]:disabled+label:before {
+    box-shadow: none;
+    background: #ddd;
 }

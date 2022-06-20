@@ -1,89 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
+    <head>
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="author" content="Jakub Kawecki">
+        <meta name="description"
+              content="An easy way to have an eye on your change.">
+        <script src="../static/js/login.js" defer></script>
+        <!-- CSS -->
+        <link rel="stylesheet" href="../static/css/css_reset.css">
+        <link rel="stylesheet" href="../static/css/login-style.css">
+        <title>FinanceApp</title>
+    </head>
+    <body>
+        <div class="header"></div>
+        <div class="window">
+            <div class="logo">WallIt</div>
+            <div class="menu">
+                <div id="login" class="sub-menu">
 
-<head>
-    <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    {% with messages = get_flashed_messages() %}
+                        {% if messages %}
+                            {% for message in messages %}<p>{{ message }}</p>{% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    {% for error in loginForm.username.errors %}<span style="color: red;">[{{ error }}]</span>{% endfor %}
+                    {% for error in loginForm.password.errors %}<span style="color: red;">[{{ error }}]</span>{% endfor %}
 
-    <meta name="author" content="Jakub Kawecki">
-    <meta name="description" content="An easy way to have an eye on your change.">
+                    <form class="form" name="loginForm" action="{{ url_for('welcome') }}" method="post">
+                        {{ loginForm.hidden_tag() }}
+                        {{ loginForm.username(placeholder='Username') }}
+                        {{ loginForm.password(placeholder='Password') }}
+                        {{ loginForm.rememberMe() }}
+                        {{ loginForm.rememberMe.label }}
+                        <div class="button-list">
+                            <button type="submit">Sign in</button>
+                        </div>
+                    </form>
+                    <a id="reset-password-menu" role="button">Forgot password?</a>
+                    <a id="sign-up-menu" role="button">New here? Sign up.</a>
+                </div>
+                <div id="reset-password" class="sub-menu hidden">
+                    <form class="form"
+                          name="resetPasswordForm"
+                          action="{{ url_for('welcome') }}"
+                          method="post">
 
-    <script src="../static/js/login.js" defer></script>
+                        {{ resetPasswordForm.hidden_tag() }}
+                        {{ resetPasswordForm.email(placeholder='E-mail') }}
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="../static/css/css_reset.css">
-    <link rel="stylesheet" href="../static/css/login-style.css">
+                        <div class="button-list">
+                            <button type="submit" data-label="Reset password">Reset password</button>
+                            <button id="back" type="button">Back</button>
+                        </div>
+                    </form>
+                </div>
+                <div id="sign-up" class="sub-menu hidden">
+                    <form class="form"
+                          name="signUpForm"
+                          action="{{ url_for('welcome') }}"
+                          method="post">
 
+                        {{ signUpForm.hidden_tag() }}
+                        {{ signUpForm.email(placeholder='E-mail') }}
+                        {{ signUpForm.username(placeholder='Username') }}
+                        {{ signUpForm.password(placeholder='Password') }}
+                        {{ signUpForm.repeatPassword(placeholder='Repeat password') }}
 
-    <title>FinanceApp</title>
-</head>
+                        {% for error in signUpForm.password.errors %}
+                        <span style="color: red;">[{{ error }}]</span>
+                        {% endfor %}
 
-<body>
-    <div class="header"></div>
-
-    <div class="window">
-        <div class="logo">WallIt</div>
-        <div class="menu">
-            <div id="login" class="sub-menu">
-                <form class="form" name="loginForm" action="./welcome"  method="post">
-                    <input type="text" name="username" id="username" placeholder="Username" autofocus required>
-                    <input type="password" name="password" id="password" placeholder="Password" required>
-
-                    <div class="button-list">
-                        <button type="submit" data-label="Sign in">Sign in</button>
-                    </div>
-                </form>
-                <a id="reset-password-menu" role="button"> Forgot password?</a>
-                <a id="sign-up-menu" role="button">New here? Sign up.</a>
-            </div>
-
-            <div id="reset-password" class="sub-menu hidden">
-                <form class="form" name="passResetForm" action="./welcome" method="get">
-                    <input type="email" name="email" id="email" placeholder="E-mail" autofocus required>
-
-                    <div class="button-list">
-                        <button type="submit" data-label="Reset password">Reset password</button>
-                        <button id="back" type="button">Back</button>
-                    </div>
-                </form>
-            </div>
-
-            <div id="sign-up" class="sub-menu hidden">
-                <form class="form" name="signUpForm" action="./welcome" method="get">
-                    <input type="email" name="email" id="email" placeholder="E-mail" autofocus required>
-                    <input type="username" name="username" id="username" placeholder="Username" required>
-                    <input type="password" name="password" id="password" placeholder="Password" required>
-                    <input type="repeatPassword" name="repeatPassword" id="repeatPassword" placeholder="Repeat password"
-                        required>
-
-                    <div class="button-list">
-                        <button type="submit" data-label="Sign up">Sign up</button>
-                        <button id="back" type="button">Back</button>
-                    </div>
-                </form>
-            </div>
-
-            <div class="author-references">
-                <a href="https://github.com/ZaiZu2/FinanceApp"><img src="../static/img/icons8-github.svg"
-                        alt="author-github"></a>
-                <a href="https://www.linkedin.com/in/jakub-kawecki"><img src="../static/img/icons8-linkedin.svg"
-                        alt="author-linkedIn"></a>
+                        <div class="button-list">
+                            <button type="submit" data-label="Sign up">Sign up</button>
+                            <button id="back" type="button">Back</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="author-references">
+                    <a href="https://github.com/ZaiZu2/FinanceApp">
+                        <img src="../static/img/icons8-github.svg" alt="author-github">
+                    </a>
+                    <a href="https://www.linkedin.com/in/jakub-kawecki">
+                        <img src="../static/img/icons8-linkedin.svg" alt="author-linkedIn">
+                    </a>
+                </div>
             </div>
         </div>
-    </div>
-
-    <footer>
-        <p>Photo by <a href="https://unsplash.com/@fiveamstories">Alex Shutin</a> on <a
-                href="https://unsplash.com/photos/kKvQJ6rK6S4">Unsplash</a></p>
-        <p>Icons by <a target="_blank" href="https://icons8.com">Icons8</a></p>
-    </footer>
-</body>
-
+        <footer>
+            <p>
+                Photo by <a href="https://unsplash.com/@fiveamstories">Alex Shutin</a> on <a href="https://unsplash.com/photos/kKvQJ6rK6S4">Unsplash</a>
+            </p>
+            <p>
+                Icons by <a target="_blank" href="https://icons8.com">Icons8</a>
+            </p>
+        </footer>
+    </body>
 </html>
-
-
 <div>
-
-    </form>
+</form>
 </div>
