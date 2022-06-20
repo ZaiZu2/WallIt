@@ -1,13 +1,14 @@
 #! python3
 
-from flask import redirect, url_for
-from FinanceApp import app, Database
+from FinanceApp import app
 from FinanceApp.forms import LoginForm, SignUpForm, ResetPasswordForm
+from FinanceApp.models import User
 
-from flask import render_template, flash
+from flask import redirect, url_for, render_template, flash
+from flask_login import current_user, login_user
 
 
-@app.route("/")
+@app.route("/index")
 def index():
     currencies = ["CZK", "PLN", "EUR", "USD"]
     categories = ["Groceries", "Salary", "Entertainment", "Hobby", "Restaurant", "Rent"]
@@ -20,7 +21,7 @@ def index():
     user1 = User()
 
     return render_template(
-        "filter.html",
+        "index.html",
         user=user1,
         currencies=currencies,
         categories=categories,
@@ -28,13 +29,12 @@ def index():
     )
 
 
-@app.route("/login", methods=["GET", "POST"])
-def login():
+@app.route("/welcome", methods=["GET", "POST"])
+def welcome():
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
 
     loginForm = LoginForm()
-    signUpForm = SignUpForm()
-    resetPasswordForm = ResetPasswordForm()
-
     if loginForm.validate_on_submit():
         print("LOGIN")
         flash(
@@ -42,19 +42,39 @@ def login():
                 loginForm.username.data, loginForm.rememberMe.data
             )
         )
-        # logic authorizing the user
+
+        user = User.query.filter_by(username=loginForm.username.data).first()
+        if user is None or not user.checkPassword(loginForm.password.data):
+            flash("Invalid username or password")
+            return redirect(url_for("welcome"))
+        login_user(user, remember=loginForm.rememberMe.data)
         return redirect(url_for("index"))
 
+        # return redirect(url_for("login"))
+
+    signUpForm = SignUpForm()
     if signUpForm.validate_on_submit():
         print("SIGNUP")
         return redirect(url_for("signUp"))
 
+    resetPasswordForm = ResetPasswordForm()
+    if resetPasswordForm.validate_on_submit():
+        print("RESET")
+        return redirect(url_for("passwordReset"))
+
     return render_template(
-        "login.html",
+        "welcome.html",
         loginForm=loginForm,
         signUpForm=signUpForm,
         resetPasswordForm=resetPasswordForm,
     )
+
+    # @app.route("/login", methods=["POST"])
+    # def login():
+
+    pass
+    # query the db for email address
+    # send email with password
 
 
 @app.route("/account/reset", methods=["POST"])

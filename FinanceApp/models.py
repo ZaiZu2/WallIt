@@ -1,11 +1,14 @@
 #!python3
 
-from FinanceApp import db
+from FinanceApp import db, login
+
+from werkzeug.security import check_password_hash, generate_password_hash
+from flask_login import UserMixin
 
 from datetime import datetime
 
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -20,6 +23,17 @@ class User(db.Model):
 
     def __repr__(self) -> str:
         return f"{self.username}: {self.firstName} {self.lastName} under email: {self.email}"
+
+    def setPassword(self, password):
+        self.passwordHash = generate_password_hash(password)
+
+    def checkPassword(self, password) -> bool:
+        return check_password_hash(self.passwordHash, password)
+
+
+@login.user_loader
+def loadUser(id: str) -> User:
+    return User.query.get(int(id))
 
 
 class Transaction(db.Model):

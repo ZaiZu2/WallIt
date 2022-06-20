@@ -1,2 +1,2 @@
-FLASK_APP=FinanceApp.py
+FLASK_APP=WallIt.py
 FLASK_ENV=development
