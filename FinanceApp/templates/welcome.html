@@ -11,7 +11,7 @@
         <!-- CSS -->
         <link rel="stylesheet" href="../static/css/css_reset.css"/>
         <link rel="stylesheet" href="../static/css/login-style.css"/>
-        <title>FinanceApp</title>
+        <title>WallIt</title>
     </head>
     <body>
         <div class="header"></div>
@@ -19,15 +19,19 @@
             <div class="logo">WallIt</div>
             <div class="menu">
                 <div id="login" class="sub-menu">
-                    {% with messages = get_flashed_messages() %}
-                        {% if messages %}
-                            {% for message in messages %}<p class="feedback-field">{{ message }}</p>{% endfor %}
-                        {% endif %}
-                    {% endwith %}
+                    <div class="feedback-field">
+                        {% with messages = get_flashed_messages() %}
+                            {% if messages %}
+                                {% for message in messages %}<p class="feedback">{{ message }}</p>{% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                    </div>
                     {% for error in loginForm.username.errors %}<span style="color: red;">[{{ error }}]</span>{% endfor %}
                     {% for error in loginForm.password.errors %}<span style="color: red;">[{{ error }}]</span>{% endfor %}
-
-                    <form class="form" name="loginForm" action="{{ url_for('welcome') }}" method="post">
+                    <form class="form"
+                          name="loginForm"
+                          action="{{ url_for('welcome') }}"
+                          method="post">
                         {{ loginForm.hidden_tag() }}
                         {{ loginForm.username(placeholder='Username') }}
                         {{ loginForm.password(placeholder='Password') }}
@@ -41,14 +45,19 @@
                     <a id="sign-up-menu" role="button">New here? Sign up.</a>
                 </div>
                 <div id="reset-password" class="sub-menu hidden">
+                    <div class="feedback-field">
+                        {% with messages = get_flashed_messages() %}
+                            {% if messages %}
+                                {% for message in messages %}<p class="feedback">{{ message }}</p>{% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                    </div>
                     <form class="form"
                           name="resetPasswordForm"
                           action="{{ url_for('welcome') }}"
                           method="post">
-
                         {{ resetPasswordForm.hidden_tag() }}
                         {{ resetPasswordForm.email(placeholder='E-mail') }}
-
                         <div class="button-list">
                             <button type="submit" data-label="Reset password">Reset password</button>
                             <button id="back" type="button">Back</button>
@@ -56,21 +65,22 @@
                     </form>
                 </div>
                 <div id="sign-up" class="sub-menu hidden">
+                    <div class="feedback-field">
+                        {% with messages = get_flashed_messages() %}
+                            {% if messages %}
+                                {% for message in messages %}<p class="feedback">{{ message }}</p>{% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                    </div>
                     <form class="form"
                           name="signUpForm"
                           action="{{ url_for('welcome') }}"
                           method="post">
-
                         {{ signUpForm.hidden_tag() }}
                         {{ signUpForm.email(placeholder='E-mail') }}
                         {{ signUpForm.username(placeholder='Username') }}
                         {{ signUpForm.password(placeholder='Password') }}
                         {{ signUpForm.repeatPassword(placeholder='Repeat password') }}
-
-                        {% for error in signUpForm.password.errors %}
-                        <span style="color: red;">[{{ error }}]</span>
-                        {% endfor %}
-
                         <div class="button-list">
                             <button type="submit" data-label="Sign up">Sign up</button>
                             <button id="back" type="button">Back</button>
@@ -79,10 +89,10 @@
                 </div>
                 <div class="author-references">
                     <a href="https://github.com/ZaiZu2/FinanceApp">
-                        <img src="../static/img/icons8-github.svg" alt="author-github"/>
+                        <img src="../static/img/icons8-github.svg" height="auto" width="auto" alt="author-github"/>
                     </a>
                     <a href="https://www.linkedin.com/in/jakub-kawecki">
-                        <img src="../static/img/icons8-linkedin.svg" alt="author-linkedIn"/>
+                        <img src="../static/img/icons8-linkedin.svg" height="auto" width="auto" alt="author-linkedIn"/>
                     </a>
                 </div>
             </div>

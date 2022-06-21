@@ -1,20 +1,5 @@
 @import './custom-variables.css';
 
-
-.window {
-    flex: 1;
-    background-color: var(--main-window-bg-color);
-    overflow: hidden;
-    margin: 50px;
-
-    border-radius: 3rem;
-    -webkit-box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 0.7);
-    -moz-box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 0.7);
-    box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 0.7);
-
-    display: flex;
-}
-
 /* ********************************* */
 /* ********** MAIN-STYLES ********** */
 /* ********************************* */
@@ -211,13 +196,27 @@ input[type="date"]::-webkit-datetime-edit-text {
 /* ********** MAIN-WINDOW ********** */
 /* ********************************* */
 
+.window {
+    flex: 1;
+    background-color: var(--main-window-bg-color);
+    overflow: hidden;
+    margin: 30px;
+
+    border-radius: 3rem;
+    -webkit-box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 0.7);
+    -moz-box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 0.7);
+    box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 0.7);
+
+    display: flex;
+}
+
 .main-window {
     flex: 1;
-    padding: 30px;
+    padding: 20px;
 
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 20px;
 }
 
 .subwindow-outline {
@@ -444,15 +443,35 @@ th.custom-th {
     border-left: none;
     border-right: none;
 
-    vertical-align: middle;
+
     color: white;
     white-space: nowrap;
 }
 
-th.custom-th {
-    text-align: center;
+.custom-th {
+    font-weight: bold;
+
 }
 
+.custom-thead .custom-th:focus,
+.custom-thead .custom-th:hover {
+    background: none;
+}
+
+.custom-thead .gridjs-sort-neutral {
+    opacity: 0.5;
+    filter: invert(1);
+}
+
+.custom-thead .gridjs-sort-asc {
+    opacity: 1;
+    filter: invert(1);
+}
+
+.custom-thead .gridjs-sort-desc {
+    opacity: 1;
+    filter: invert(1);
+}
 
 /* ********************************** */
 /* ********** GOOGLE-ICONS ********** */
