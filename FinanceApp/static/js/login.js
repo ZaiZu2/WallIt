@@ -1,4 +1,3 @@
-/*
 const toggleWindow = function (divId) {
   const menuNode = document.querySelector(divId);
   menuNode.classList.toggle('hidden');
@@ -35,4 +34,3 @@ signUpButton.addEventListener('click', () => {
     toggleWindow('#login');
     toggleWindow('#sign-up');
 });
-*/
