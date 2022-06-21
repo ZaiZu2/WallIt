@@ -13,7 +13,11 @@
             "cwd": "${fileDirname}",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
-            }
-        }
+            },
+            "jinja": true,
+            "justMyCode": true,
+        },
+
     ]
+
 }

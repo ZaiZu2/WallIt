@@ -1,0 +1,72 @@
+{% extends "welcome.html" %}
+{% block login %}
+    <div id="login" class="sub-menu">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}<p class="feedback-field">{{ message }}</p>{% endfor %}
+            {% endif %}
+        {% endwith %}
+        <form class="form"
+              name="loginForm"
+              action="{{ url_for('login') }}"
+              method="post">
+            {{ loginForm.hidden_tag() }}
+            {{ loginForm.username(placeholder='Username') }}
+            {{ loginForm.password(placeholder='Password') }}
+            {{ loginForm.rememberMe() }}
+            {{ loginForm.rememberMe.label }}
+            <div class="button-list">
+                <button type="submit">Sign in</button>
+            </div>
+        </form>
+        <a id="reset-password-menu" href="{{ url_for('resetPassword') }}">Forgot password?</a>
+        <a id="sign-up-menu" href="{{ url_for('signUp') }}" role="button">New here? Sign up.</a>
+    </div>
+{% endblock login %}
+{% block signup %}
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}<p class="feedback-field">{{ message }}</p>{% endfor %}
+        {% endif %}
+    {% endwith %}
+    <div id="sign-up" class="sub-menu">
+        <form class="form"
+              name="signUpForm"
+              action="{{ url_for('signUp') }}"
+              method="post">
+            {{ signUpForm.hidden_tag() }}
+            {{ signUpForm.email(placeholder='E-mail') }}
+            {{ signUpForm.username(placeholder='Username') }}
+            {{ signUpForm.password(placeholder='Password') }}
+            {{ signUpForm.repeatPassword(placeholder='Repeat password') }}
+        </form>
+        <div class="button-list">
+            <button type="submit" data-label="Sign up">Sign up</button>
+            <form action="{{ url_for('login') }}" method="get">
+                <button id="back" href="{{ url_for('login') }}" type="submit">Back</button>
+            </form>
+        </div>
+    </div>
+{% endblock signup %}
+{% block resetpassword %}
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}<p class="feedback-field">{{ message }}</p>{% endfor %}
+        {% endif %}
+    {% endwith %}
+    <div id="reset-password" class="sub-menu">
+        <form class="form"
+              name="resetPasswordForm"
+              action="{{ url_for('resetPassword') }}"
+              method="post">
+            {{ resetPasswordForm.hidden_tag() }}
+            {{ resetPasswordForm.email(placeholder='E-mail') }}
+        </form>
+        <div class="button-list">
+            <button type="submit" data-label="Reset password">Reset password</button>
+            <form action="{{ url_for('login') }}" method="get">
+                <button id="back" href="{{ url_for('login') }}" type="submit">Back</button>
+            </form>
+        </div>
+    </div>
+{% endblock resetpassword %}

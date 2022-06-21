@@ -181,7 +181,8 @@ input[type="date"]::-webkit-datetime-edit-text {
     line-height: 50px;
 }
 
-#log-out {
+#log-out,
+#log-out:visited {
     height: 100px;
     padding: 10px;
 
@@ -189,6 +190,9 @@ input[type="date"]::-webkit-datetime-edit-text {
     justify-content: center;
     align-items: center;
     gap: 10px;
+
+    color: var(--main-font-inactive-color);
+    text-decoration: none;
 }
 
 #log-out:hover,
@@ -198,7 +202,7 @@ input[type="date"]::-webkit-datetime-edit-text {
 }
 
 #log-out h3 {
-    font-size: 2rem;
+    font-size: 1.7rem;
     flex: none;
     width: fit-content;
 }

@@ -13,6 +13,8 @@ app.config.from_object(Config)  # read flask app config file
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
 login = LoginManager(app)
+login.login_view = "welcome"
 
 from FinanceApp import routes, models

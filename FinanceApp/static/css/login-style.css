@@ -64,6 +64,9 @@ body {
     display: none;
 }
 
+p.feedback-field {
+    text-align: center;
+}
 
 .form {
     padding: 12px;

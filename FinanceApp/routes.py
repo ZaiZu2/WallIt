@@ -4,11 +4,12 @@ from FinanceApp import app
 from FinanceApp.forms import LoginForm, SignUpForm, ResetPasswordForm
 from FinanceApp.models import User
 
-from flask import redirect, url_for, render_template, flash
-from flask_login import current_user, login_user
+from flask import redirect, request, url_for, render_template, flash
+from flask_login import current_user, login_required, login_user, logout_user
 
 
-@app.route("/index")
+@app.route("/")
+@login_required
 def index():
     currencies = ["CZK", "PLN", "EUR", "USD"]
     categories = ["Groceries", "Salary", "Entertainment", "Hobby", "Restaurant", "Rent"]
@@ -21,71 +22,58 @@ def index():
     user1 = User()
 
     return render_template(
-        "index.html",
+        "filter.html",
         user=user1,
         currencies=currencies,
         categories=categories,
         banks=banks,
+        current_user=current_user._get_current_object(),
     )
 
 
-@app.route("/welcome", methods=["GET", "POST"])
-def welcome():
+@app.route("/login", methods=["GET", "POST"])
+def login():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
 
     loginForm = LoginForm()
     if loginForm.validate_on_submit():
-        print("LOGIN")
-        flash(
-            "Login requested for user {}, remember_me={}".format(
-                loginForm.username.data, loginForm.rememberMe.data
-            )
-        )
-
         user = User.query.filter_by(username=loginForm.username.data).first()
         if user is None or not user.checkPassword(loginForm.password.data):
             flash("Invalid username or password")
-            return redirect(url_for("welcome"))
+            return redirect(url_for("login"))
         login_user(user, remember=loginForm.rememberMe.data)
         return redirect(url_for("index"))
 
-        # return redirect(url_for("login"))
-
-    signUpForm = SignUpForm()
-    if signUpForm.validate_on_submit():
-        print("SIGNUP")
-        return redirect(url_for("signUp"))
-
-    resetPasswordForm = ResetPasswordForm()
-    if resetPasswordForm.validate_on_submit():
-        print("RESET")
-        return redirect(url_for("passwordReset"))
-
     return render_template(
-        "welcome.html",
-        loginForm=loginForm,
-        signUpForm=signUpForm,
-        resetPasswordForm=resetPasswordForm,
+        "welcome_context.html", loginForm=loginForm, path=request.path
     )
 
-    # @app.route("/login", methods=["POST"])
-    # def login():
 
-    pass
-    # query the db for email address
-    # send email with password
+@app.route("/account/reset", methods=["GET", "POST"])
+def resetPassword():
+    resetPasswordForm = ResetPasswordForm()
+    if resetPasswordForm.validate_on_submit():
+        return redirect(url_for("resetPassword"))
 
-
-@app.route("/account/reset", methods=["POST"])
-def passwordReset():
-
-    pass
-    # query the db for email address
-    # send email with password
+    return render_template(
+        "welcome_context.html", resetPasswordForm=resetPasswordForm, path=request.path
+    )
 
 
-@app.route("/account/new", methods=["POST"])
+@app.route("/account/new", methods=["GET", "POST"])
 def signUp():
+    signUpForm = SignUpForm()
+    if signUpForm.validate_on_submit():
+        return redirect(url_for("signUp"))
 
-    pass
+    return render_template(
+        "welcome_context.html", signUpForm=signUpForm, path=request.path
+    )
+
+
+@app.route("/logout", methods=["POST", "GET"])
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("login"))
