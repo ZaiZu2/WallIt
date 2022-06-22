@@ -3,6 +3,7 @@
 from typing_extensions import Required
 from flask import Flask
 from flask_wtf import FlaskForm
+from pyparsing import StringEnd
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, EmailField
 from wtforms.validators import InputRequired, Email, EqualTo, Length
 
@@ -44,6 +45,18 @@ class SignUpForm(FlaskForm):
         ],
     )
     repeatPassword = PasswordField(
+        "Repeat password",
+        validators=[
+            InputRequired(),
+        ],
+    )
+    firstName = StringField(
+        "Repeat password",
+        validators=[
+            InputRequired(),
+        ],
+    )
+    lastName = StringField(
         "Repeat password",
         validators=[
             InputRequired(),

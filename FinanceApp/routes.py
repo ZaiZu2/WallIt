@@ -1,10 +1,11 @@
 #! python3
 
-from FinanceApp import app
+import email
+from FinanceApp import app, db
 from FinanceApp.forms import LoginForm, SignUpForm, ResetPasswordForm
 from FinanceApp.models import User
 
-from flask import redirect, request, url_for, render_template, flash
+from flask import redirect, request, session, url_for, render_template, flash
 from flask_login import current_user, login_required, login_user, logout_user
 
 
@@ -31,15 +32,7 @@ def welcome():
 
     loginForm = LoginForm()
     if loginForm.validate_on_submit():
-
-        user = User.query.filter_by(username=loginForm.username.data).first()
-        if user is None or not user.checkPassword(loginForm.password.data):
-            flash("Invalid username or password")
-            return redirect(url_for("welcome"))
-        login_user(user, remember=loginForm.rememberMe.data)
-        return redirect(url_for("index"))
-
-        # return redirect(url_for("login"))
+        return redirect(url_for("login"))
 
     signUpForm = SignUpForm()
     if signUpForm.validate_on_submit():
@@ -56,12 +49,20 @@ def welcome():
         resetPasswordForm=resetPasswordForm,
     )
 
-    # @app.route("/login", methods=["POST"])
-    # def login():
 
-    # pass
-    # query the db for email address
-    # send email with password
+@app.route("/login", methods=["POST"])
+def login():
+    loginForm = LoginForm()
+    if loginForm.validate_on_submit():
+        user = User.query.filter_by(username=loginForm.username.data).first()
+        if user is None or not user.checkPassword(loginForm.password.data):
+            flash("Invalid username or password")
+            return redirect(url_for("welcome"))
+
+        login_user(user, remember=loginForm.rememberMe.data)
+        return redirect(url_for("index"))
+
+    return redirect(url_for("welcome"))
 
 
 @app.route("/account/reset", methods=["POST"])
@@ -73,7 +74,29 @@ def passwordReset():
 
 @app.route("/account/new", methods=["POST"])
 def signUp():
-    pass
+    signUpForm = SignUpForm()
+    if signUpForm.validate_on_submit():
+        if User.query.filter_by(username=signUpForm.username.data).first():
+            flash("Username is already used")
+            return redirect(url_for("welcome"))
+        if User.query.filter_by(email=signUpForm.email.data).first():
+            flash("Email is already used")
+            return redirect(url_for("welcome"))
+
+        newUser = User(
+            username=signUpForm.username.data,
+            email=signUpForm.email.data,
+            password=signUpForm.password.data,
+            firstName=signUpForm.firstName.data,
+            lastName=signUpForm.lastName.data,
+        )
+        db.session.add(newUser)
+        db.session.commit()
+        flash("Account created successfully")
+        return redirect(url_for("welcome"))
+
+    flash("wrong form")
+    return redirect(url_for("welcome"))
 
 
 @app.route("/logout", methods=["POST", "GET"])

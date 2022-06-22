@@ -24,13 +24,12 @@
                             {% if messages %}
                                 {% for message in messages %}<p class="feedback">{{ message }}</p>{% endfor %}
                             {% endif %}
+                            {% set messages = None %}
                         {% endwith %}
                     </div>
-                    {% for error in loginForm.username.errors %}<span style="color: red;">[{{ error }}]</span>{% endfor %}
-                    {% for error in loginForm.password.errors %}<span style="color: red;">[{{ error }}]</span>{% endfor %}
                     <form class="form"
                           name="loginForm"
-                          action="{{ url_for('welcome') }}"
+                          action="{{ url_for('login') }}"
                           method="post">
                         {{ loginForm.hidden_tag() }}
                         {{ loginForm.username(placeholder='Username') }}
@@ -74,11 +73,13 @@
                     </div>
                     <form class="form"
                           name="signUpForm"
-                          action="{{ url_for('welcome') }}"
+                          action="{{ url_for('signUp') }}"
                           method="post">
                         {{ signUpForm.hidden_tag() }}
                         {{ signUpForm.email(placeholder='E-mail') }}
                         {{ signUpForm.username(placeholder='Username') }}
+                        {{ signUpForm.firstName(placeholder='First name') }}
+                        {{ signUpForm.lastName(placeholder='Last name') }}
                         {{ signUpForm.password(placeholder='Password') }}
                         {{ signUpForm.repeatPassword(placeholder='Repeat password') }}
                         <div class="button-list">
@@ -89,10 +90,16 @@
                 </div>
                 <div class="author-references">
                     <a href="https://github.com/ZaiZu2/FinanceApp">
-                        <img src="../static/img/icons8-github.svg" height="auto" width="auto" alt="author-github"/>
+                        <img src="../static/img/icons8-github.svg"
+                             height="auto"
+                             width="auto"
+                             alt="author-github"/>
                     </a>
                     <a href="https://www.linkedin.com/in/jakub-kawecki">
-                        <img src="../static/img/icons8-linkedin.svg" height="auto" width="auto" alt="author-linkedIn"/>
+                        <img src="../static/img/icons8-linkedin.svg"
+                             height="auto"
+                             width="auto"
+                             alt="author-linkedIn"/>
                     </a>
                 </div>
             </div>

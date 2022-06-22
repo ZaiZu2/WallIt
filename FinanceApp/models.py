@@ -21,13 +21,17 @@ class User(UserMixin, db.Model):
     # model name used for relationship()!
     transactions = db.relationship("Transaction", backref="user", lazy=True)
 
+    def __init__(self, password, **kwargs) -> None:
+        super(User, self).__init__(**kwargs)
+        self.setPassword(password)
+
     def __repr__(self) -> str:
         return f"{self.username}: {self.firstName} {self.lastName} under email: {self.email}"
 
-    def setPassword(self, password):
+    def setPassword(self, password: str):
         self.passwordHash = generate_password_hash(password)
 
-    def checkPassword(self, password) -> bool:
+    def checkPassword(self, password: str) -> bool:
         return check_password_hash(self.passwordHash, password)
 
 
