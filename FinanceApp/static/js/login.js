@@ -23,5 +23,7 @@ resetPassButton.addEventListener('click', () => showSubmenu('reset-password'));
 const signUpButton = document.getElementById('sign-up-button');
 signUpButton.addEventListener('click', () => showSubmenu('sign-up'));
 
-// Load last open submenu when page gets refreshed
-showSubmenu(sessionStorage.getItem('lastOpenSubmenu'))
+// Load last open submenu if available else open login menu
+if (sessionStorage.getItem('lastOpenSubmenu'))
+  showSubmenu(sessionStorage.getItem('lastOpenSubmenu'));
+else showSubmenu('login');
