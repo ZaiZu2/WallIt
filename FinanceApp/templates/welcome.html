@@ -41,8 +41,8 @@
                             <button type="submit">Sign in</button>
                         </div>
                     </form>
-                    <a id="reset-password-menu" role="button">Forgot password?</a>
-                    <a id="sign-up-menu" role="button">New here? Sign up.</a>
+                    <a id="reset-password-button" role="button">Forgot password?</a>
+                    <a id="sign-up-button" role="button">New here? Sign up.</a>
                 </div>
                 <div id="reset-password" class="sub-menu hidden">
                     <div class="feedback-field">
@@ -60,7 +60,7 @@
                         {{ resetPasswordForm.email(placeholder='E-mail') }}
                         <div class="button-list">
                             <button type="submit" data-label="Reset password">Reset password</button>
-                            <button id="back" type="button">Back</button>
+                            <button class="back-button" type="button">Back</button>
                         </div>
                     </form>
                 </div>
@@ -83,7 +83,7 @@
                         {{ signUpForm.repeatPassword(placeholder='Repeat password') }}
                         <div class="button-list">
                             <button type="submit" data-label="Sign up">Sign up</button>
-                            <button id="back" type="button">Back</button>
+                            <button class="back-button" type="button">Back</button>
                         </div>
                     </form>
                 </div>
