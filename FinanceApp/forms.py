@@ -9,10 +9,12 @@ from wtforms.validators import InputRequired, Email, EqualTo, Length
 
 
 class LoginForm(FlaskForm):
-    username = StringField("Username", validators=[InputRequired()])
+    username = StringField(
+        "Username", validators=[InputRequired(message="Username is required")]
+    )
     password = PasswordField(
         "Password",
-        validators=[InputRequired()],
+        validators=[InputRequired(message="Password is required")],
     )
     rememberMe = BooleanField("Remember me")
     submit = SubmitField("Sign in")
@@ -28,18 +30,21 @@ class ResetPasswordForm(FlaskForm):
 class SignUpForm(FlaskForm):
     email = EmailField(
         "Email",
-        validators=[InputRequired(), Email(message="Wrongly formatted email address")],
+        validators=[
+            InputRequired(message="Email is required"),
+            Email(message="Wrongly formatted email address"),
+        ],
     )
     username = StringField(
         "Username",
         validators=[
-            InputRequired(),
+            InputRequired(message="Username is required"),
         ],
     )
     password = PasswordField(
         "Password",
         validators=[
-            InputRequired(),
+            InputRequired(message="Password is required"),
             Length(min=5, message="Password should be minimum 5 characters long"),
             EqualTo("repeatPassword", message="Passwords do not match"),
         ],
@@ -47,18 +52,18 @@ class SignUpForm(FlaskForm):
     repeatPassword = PasswordField(
         "Repeat password",
         validators=[
-            InputRequired(),
+            InputRequired(message="Password has to be repeated"),
         ],
     )
     firstName = StringField(
-        "Repeat password",
+        "First name",
         validators=[
-            InputRequired(),
+            InputRequired(message="First name is required"),
         ],
     )
     lastName = StringField(
-        "Repeat password",
+        "Last name",
         validators=[
-            InputRequired(),
+            InputRequired(message="Last name is required"),
         ],
     )

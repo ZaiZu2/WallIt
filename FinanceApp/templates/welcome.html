@@ -20,12 +20,13 @@
             <div class="menu">
                 <div id="login" class="sub-menu">
                     <div class="feedback-field">
-                        {% with messages = get_flashed_messages() %}
-                            {% if messages %}
-                                {% for message in messages %}<p class="feedback">{{ message }}</p>{% endfor %}
-                            {% endif %}
-                            {% set messages = None %}
-                        {% endwith %}
+                        <div class="feedback">
+                            {% with messages = get_flashed_messages(category_filter=['login']) %}
+                                {% if messages %}
+                                    {% for message in messages %}<p>{{ message }}</p>{% endfor %}
+                                {% endif %}
+                            {% endwith %}
+                        </div>
                     </div>
                     <form class="form"
                           name="loginForm"
@@ -45,15 +46,17 @@
                 </div>
                 <div id="reset-password" class="sub-menu hidden">
                     <div class="feedback-field">
-                        {% with messages = get_flashed_messages() %}
-                            {% if messages %}
-                                {% for message in messages %}<p class="feedback">{{ message }}</p>{% endfor %}
-                            {% endif %}
-                        {% endwith %}
+                        <div class="feedback">
+                            {% with messages = get_flashed_messages(category_filter=['resetPassword']) %}
+                                {% if messages %}
+                                    {% for message in messages %}<p>{{ message }}</p>{% endfor %}
+                                {% endif %}
+                            {% endwith %}
+                        </div>
                     </div>
                     <form class="form"
                           name="resetPasswordForm"
-                          action="{{ url_for('welcome') }}"
+                          action="{{ url_for('resetPassword') }}"
                           method="post">
                         {{ resetPasswordForm.hidden_tag() }}
                         {{ resetPasswordForm.email(placeholder='E-mail') }}
@@ -65,11 +68,13 @@
                 </div>
                 <div id="sign-up" class="sub-menu hidden">
                     <div class="feedback-field">
-                        {% with messages = get_flashed_messages() %}
-                            {% if messages %}
-                                {% for message in messages %}<p class="feedback">{{ message }}</p>{% endfor %}
-                            {% endif %}
-                        {% endwith %}
+                        <div class="feedback">
+                            {% with messages = get_flashed_messages(category_filter=['signUp']) %}
+                                {% if messages %}
+                                    {% for message in messages %}<p>{{ message }}</p>{% endfor %}
+                                {% endif %}
+                            {% endwith %}
+                        </div>
                     </div>
                     <form class="form"
                           name="signUpForm"

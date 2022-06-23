@@ -31,16 +31,8 @@ def welcome():
         return redirect(url_for("index"))
 
     loginForm = LoginForm()
-    if loginForm.validate_on_submit():
-        return redirect(url_for("login"))
-
     signUpForm = SignUpForm()
-    if signUpForm.validate_on_submit():
-        return redirect(url_for("signUp"))
-
     resetPasswordForm = ResetPasswordForm()
-    if resetPasswordForm.validate_on_submit():
-        return redirect(url_for("passwordReset"))
 
     return render_template(
         "welcome.html",
@@ -56,7 +48,7 @@ def login():
     if loginForm.validate_on_submit():
         user = User.query.filter_by(username=loginForm.username.data).first()
         if user is None or not user.checkPassword(loginForm.password.data):
-            flash("Invalid username or password")
+            flash("Invalid username or password", "login")
             return redirect(url_for("welcome"))
 
         login_user(user, remember=loginForm.rememberMe.data)
@@ -66,10 +58,17 @@ def login():
 
 
 @app.route("/account/reset", methods=["POST"])
-def passwordReset():
-    pass
-    # query the db for email address
-    # send email with password
+def resetPassword():
+    resetPasswordForm = ResetPasswordForm()
+    if resetPasswordForm.validate_on_submit():
+        if User.query.filter_by(resetPasswordForm.email.data).first():
+            # send email with password reset form
+            flash("Email with password reset form was sent", "resetPassword")
+            return redirect(url_for("welcome"))
+
+        flash("Account with given email does not exist", "resetPassword")
+
+    return redirect(url_for("welcome"))
 
 
 @app.route("/account/new", methods=["POST"])
@@ -77,10 +76,10 @@ def signUp():
     signUpForm = SignUpForm()
     if signUpForm.validate_on_submit():
         if User.query.filter_by(username=signUpForm.username.data).first():
-            flash("Username is already used")
+            flash("Username is already used, 'signUp'")
             return redirect(url_for("welcome"))
         if User.query.filter_by(email=signUpForm.email.data).first():
-            flash("Email is already used")
+            flash("Email is already used", "signUp")
             return redirect(url_for("welcome"))
 
         newUser = User(
@@ -92,10 +91,12 @@ def signUp():
         )
         db.session.add(newUser)
         db.session.commit()
-        flash("Account created successfully")
+        flash("Account created successfully", "signUp")
         return redirect(url_for("welcome"))
 
-    flash("wrong form")
+    for field in signUpForm._fields.values():
+        for error in field.errors:
+            flash(error, "signUp")
     return redirect(url_for("welcome"))
 
 
