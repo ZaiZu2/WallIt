@@ -80,7 +80,6 @@ input {
 }
 
 input:not(:placeholder-shown):invalid {
-    border-width: var(--border-width-active);
     border-color: red;
 }
 
@@ -92,7 +91,7 @@ input:hover,
 input:focus,
 input:active {
     /*border-width: var(--border-width-active);*/
-    box-shadow: 1px;
+
     outline: none;
     border-color: var(--main-font-active-color);
 }

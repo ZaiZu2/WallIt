@@ -25,7 +25,7 @@ def index():
     )
 
 
-@app.route("/welcome", methods=["GET", "POST"])
+@app.route("/welcome", methods=["GET"])
 def welcome():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
@@ -61,7 +61,7 @@ def login():
 def resetPassword():
     resetPasswordForm = ResetPasswordForm()
     if resetPasswordForm.validate_on_submit():
-        if User.query.filter_by(resetPasswordForm.email.data).first():
+        if User.query.filter_by(email=resetPasswordForm.email.data).first():
             # send email with password reset form
             flash("Email with password reset form was sent", "resetPassword")
             return redirect(url_for("welcome"))
@@ -100,7 +100,7 @@ def signUp():
     return redirect(url_for("welcome"))
 
 
-@app.route("/logout", methods=["POST", "GET"])
+@app.route("/logout", methods=["GET"])
 @login_required
 def logout():
     logout_user()

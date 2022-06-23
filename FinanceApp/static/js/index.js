@@ -54,6 +54,36 @@ filterButtons.forEach(button => {
     })
 });
 
+// Custom filter input validators
+// Check that minAmount is always smaller than maxAmount
+const minAmount = document.getElementById('minAmount');
+const maxAmount = document.getElementById('maxAmount');
+const amountInputs = [minAmount, maxAmount]
+amountInputs.forEach(input => {
+    input.addEventListener('input', () => {
+        if (maxAmount.value && minAmount.value) {
+            minAmount.setAttribute('max', maxAmount.value);
+            minAmount.checkValidity();
+            maxAmount.setAttribute('min', minAmount.value);
+            maxAmount.checkValidity();
+        }
+    })
+})
+// Check that minDate is always before than maxDate
+const minDate = document.getElementById('minDate');
+const maxDate = document.getElementById('maxDate');
+const dateInputs = [minDate, maxDate]
+dateInputs.forEach(input => {
+    input.addEventListener('change', () => {
+        if (maxDate.value && minDate.value) {
+            minDate.setAttribute('max', maxDate.value);
+            minDate.checkValidity();
+            maxDate.setAttribute('min', minDate.value);
+            maxDate.checkValidity();
+        }
+    })
+})
+
 // submit multiple forms and send request with JSONified input
 const filterSubmit = document.getElementById('filterSubmit');
 filterSubmit.addEventListener("click", (e) => {
@@ -82,28 +112,27 @@ filterSubmit.addEventListener("click", (e) => {
 
     //postData('./index.html', inputs);
     console.log(JSON.stringify(inputs));
+
+    /*
+    // Example POST method implementation:
+    async function postData(url = '', data = {}) {
+        // Default options are marked with *
+        const response = await fetch(url, {
+            method: 'POST', // *GET, POST, PUT, DELETE, etc.
+            mode: 'cors', // no-cors, *cors, same-origin
+            cache: 'default', // *default, no-cache, reload, force-cache, only-if-cached
+            credentials: 'same-origin', // include, *same-origin, omit
+            headers: { 'Content-Type': 'application/json' },
+            redirect: 'follow', // manual, *follow, error
+            referrerPolicy: 'no-referrer-when-downgrade', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+            body: JSON.stringify(data) // body data type must match "Content-Type" header
+        });
+        return response.json(); // parses JSON response into native JavaScript objects
+    }
+    */
 });
 
-
-/*
-// Example POST method implementation:
-async function postData(url = '', data = {}) {
-    // Default options are marked with *
-    const response = await fetch(url, {
-        method: 'POST', // *GET, POST, PUT, DELETE, etc.
-        mode: 'cors', // no-cors, *cors, same-origin
-        cache: 'default', // *default, no-cache, reload, force-cache, only-if-cached
-        credentials: 'same-origin', // include, *same-origin, omit
-        headers: { 'Content-Type': 'application/json' },
-        redirect: 'follow', // manual, *follow, error
-        referrerPolicy: 'no-referrer-when-downgrade', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-        body: JSON.stringify(data) // body data type must match "Content-Type" header
-    });
-    return response.json(); // parses JSON response into native JavaScript objects
-}
-*/
-
-let transactionsTable = new gridjs.Grid({
+const transactionsTable = new gridjs.Grid({
     search: true,
     columns: [{
         name: "Name",
