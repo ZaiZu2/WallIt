@@ -19,16 +19,29 @@ class User(UserMixin, db.Model):
     lastName = db.Column(db.Text)
 
     # model name used for relationship()!
-    transactions = db.relationship("Transaction", backref="user", lazy=True)
+    transactions = db.relationship(
+        "Transaction",
+        cascade="all, delete",
+        passive_deletes=True,
+        backref="user",
+        lazy=True,
+    )
+    categories = db.relationship(
+        "Category",
+        cascade="all, delete",
+        passive_deletes=True,
+        backref="user",
+        lazy=True,
+    )
 
-    def __init__(self, password, **kwargs) -> None:
+    def __init__(self, password: str, **kwargs) -> None:
         super(User, self).__init__(**kwargs)
         self.setPassword(password)
 
     def __repr__(self) -> str:
         return f"{self.username}: {self.firstName} {self.lastName} under email: {self.email}"
 
-    def setPassword(self, password: str):
+    def setPassword(self, password: str) -> None:
         self.passwordHash = generate_password_hash(password)
 
     def checkPassword(self, password: str) -> bool:
@@ -54,10 +67,12 @@ class Transaction(db.Model):
         db.DateTime, index=True, nullable=False, default=datetime.utcnow
     )
     place = db.Column(db.Text)
-    category = db.Column(db.Text, index=True)
 
     # table name used for ForeignKey()!
-    userId = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    categoryId = db.Column(db.Integer, db.ForeignKey("categories.id"), index=True)
+    userId = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     bankId = db.Column(db.Integer, db.ForeignKey("banks.id"), nullable=False)
 
     def __repr__(self) -> str:
@@ -75,3 +90,15 @@ class Bank(db.Model):
 
     def __repr__(self) -> str:
         return f"Bank: {self.name}"
+
+
+class Category(db.Model):
+    __tablename__ = "categories"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.Text, index=True, nullable=False)
+
+    # table name used for ForeignKey()!
+    userId = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )

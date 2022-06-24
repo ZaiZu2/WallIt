@@ -54,6 +54,9 @@ def login():
         login_user(user, remember=loginForm.rememberMe.data)
         return redirect(url_for("index"))
 
+    for field in loginForm._fields.values():
+        for error in field.errors:
+            flash(error, "login")
     return redirect(url_for("welcome"))
 
 
@@ -68,6 +71,9 @@ def resetPassword():
 
         flash("Account with given email does not exist", "resetPassword")
 
+    for field in resetPasswordForm._fields.values():
+        for error in field.errors:
+            flash(error, "resetPassword")
     return redirect(url_for("welcome"))
 
 
