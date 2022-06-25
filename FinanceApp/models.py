@@ -78,6 +78,18 @@ class Transaction(db.Model):
     def __repr__(self) -> str:
         return f"Transaction: {self.amount} {self.currency} on {self.transactionDate}"
 
+    def printToTable(self) -> dict:
+
+        return {
+            "info": self.info,
+            "title": self.title,
+            "amount": self.amount,
+            "currency": self.currency,
+            "category": self.categoryId,
+            "date": self.transactionDate.strftime("%Y/%m/%d %H:%M:%S"),
+            "bank": self.bankId,
+        }
+
 
 class Bank(db.Model):
     __tablename__ = "banks"
@@ -102,3 +114,6 @@ class Category(db.Model):
     userId = db.Column(
         db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
+
+    def __repr__(self) -> str:
+        return f"Category: {self.name}"

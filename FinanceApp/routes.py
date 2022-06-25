@@ -1,12 +1,15 @@
 #! python3
 
-import email
+
+from sqlalchemy import select
 from FinanceApp import app, db
 from FinanceApp.forms import LoginForm, SignUpForm, ResetPasswordForm
-from FinanceApp.models import User
+from FinanceApp.models import Transaction, User, Bank, Category
 
 from flask import redirect, request, session, url_for, render_template, flash
 from flask_login import current_user, login_required, login_user, logout_user
+
+from datetime import datetime
 
 
 @app.route("/")
@@ -111,3 +114,47 @@ def signUp():
 def logout():
     logout_user()
     return redirect(url_for("welcome"))
+
+
+@app.route("/api/transactions")
+@login_required
+def transactionTable():
+    """Generate serialized transaction records used for populating Transaction Table
+
+    Returns:
+        dict: serialized transaction data and transaction count
+    """
+
+    # Dictionary mapping queried values to the keys used for serialization
+    serializeMap = {
+        "info": Transaction.info,
+        "title": Transaction.title,
+        "amount": Transaction.amount,
+        "currency": Transaction.currency,
+        "date": Transaction.transactionDate,
+        "place": Transaction.place,
+        "category": Category.name,
+        "bank": Bank.name,
+    }
+
+    query = (
+        select([dbField for dbField in serializeMap.values()])
+        .filter_by(userId=current_user.id)
+        .select_from(Transaction)
+        .join(Bank)
+        .join(Category)
+    )
+    results = db.session.execute(query).all()
+
+    # Serializing data received from the DB
+    tableRows = []
+    for result in results:
+        resultDict = {}
+        for name, value in zip(serializeMap.keys(), result):
+            if isinstance(value, datetime):
+                resultDict[name] = value.strftime("%Y/%m/%d")
+            else:
+                resultDict[name] = value
+        tableRows.append(resultDict)
+
+    return {"transactions": tableRows, "total": len(tableRows)}
