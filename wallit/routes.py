@@ -2,9 +2,9 @@
 
 
 from sqlalchemy import select
-from FinanceApp import app, db
-from FinanceApp.forms import LoginForm, SignUpForm, ResetPasswordForm
-from FinanceApp.models import Transaction, User, Bank, Category
+from wallit import app, db
+from wallit.forms import LoginForm, SignUpForm, ResetPasswordForm
+from wallit.models import Transaction, User, Bank, Category
 
 from flask import redirect, url_for, render_template, flash
 from flask_login import current_user, login_required, login_user, logout_user

@@ -9,7 +9,7 @@
 
 
 from __future__ import annotations
-from FinanceApp.Exceptions import LoginFailedError, InvalidConfigError, FileError
+from legacy_code.Exceptions import LoginFailedError, InvalidConfigError, FileError
 
 import copy
 import csv

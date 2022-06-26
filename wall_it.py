@@ -1,6 +1,6 @@
-from FinanceApp import app, db, login
+from wallit import app, db, login
 
-from FinanceApp.models import User, Transaction, Bank
+from wallit.models import User, Transaction, Bank
 
 
 @app.shell_context_processor

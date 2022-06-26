@@ -17,4 +17,4 @@ migrate = Migrate(app, db)
 login = LoginManager(app)
 login.login_view = "welcome"
 
-from FinanceApp import routes, models
+from wallit import routes, models
