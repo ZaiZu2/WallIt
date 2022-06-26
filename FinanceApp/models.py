@@ -14,9 +14,9 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.Text, index=True, unique=True, nullable=False)
     email = db.Column(db.Text, unique=True, nullable=False)
-    passwordHash = db.Column(db.Text, nullable=False)
-    firstName = db.Column(db.Text)
-    lastName = db.Column(db.Text)
+    password_hash = db.Column(db.Text, nullable=False)
+    first_name = db.Column(db.Text)
+    last_name = db.Column(db.Text)
 
     # model name used for relationship()!
     transactions = db.relationship(
@@ -36,20 +36,20 @@ class User(UserMixin, db.Model):
 
     def __init__(self, password: str, **kwargs) -> None:
         super(User, self).__init__(**kwargs)
-        self.setPassword(password)
+        self.set_password(password)
 
     def __repr__(self) -> str:
-        return f"{self.username}: {self.firstName} {self.lastName} under email: {self.email}"
+        return f"{self.username}: {self.first_name} {self.last_name} under email: {self.email}"
 
-    def setPassword(self, password: str) -> None:
-        self.passwordHash = generate_password_hash(password)
+    def set_password(self, password: str) -> None:
+        self.password_hash = generate_password_hash(password)
 
-    def checkPassword(self, password: str) -> bool:
-        return check_password_hash(self.passwordHash, password)
+    def check_password(self, password: str) -> bool:
+        return check_password_hash(self.password_hash, password)
 
 
 @login.user_loader
-def loadUser(id: str) -> User:
+def load_user(id: str) -> User:
     return User.query.get(int(id))
 
 
@@ -61,33 +61,33 @@ class Transaction(db.Model):
     title = db.Column(db.Text)
     amount = db.Column(db.Float, index=True, nullable=False)
     currency = db.Column(db.Text, index=True, nullable=False)
-    srcAmount = db.Column(db.Float)
-    srcCurrency = db.Column(db.Text)
-    transactionDate = db.Column(
+    src_amount = db.Column(db.Float)
+    src_currency = db.Column(db.Text)
+    transaction_date = db.Column(
         db.DateTime, index=True, nullable=False, default=datetime.utcnow
     )
     place = db.Column(db.Text)
 
     # table name used for ForeignKey()!
-    categoryId = db.Column(db.Integer, db.ForeignKey("categories.id"), index=True)
-    userId = db.Column(
+    category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), index=True)
+    user_id = db.Column(
         db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    bankId = db.Column(db.Integer, db.ForeignKey("banks.id"), nullable=False)
+    bank_id = db.Column(db.Integer, db.ForeignKey("banks.id"), nullable=False)
 
     def __repr__(self) -> str:
-        return f"Transaction: {self.amount} {self.currency} on {self.transactionDate}"
+        return f"Transaction: {self.amount} {self.currency} on {self.transaction_date}"
 
-    def printToTable(self) -> dict:
+    def print_to_table(self) -> dict:
 
         return {
             "info": self.info,
             "title": self.title,
             "amount": self.amount,
             "currency": self.currency,
-            "category": self.categoryId,
-            "date": self.transactionDate.strftime("%Y/%m/%d %H:%M:%S"),
-            "bank": self.bankId,
+            "category": self.category_id,
+            "date": self.transaction_date.strftime("%Y/%m/%d %H:%M:%S"),
+            "bank": self.bank_id,
         }
 
 
@@ -98,7 +98,7 @@ class Bank(db.Model):
     name = db.Column(db.Text, index=True, unique=True, nullable=False)
 
     # model name used for relationship()!
-    banks = db.relationship("Transaction", backref="bank", lazy=True)
+    transactions = db.relationship("Transaction", backref="bank", lazy=True)
 
     def __repr__(self) -> str:
         return f"Bank: {self.name}"
@@ -111,7 +111,7 @@ class Category(db.Model):
     name = db.Column(db.Text, index=True, nullable=False)
 
     # table name used for ForeignKey()!
-    userId = db.Column(
+    user_id = db.Column(
         db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
 

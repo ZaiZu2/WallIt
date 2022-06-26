@@ -6,7 +6,7 @@ from FinanceApp import app, db
 from FinanceApp.forms import LoginForm, SignUpForm, ResetPasswordForm
 from FinanceApp.models import Transaction, User, Bank, Category
 
-from flask import redirect, request, session, url_for, render_template, flash
+from flask import redirect, url_for, render_template, flash
 from flask_login import current_user, login_required, login_user, logout_user
 
 from datetime import datetime
@@ -33,79 +33,82 @@ def welcome():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
 
-    loginForm = LoginForm()
-    signUpForm = SignUpForm()
-    resetPasswordForm = ResetPasswordForm()
+    login_form = LoginForm()
+    sign_up_form = SignUpForm()
+    reset_password_form = ResetPasswordForm()
 
     return render_template(
         "welcome.html",
-        loginForm=loginForm,
-        signUpForm=signUpForm,
-        resetPasswordForm=resetPasswordForm,
+        login_form=login_form,
+        sign_up_form=sign_up_form,
+        reset_password_form=reset_password_form,
     )
 
 
 @app.route("/login", methods=["POST"])
 def login():
-    loginForm = LoginForm()
-    if loginForm.validate_on_submit():
-        user = User.query.filter_by(username=loginForm.username.data).first()
-        if user is None or not user.checkPassword(loginForm.password.data):
-            flash("Invalid username or password", "login")
+    login_form = LoginForm()
+    if login_form.validate_on_submit():
+        user = User.query.filter_by(username=login_form.username.data).first()
+        if user is None or not user.check_password(login_form.password.data):
+            flash("Invalid username or password", "login_message")
             return redirect(url_for("welcome"))
 
-        login_user(user, remember=loginForm.rememberMe.data)
+        login_user(user, remember=login_form.remember_me.data)
         return redirect(url_for("index"))
 
-    for field in loginForm._fields.values():
+    # Reassing form.errors to flash as they will be inaccessible after after redirection
+    for field in login_form._fields.values():
         for error in field.errors:
-            flash(error, "login")
+            flash(error, "login_message")
     return redirect(url_for("welcome"))
 
 
 @app.route("/account/reset", methods=["POST"])
-def resetPassword():
-    resetPasswordForm = ResetPasswordForm()
-    if resetPasswordForm.validate_on_submit():
-        if User.query.filter_by(email=resetPasswordForm.email.data).first():
+def reset_password():
+    reset_password_form = ResetPasswordForm()
+    if reset_password_form.validate_on_submit():
+        if User.query.filter_by(email=reset_password_form.email.data).first():
             # send email with password reset form
-            flash("Email with password reset form was sent", "resetPassword")
+            flash("Email with password reset form was sent", "reset_password_message")
             return redirect(url_for("welcome"))
 
-        flash("Account with given email does not exist", "resetPassword")
+        flash("Account with given email does not exist", "reset_password_message")
 
-    for field in resetPasswordForm._fields.values():
+    # Reassign form.errors to flash as they will be inaccessible after after redirection
+    for field in reset_password_form._fields.values():
         for error in field.errors:
-            flash(error, "resetPassword")
+            flash(error, "reset_password_message")
     return redirect(url_for("welcome"))
 
 
 @app.route("/account/new", methods=["POST"])
-def signUp():
-    signUpForm = SignUpForm()
-    if signUpForm.validate_on_submit():
-        if User.query.filter_by(username=signUpForm.username.data).first():
-            flash("Username is already used, 'signUp'")
+def sign_up():
+    sign_up_form = SignUpForm()
+    if sign_up_form.validate_on_submit():
+        if User.query.filter_by(username=sign_up_form.username.data).first():
+            flash("Username is already used, 'sign_up_message'")
             return redirect(url_for("welcome"))
-        if User.query.filter_by(email=signUpForm.email.data).first():
-            flash("Email is already used", "signUp")
+        if User.query.filter_by(email=sign_up_form.email.data).first():
+            flash("Email is already used", "sign_up_message")
             return redirect(url_for("welcome"))
 
-        newUser = User(
-            username=signUpForm.username.data,
-            email=signUpForm.email.data,
-            password=signUpForm.password.data,
-            firstName=signUpForm.firstName.data,
-            lastName=signUpForm.lastName.data,
+        new_user = User(
+            username=sign_up_form.username.data,
+            email=sign_up_form.email.data,
+            password=sign_up_form.password.data,
+            first_name=sign_up_form.first_name.data,
+            last_name=sign_up_form.last_name.data,
         )
-        db.session.add(newUser)
+        db.session.add(new_user)
         db.session.commit()
-        flash("Account created successfully", "signUp")
+        flash("Account created successfully", "sign_up_message")
         return redirect(url_for("welcome"))
 
-    for field in signUpForm._fields.values():
+    # Reassing form.errors to flash as they will be inaccessible after after redirection
+    for field in sign_up_form._fields.values():
         for error in field.errors:
-            flash(error, "signUp")
+            flash(error, "sign_up_message")
     return redirect(url_for("welcome"))
 
 
@@ -118,7 +121,7 @@ def logout():
 
 @app.route("/api/transactions")
 @login_required
-def transactionTable():
+def populate_transaction_table():
     """Generate serialized transaction records used for populating Transaction Table
 
     Returns:
@@ -126,20 +129,20 @@ def transactionTable():
     """
 
     # Dictionary mapping queried values to the keys used for serialization
-    serializeMap = {
+    serialize_map = {
         "info": Transaction.info,
         "title": Transaction.title,
         "amount": Transaction.amount,
         "currency": Transaction.currency,
-        "date": Transaction.transactionDate,
+        "date": Transaction.transaction_date,
         "place": Transaction.place,
         "category": Category.name,
         "bank": Bank.name,
     }
 
     query = (
-        select([dbField for dbField in serializeMap.values()])
-        .filter_by(userId=current_user.id)
+        select([db_fieldname for db_fieldname in serialize_map.values()])
+        .filter_by(user_id=current_user.id)
         .select_from(Transaction)
         .join(Bank)
         .join(Category)
@@ -147,14 +150,14 @@ def transactionTable():
     results = db.session.execute(query).all()
 
     # Serializing data received from the DB
-    tableRows = []
+    table_rows = []
     for result in results:
-        resultDict = {}
-        for name, value in zip(serializeMap.keys(), result):
+        result_dict = {}
+        for name, value in zip(serialize_map.keys(), result):
             if isinstance(value, datetime):
-                resultDict[name] = value.strftime("%Y/%m/%d")
+                result_dict[name] = value.strftime("%Y/%m/%d")
             else:
-                resultDict[name] = value
-        tableRows.append(resultDict)
+                result_dict[name] = value
+        table_rows.append(result_dict)
 
-    return {"transactions": tableRows, "total": len(tableRows)}
+    return {"transactions": table_rows, "total": len(table_rows)}

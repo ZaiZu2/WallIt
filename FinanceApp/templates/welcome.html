@@ -21,7 +21,7 @@
                 <div id="login" class="sub-menu">
                     <div class="feedback-field">
                         <div class="feedback">
-                            {% with messages = get_flashed_messages(category_filter=['login']) %}
+                            {% with messages = get_flashed_messages(category_filter=['login_message']) %}
                                 {% if messages %}
                                     {% for message in messages %}<p>{{ message }}</p>{% endfor %}
                                 {% endif %}
@@ -32,11 +32,11 @@
                           name="loginForm"
                           action="{{ url_for('login') }}"
                           method="post">
-                        {{ loginForm.hidden_tag() }}
-                        {{ loginForm.username(placeholder='Username') }}
-                        {{ loginForm.password(placeholder='Password') }}
-                        {{ loginForm.rememberMe() }}
-                        {{ loginForm.rememberMe.label }}
+                        {{ login_form.hidden_tag() }}
+                        {{ login_form.username(placeholder='Username') }}
+                        {{ login_form.password(placeholder='Password') }}
+                        {{ login_form.remember_me() }}
+                        {{ login_form.remember_me.label }}
                         <div class="button-list">
                             <button type="submit">Sign in</button>
                         </div>
@@ -47,7 +47,7 @@
                 <div id="reset-password" class="sub-menu hidden">
                     <div class="feedback-field">
                         <div class="feedback">
-                            {% with messages = get_flashed_messages(category_filter=['resetPassword']) %}
+                            {% with messages = get_flashed_messages(category_filter=['reset_password_message']) %}
                                 {% if messages %}
                                     {% for message in messages %}<p>{{ message }}</p>{% endfor %}
                                 {% endif %}
@@ -56,10 +56,10 @@
                     </div>
                     <form class="form"
                           name="resetPasswordForm"
-                          action="{{ url_for('resetPassword') }}"
+                          action="{{ url_for('reset_password') }}"
                           method="post">
-                        {{ resetPasswordForm.hidden_tag() }}
-                        {{ resetPasswordForm.email(placeholder='E-mail') }}
+                        {{ reset_password_form.hidden_tag() }}
+                        {{ reset_password_form.email(placeholder='E-mail') }}
                         <div class="button-list">
                             <button type="submit" data-label="Reset password">Reset password</button>
                             <button class="back-button" type="button">Back</button>
@@ -69,7 +69,7 @@
                 <div id="sign-up" class="sub-menu hidden">
                     <div class="feedback-field">
                         <div class="feedback">
-                            {% with messages = get_flashed_messages(category_filter=['signUp']) %}
+                            {% with messages = get_flashed_messages(category_filter=['sign_up_message']) %}
                                 {% if messages %}
                                     {% for message in messages %}<p>{{ message }}</p>{% endfor %}
                                 {% endif %}
@@ -78,15 +78,15 @@
                     </div>
                     <form class="form"
                           name="signUpForm"
-                          action="{{ url_for('signUp') }}"
+                          action="{{ url_for('sign_up') }}"
                           method="post">
-                        {{ signUpForm.hidden_tag() }}
-                        {{ signUpForm.email(placeholder='E-mail') }}
-                        {{ signUpForm.username(placeholder='Username') }}
-                        {{ signUpForm.firstName(placeholder='First name') }}
-                        {{ signUpForm.lastName(placeholder='Last name') }}
-                        {{ signUpForm.password(placeholder='Password') }}
-                        {{ signUpForm.repeatPassword(placeholder='Repeat password') }}
+                        {{ sign_up_form.hidden_tag() }}
+                        {{ sign_up_form.email(placeholder='E-mail') }}
+                        {{ sign_up_form.username(placeholder='Username') }}
+                        {{ sign_up_form.first_name(placeholder='First name') }}
+                        {{ sign_up_form.last_name(placeholder='Last name') }}
+                        {{ sign_up_form.password(placeholder='Password') }}
+                        {{ sign_up_form.repeat_password(placeholder='Repeat password') }}
                         <div class="button-list">
                             <button type="submit" data-label="Sign up">Sign up</button>
                             <button class="back-button" type="button">Back</button>
