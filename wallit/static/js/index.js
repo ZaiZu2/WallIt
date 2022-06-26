@@ -132,6 +132,14 @@ filterSubmit.addEventListener("click", (e) => {
     */
 });
 
+const appendUrl = function (url, keywords) {
+  return (
+    url +
+    (url.includes("?") == true ? "&" : "?") +
+    new URLSearchParams(keywords).toString()
+  );
+};
+
 const transactionsTable = new gridjs.Grid({
   columns: [
     {
@@ -142,7 +150,7 @@ const transactionsTable = new gridjs.Grid({
       },
       sort: {
         enabled: false,
-      }
+      },
     },
     {
       id: "title",
@@ -152,7 +160,7 @@ const transactionsTable = new gridjs.Grid({
       },
       sort: {
         enabled: false,
-      }
+      },
     },
     {
       id: "amount",
@@ -184,11 +192,20 @@ const transactionsTable = new gridjs.Grid({
     then: (data) => data.transactions,
     total: (data) => data.total,
   },
-  search: true,
+  search: {
+    enabled: true,
+    server: {
+      url: (prev, search) => appendUrl(prev, {search}),
+    },
+  },
   sort: true,
   pagination: {
     enabled: true,
     limit: 10,
+    server: {
+      url: (prev, page, limit) =>
+        appendUrl(prev, {start: page*limit, limit})
+    },
   },
   className: {
     container: "custom-container",
@@ -204,5 +221,6 @@ const transactionsTable = new gridjs.Grid({
     paginationButtonNext: "custom-pagination-button-next",
     paginationButtonCurrent: "custom-pagination-button-current",
     paginationButtonPrev: "custom-pagination-button-prev",
+    loading: "custom-loading"
   },
 }).render(document.getElementById("poop"));

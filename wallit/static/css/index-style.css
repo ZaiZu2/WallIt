@@ -472,6 +472,11 @@ th.custom-th {
     filter: invert(1);
 }
 
+.custom-container.custom-loading,
+.custom-container .grid-js-loading-bar {
+    background: none;
+}
+
 /* ********************************** */
 /* ********** GOOGLE-ICONS ********** */
 /* ********************************** */

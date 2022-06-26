@@ -1,12 +1,14 @@
 #! python3
 
 
-from sqlalchemy import select
+from itertools import count
+import string
+from sqlalchemy import select, func
 from wallit import app, db
 from wallit.forms import LoginForm, SignUpForm, ResetPasswordForm
 from wallit.models import Transaction, User, Bank, Category
 
-from flask import redirect, url_for, render_template, flash
+from flask import redirect, url_for, render_template, flash, request
 from flask_login import current_user, login_required, login_user, logout_user
 
 from datetime import datetime
@@ -129,7 +131,7 @@ def populate_transaction_table():
     """
 
     # Dictionary mapping queried values to the keys used for serialization
-    serialize_map = {
+    table_map = {
         "info": Transaction.info,
         "title": Transaction.title,
         "amount": Transaction.amount,
@@ -140,24 +142,50 @@ def populate_transaction_table():
         "bank": Bank.name,
     }
 
+    # Build a base query
     query = (
-        select([db_fieldname for db_fieldname in serialize_map.values()])
+        select([db_fieldname for db_fieldname in table_map.values()])
         .filter_by(user_id=current_user.id)
         .select_from(Transaction)
         .join(Bank)
         .join(Category)
     )
+    # Query for number of Transactions found
+    count_query = select(func.count(Transaction.id)).filter_by(user_id=current_user.id)
+
+    # Apply search phrase to the base queries
+    search = request.args.get("search")
+    if search:
+        query = query.filter(
+            db.or_(
+                table_map["info"].ilike(f"%{search}%"),
+                table_map["title"].ilike(f"%{search}%"),
+            )
+        )
+        count_query = count_query.filter(
+            db.or_(
+                table_map["info"].ilike(f"%{search}%"),
+                table_map["title"].ilike(f"%{search}%"),
+            )
+        )
+
+    # Pagination
+    start = request.args.get("start", type=int)
+    length = request.args.get("limit", type=int)
+    query = query.offset(start).limit(length)
+
+    total_rows = db.session.execute(count_query).scalar()
     results = db.session.execute(query).all()
 
     # Serializing data received from the DB
     table_rows = []
-    for result in results:
+    for row in results:
         result_dict = {}
-        for name, value in zip(serialize_map.keys(), result):
-            if isinstance(value, datetime):
-                result_dict[name] = value.strftime("%Y/%m/%d")
+        for name, transaction in zip(table_map.keys(), row):
+            if isinstance(transaction, datetime):
+                result_dict[name] = transaction.strftime(f"%Y/%m/%d")
             else:
-                result_dict[name] = value
+                result_dict[name] = transaction
         table_rows.append(result_dict)
 
-    return {"transactions": table_rows, "total": len(table_rows)}
+    return {"transactions": table_rows, "total": total_rows}
