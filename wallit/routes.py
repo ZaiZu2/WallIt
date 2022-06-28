@@ -1,10 +1,8 @@
 #! python3
 
 
-from itertools import count
-import string
-from sqlalchemy import select, func
-from wallit import app, db
+from sqlalchemy import select, func, desc
+from wallit import app, db, logger
 from wallit.forms import LoginForm, SignUpForm, ResetPasswordForm
 from wallit.models import Transaction, User, Bank, Category
 
@@ -169,13 +167,32 @@ def populate_transaction_table():
             )
         )
 
+    # Apply sorting to the base query
+    sort = request.args.get("sort")
+    if sort:
+        ordered_columns = []
+        for substring in sort.split(","):
+            direction = substring[0]
+            column_name = substring[1:]
+            column = table_map[column_name]
+
+            if direction == "-":
+                column = column.desc()
+            ordered_columns.append(column)
+
+        if ordered_columns:
+            query = query.order_by(*ordered_columns)
+
     # Pagination
     start = request.args.get("start", type=int)
     length = request.args.get("limit", type=int)
     query = query.offset(start).limit(length)
 
+    # Query execution
     total_rows = db.session.execute(count_query).scalar()
     results = db.session.execute(query).all()
+    logger.debug(query.compile().string)
+    logger.debug(count_query.compile().string)
 
     # Serializing data received from the DB
     table_rows = []

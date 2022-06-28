@@ -361,6 +361,7 @@ input[type="date"]::-webkit-datetime-edit-text {
 .custom-tbody,
 .custom-thead {
     background: none;
+    width: 1050px;
 }
 
 .custom-header {
@@ -434,7 +435,7 @@ input[type="date"]::-webkit-datetime-edit-text {
 
 td.custom-td,
 th.custom-th {
-    width: fit-content;
+    width: fit-content !important;
     padding: 8px;
     background-color: rgba(0, 0, 0, 0);
     border-top: var(--border-inactive);
@@ -445,7 +446,15 @@ th.custom-th {
 
     color: white;
     white-space: nowrap;
+    overflow: hidden;
 }
+
+/*td[data-column-id='info'].custom-td,*/
+th[data-column-id='info'].custom-th,
+th[data-column-id='title'].custom-th {
+    width: 250px !important;
+}
+
 
 .custom-th {
     font-weight: bold;

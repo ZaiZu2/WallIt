@@ -187,6 +187,7 @@ const transactionsTable = new gridjs.Grid({
       name: "Bank",
     },
   ],
+  autoWidth: false,
   server: {
     url: "/api/transactions",
     then: (data) => data.transactions,
@@ -195,16 +196,34 @@ const transactionsTable = new gridjs.Grid({
   search: {
     enabled: true,
     server: {
-      url: (prev, search) => appendUrl(prev, {search}),
+      url: (prev, search) => appendUrl(prev, { search }),
     },
   },
-  sort: true,
+  sort: {
+    enabled: true,
+    multiColumn: true,
+    server: {
+      url: (prev, columns) => {
+        if (!columns.length) return prev;
+
+        // Create array of table columns for reference
+        const columnIds = transactionsTable.config.columns.map(
+          (column) => column.id
+        );
+        // Find which table columns have sorting applied and assign them sorting direction
+        let sort = columns.map(
+          (col) => (col.direction === 1 ? "+" : "-") + columnIds[col.index]
+        );
+        return appendUrl(prev, { sort });
+      },
+    },
+  },
   pagination: {
     enabled: true,
     limit: 10,
     server: {
       url: (prev, page, limit) =>
-        appendUrl(prev, {start: page*limit, limit})
+        appendUrl(prev, { start: page * limit, limit }),
     },
   },
   className: {
@@ -221,6 +240,6 @@ const transactionsTable = new gridjs.Grid({
     paginationButtonNext: "custom-pagination-button-next",
     paginationButtonCurrent: "custom-pagination-button-current",
     paginationButtonPrev: "custom-pagination-button-prev",
-    loading: "custom-loading"
+    loading: "custom-loading",
   },
 }).render(document.getElementById("poop"));
