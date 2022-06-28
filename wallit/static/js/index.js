@@ -165,11 +165,14 @@ const transactionsTable = new gridjs.Grid({
     {
       id: "amount",
       name: "Amount",
+      formatter: (cell) => {
+        return `${cell} CZK`;
+      },
     },
-    {
-      id: "currency",
-      name: "Currency",
-    },
+    // {
+    //   id: "currency",
+    //   name: "Currency",
+    // },
     {
       id: "category",
       name: "Category",

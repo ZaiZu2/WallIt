@@ -1,0 +1,153 @@
+/* *********************************** */
+/* ********** GRID.JS TABLE ********** */
+/* *********************************** */
+
+.custom-container {
+  padding: 0;
+}
+
+.custom-container .gridjs-wrapper {
+  border-radius: 0;
+}
+
+.custom-table,
+.custom-tbody,
+.custom-thead {
+  background: none;
+  width: 1000px;
+}
+
+.custom-header {
+  padding: 8px 0;
+  margin: 0px;
+}
+
+.custom-header input {
+  width: 100%;
+  background: none;
+  height: 2rem;
+  padding-left: 8px;
+
+  box-sizing: border-box;
+  border: var(--border-inactive);
+  border-radius: 0.5rem;
+
+  color: var(--main-font-active-color);
+  font-size: 1rem;
+  font-family: var(--main-font);
+}
+
+.custom-header.input::placeholder {
+  color: var(--main-font-inactive-color);
+}
+
+.custom-header input:hover,
+.custom-header input:focus,
+.custom-header input:active {
+  box-shadow: none;
+  outline: none;
+  border-color: var(--main-font-active-color);
+}
+
+.custom-footer {
+  padding: 8px 0 0;
+  border-top: var(--border-inactive);
+  background: none;
+}
+
+.custom-pagination {
+}
+
+.custom-pagination-summary {
+  margin: 10px 6px !important;
+  color: var(--main-font-active-color);
+}
+
+.custom-pagination-button {
+  background: none !important;
+  color: var(--main-font-inactive-color);
+}
+
+.custom-pagination-button:hover {
+  background: none !important;
+  color: var(--main-font-active-color) !important;
+}
+
+.custom-footer .custom-pagination-button:active,
+.custom-footer .custom-pagination-button:focus {
+  background-color: var(--main-font-active-color) !important;
+  color: black !important;
+  transform: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.custom-footer .custom-pagination-button-current {
+  background-color: var(--main-font-active-color) !important;
+  color: black !important;
+}
+
+td.custom-td,
+th.custom-th {
+  width: fit-content !important;
+  padding: 8px;
+  background-color: rgba(0, 0, 0, 0);
+  border-top: var(--border-inactive);
+  border-bottom: var(--border-inactive);
+  border-left: none;
+  border-right: none;
+
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.custom-td {
+  text-align: right;
+}
+
+.custom-th {
+  font-weight: bold;
+  text-align: center;
+}
+
+th[data-column-id="info"].custom-th,
+th[data-column-id="title"].custom-th {
+  width: 250px !important;
+}
+td[data-column-id="info"].custom-td,
+td[data-column-id="title"].custom-td {
+  text-align: left;
+}
+
+th[data-column-id="amount"].custom-th {
+  width: 120px !important;
+}
+td[data-column-id="amount"].custom-td {
+  text-align: right;
+}
+
+.custom-thead .custom-th:focus,
+.custom-thead .custom-th:hover {
+  background: none;
+}
+
+.custom-thead .gridjs-sort-neutral {
+  opacity: 0.5;
+  filter: invert(1);
+}
+
+.custom-thead .gridjs-sort-asc {
+  opacity: 1;
+  filter: invert(1);
+}
+
+.custom-thead .gridjs-sort-desc {
+  opacity: 1;
+  filter: invert(1);
+}
+
+.custom-container.custom-loading,
+.custom-container .grid-js-loading-bar {
+  background: none;
+}

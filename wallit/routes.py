@@ -133,7 +133,7 @@ def populate_transaction_table():
         "info": Transaction.info,
         "title": Transaction.title,
         "amount": Transaction.amount,
-        "currency": Transaction.currency,
+        # "currency": Transaction.currency,
         "date": Transaction.transaction_date,
         "place": Transaction.place,
         "category": Category.name,
