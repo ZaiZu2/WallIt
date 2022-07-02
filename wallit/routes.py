@@ -105,7 +105,7 @@ def sign_up():
         flash("Account created successfully", "sign_up_message")
         return redirect(url_for("welcome"))
 
-    # Reassing form.errors to flash as they will be inaccessible after after redirection
+    # Reassign form.errors to flash as they will be inaccessible after after redirection
     for field in sign_up_form._fields.values():
         for error in field.errors:
             flash(error, "sign_up_message")
@@ -132,8 +132,10 @@ def populate_transaction_table():
     table_map = {
         "info": Transaction.info,
         "title": Transaction.title,
-        "amount": Transaction.amount,
-        # "currency": Transaction.currency,
+        "amount": Transaction.main_amount,
+        "main_currency": User.main_currency,
+        "base_amount": Transaction.base_amount,
+        "base_currency": Transaction.base_currency,
         "date": Transaction.transaction_date,
         "place": Transaction.place,
         "category": Category.name,
@@ -142,7 +144,7 @@ def populate_transaction_table():
 
     # Build a base query
     query = (
-        select([db_fieldname for db_fieldname in table_map.values()])
+        select([column_name for column_name in table_map.values()])
         .filter_by(user_id=current_user.id)
         .select_from(Transaction)
         .join(Bank)
@@ -206,3 +208,121 @@ def populate_transaction_table():
         table_rows.append(result_dict)
 
     return {"transactions": table_rows, "total": total_rows}
+
+
+@app.route("/api/filters/apply", methods=["POST"])
+@login_required
+def post_transactions():
+    """Receive filter parameters in JSON, query DB for filtered values
+    and return Transactions serialized to JSON
+
+    Request JSON structure example:
+    {
+        'amount': {'max': '123123', 'min': '213'},
+        'date': {'max': '2022-07-21', 'min': '2022-07-07'}
+        'base_currency': ['CZK', 'USD'],
+        'bank': ['mBank', 'Revolut'],
+        'category': ['Salary', 'Hobby', 'Restaurant'],
+    }
+
+    Response JSON structure example:
+    {
+        "transactions": [
+        {
+            "amount": 61800.05,
+            "bank": "mBank",
+            "base_amount": 3193.0,
+            "base_currency": "USD",
+            "category": "groceries",
+            "date": "Mon, 08 Feb 2021 15:02:58 GMT",
+            "info": null,
+            "place": "Bengubelan",
+            "title": null
+        },
+        ...,
+        ]
+    }
+
+    Returns:
+        dict: JSON with transaction data
+    """
+
+    # Dictionary mapping queried values to the keys used for serialization and request processing
+    # Request JSON filter names must remain the same as the keys used here
+    TABLE_MAP = {
+        "info": Transaction.info,
+        "title": Transaction.title,
+        "amount": Transaction.main_amount,
+        "base_amount": Transaction.base_amount,
+        "base_currency": Transaction.base_currency,
+        "date": Transaction.transaction_date,
+        "place": Transaction.place,
+        "category": Category.name,
+        "bank": Bank.name,
+    }
+
+    filters = request.json
+
+    #
+    query = (
+        select([column for column in TABLE_MAP.values()])
+        .filter_by(user_id=current_user.id)
+        .select_from(Transaction)
+        .join(Category)
+        .join(Bank)
+    )
+
+    # iterate over dict of filters
+    for filter_name, filter_values in filters.items():
+        # check if filter is a range (dict), then read 'min' and 'max' values if they were given
+        if isinstance(filter_values, dict):
+            if filter_values["min"]:
+                query = query.filter(TABLE_MAP[filter_name] >= filter_values["min"])
+            if filter_values["max"]:
+                query = query.filter(TABLE_MAP[filter_name] <= filter_values["max"])
+
+        # check if filter holds checkbox values (list), then read contained values if there are any
+        if isinstance(filter_values, list):
+            if filter_values:
+                query = query.filter(TABLE_MAP[filter_name].in_(filter_values))
+
+    results = db.session.execute(query).all()
+    logger.debug(query.compile().string)
+
+    # Serializing data received from the DB
+    table_rows = []
+    for row in results:
+        result_dict = {}
+        for column_name, column_value in zip(TABLE_MAP.keys(), row):
+            result_dict[column_name] = column_value
+        table_rows.append(result_dict)
+
+    return {"transactions": table_rows}
+
+
+@app.route("/api/filters/fetch", methods=["GET"])
+@login_required
+def fetchFilters() -> dict:
+    """Fetch dynamic filtering values for user
+
+    Returns:
+        dict: lists containing values for each filtering parameter
+    """
+
+    category_query = select(Category.name.distinct()).filter_by(user_id=current_user.id)
+    categories = db.session.scalars(category_query).all()
+
+    bank_query = (
+        select(Bank.name.distinct())
+        .select_from(Transaction)
+        .join(Bank)
+        .filter(Transaction.user_id == current_user.id)
+    )
+    banks = db.session.scalars(bank_query).all()
+
+    currency_query = select(Transaction.base_currency.distinct()).filter(
+        Transaction.user_id == current_user.id
+    )
+    currencies = db.session.scalars(currency_query).all()
+
+    return {"filters": [categories, banks, currencies]}

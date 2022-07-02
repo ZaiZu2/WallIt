@@ -17,6 +17,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.Text, nullable=False)
     first_name = db.Column(db.Text)
     last_name = db.Column(db.Text)
+    main_currency = db.Column(db.String(3), default="CZK", nullable=False)
 
     # model name used for relationship()!
     transactions = db.relationship(
@@ -59,10 +60,9 @@ class Transaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     info = db.Column(db.Text, index=True)
     title = db.Column(db.Text)
-    amount = db.Column(db.Float, index=True, nullable=False)
-    currency = db.Column(db.Text, index=True, nullable=False)
-    src_amount = db.Column(db.Float)
-    src_currency = db.Column(db.Text)
+    main_amount = db.Column(db.Float, index=True, nullable=False)
+    base_amount = db.Column(db.Float, index=True, nullable=False)
+    base_currency = db.Column(db.String(3), index=True, nullable=False)
     transaction_date = db.Column(
         db.DateTime, index=True, nullable=False, default=datetime.utcnow
     )
@@ -77,18 +77,6 @@ class Transaction(db.Model):
 
     def __repr__(self) -> str:
         return f"Transaction: {self.amount} {self.currency} on {self.transaction_date}"
-
-    def print_to_table(self) -> dict:
-
-        return {
-            "info": self.info,
-            "title": self.title,
-            "amount": self.amount,
-            "currency": self.currency,
-            "category": self.category_id,
-            "date": self.transaction_date.strftime("%Y/%m/%d %H:%M:%S"),
-            "bank": self.bank_id,
-        }
 
 
 class Bank(db.Model):
@@ -114,6 +102,8 @@ class Category(db.Model):
     user_id = db.Column(
         db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
+
+    transactions = db.relationship("Transaction", backref="category", lazy=True)
 
     def __repr__(self) -> str:
         return f"Category: {self.name}"

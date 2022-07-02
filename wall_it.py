@@ -1,4 +1,3 @@
-from turtle import color
 from wallit import app, db, login
 
 from wallit.models import User, Transaction, Bank

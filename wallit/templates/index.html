@@ -9,12 +9,15 @@
               content="An easy way to have an eye on your change."/>
         <!-- JS -->
         <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js" defer></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="../static/js/index.js" defer></script>
+
         <!-- CSS -->
         <link rel="stylesheet"
               href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"/>
         <link rel="stylesheet" href="../static/css/css_reset.css"/>
-        <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet"/>
+        <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css"
+              rel="stylesheet"/>
         <link rel="stylesheet" href="../static/css/grid-js.css"/>
         <link rel="stylesheet" href="../static/css/index-style.css"/>
         <title>WallIt</title>
@@ -77,53 +80,59 @@
                         <h6>Filtering</h6>
                     </div>
                     <div class="filter-button-list">
-                        <button id="filterAmount">Amount</button>
-                        <button id="filterDate">Date</button>
-                        <button id="filterCurrency">Currency</button>
-                        <button id="filterCategory">Category</button>
-                        <button id="filterBank">Banks</button>
+                        <button id="filteramount">Amount</button>
+                        <button id="filterdate">Date</button>
+                        <button id="filterbase_currency">Currency</button>
+                        <button id="filtercategory">Category</button>
+                        <button id="filterbank">Banks</button>
                     </div>
                     <div>
-                        <form name="Amount" class="filter-input">
+                        <form name="amount" class="filter-input">
                             <div class="filter-range">
-                                <input type="number" name="minAmount" id="minAmount" placeholder="Minimum"/>
-                                <input type="number" name="maxAmount" id="maxAmount" placeholder="Maximum"/>
+                                <input type="number" name="min" id="minAmount" placeholder="Minimum"/>
+                                <input type="number" name="max" id="maxAmount" placeholder="Maximum"/>
                             </div>
                         </form>
-                        <form name="Date" class="filter-input">
+                        <form name="date" class="filter-input">
                             <div class="filter-range">
-                                <input type="date" name="minDate" id="minDate"/>
-                                <input type="date" name="maxDate" id="maxDate"/>
+                                <input type="date" name="min" id="minDate"/>
+                                <input type="date" name="max" id="maxDate"/>
                             </div>
                         </form>
-
-                        <form name="Currency" class="filter-input">
+                        <form name="base_currency" class="filter-input">
                             <div class="filter-set">
                                 {% for currency in currencies %}
                                     <input type="checkbox" name="{{ currency }}" id="{{ currency }}"/>
-                                    <label for="{{ currency }}">{{ currency }}</label>
+                                    <label for="{{ currency }}">
+                                        {{ currency }}
+                                    </label>
                                 {% endfor %}
                             </div>
                         </form>
-                        <form name="Category" class="filter-input">
+                        <form name="category" class="filter-input">
                             <div class="filter-set">
                                 {% for category in categories %}
                                     <input type="checkbox" name="{{ category }}" id="{{ category }}"/>
-                                    <label for="{{ category }}">{{ category }}</label>
+                                    <label for="{{ category }}">
+                                        {{ category }}
+                                    </label>
                                 {% endfor %}
                             </div>
                         </form>
-                        <form name="Bank" class="filter-input">
+                        <form name="bank" class="filter-input">
                             <div class="filter-set">
                                 {% for bank in banks %}
                                     <input type="checkbox" name="{{ bank }}" id="{{ bank }}"/>
-                                    <label for="{{ bank }}">{{ bank }}</label>
+                                    <label for="{{ bank }}">
+                                        {{ bank }}
+                                    </label>
                                 {% endfor %}
                             </div>
                         </form>
-
                         <div id="submitContent" class="filter-input">
-                            <button id="filterSubmit" type="submit">Submit</button>
+                            <button id="filterSubmit" type="submit">
+                                Submit
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -137,6 +146,17 @@
                         </h6>
                     </div>
                     <div id="poop"></div>
+                </div>
+                <div class="subwindow-outline statistics">
+                    <div class="subwindow-header">
+                        <span class="material-symbols-rounded custom-small-icon">
+                            analytics
+                        </span>
+                        <h6>
+                            Statistics
+                        </h6>
+                    </div>
+                    <canvas id="myChart" width="500" height="400"></canvas>
                 </div>
             </div>
         </div>

@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "chart.js": "^3.8.0",
     "gridjs": "^5.0.2"
   }
 }

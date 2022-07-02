@@ -47,16 +47,13 @@
 <row name="title" null="1" autoincrement="0">
 <datatype>MEDIUMTEXT</datatype>
 <default>NULL</default></row>
-<row name="amount" null="0" autoincrement="0">
+<row name="main_amount" null="0" autoincrement="0">
 <datatype>BIGINT</datatype>
 <default>NULL</default></row>
-<row name="currency" null="0" autoincrement="0">
-<datatype>MEDIUMTEXT</datatype>
-<default>'NULL'</default></row>
-<row name="src_amount" null="1" autoincrement="0">
+<row name="base_amount" null="1" autoincrement="0">
 <datatype>BIGINT</datatype>
 <default>NULL</default></row>
-<row name="src_currency" null="1" autoincrement="0">
+<row name="base_currency" null="1" autoincrement="0">
 <datatype>MEDIUMTEXT</datatype>
 <default>NULL</default></row>
 <row name="transaction_date" null="0" autoincrement="0">
@@ -92,7 +89,7 @@
 <part>id</part>
 </key>
 </table>
-<table x="489" y="303" name="users">
+<table x="493" y="260" name="users">
 <row name="id" null="0" autoincrement="1">
 <datatype>INTEGER</datatype>
 </row>
@@ -111,6 +108,9 @@
 <row name="last_name" null="0" autoincrement="0">
 <datatype>MEDIUMTEXT</datatype>
 <default>'NULL'</default></row>
+<row name="main_currency" null="0" autoincrement="0">
+<datatype>MEDIUMTEXT</datatype>
+<default>'CZK'</default></row>
 <key type="PRIMARY" name="">
 <part>id</part>
 </key>
