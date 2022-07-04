@@ -21,9 +21,6 @@ def index():
 
     return render_template(
         "index.html",
-        currencies=currencies,
-        categories=categories,
-        banks=banks,
         current_user=current_user._get_current_object(),
     )
 
@@ -294,7 +291,12 @@ def post_transactions():
     for row in results:
         result_dict = {}
         for column_name, column_value in zip(TABLE_MAP.keys(), row):
-            result_dict[column_name] = column_value
+            # serialize date to ISO 8601 format
+            if isinstance(column_value, datetime):
+                result_dict[column_name] = column_value.isoformat()
+            else:
+                result_dict[column_name] = column_value
+
         table_rows.append(result_dict)
 
     return {"transactions": table_rows}
@@ -309,8 +311,14 @@ def fetchFilters() -> dict:
         dict: lists containing values for each filtering parameter
     """
 
+    filter_dict = {
+        "base_currency": "",
+        "category": "",
+        "bank": "",
+    }
+
     category_query = select(Category.name.distinct()).filter_by(user_id=current_user.id)
-    categories = db.session.scalars(category_query).all()
+    filter_dict["category"] = db.session.scalars(category_query).all()
 
     bank_query = (
         select(Bank.name.distinct())
@@ -318,11 +326,11 @@ def fetchFilters() -> dict:
         .join(Bank)
         .filter(Transaction.user_id == current_user.id)
     )
-    banks = db.session.scalars(bank_query).all()
+    filter_dict["bank"] = db.session.scalars(bank_query).all()
 
     currency_query = select(Transaction.base_currency.distinct()).filter(
         Transaction.user_id == current_user.id
     )
-    currencies = db.session.scalars(currency_query).all()
+    filter_dict["base_currency"] = db.session.scalars(currency_query).all()
 
-    return {"filters": [categories, banks, currencies]}
+    return filter_dict

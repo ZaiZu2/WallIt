@@ -340,6 +340,10 @@ input[type="date"]::-webkit-datetime-edit-text {
   display: none;
 }
 
+#transactionTable {
+  width: 1000px;
+}
+
 /* ********************************** */
 /* ********** GOOGLE-ICONS ********** */
 /* ********************************** */

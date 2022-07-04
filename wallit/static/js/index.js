@@ -1,3 +1,5 @@
+let transactions = [];
+
 // Allows button to toggle menu windows ON/OFF with responsive button behavior
 const menuButtons = document.querySelectorAll(".menu button");
 menuButtons.forEach((button) => {
@@ -36,7 +38,7 @@ filterButtons.forEach((button) => {
     //  If any of FilterButtons is OFF, hide the SUBMIT button
     //  If any of FilterButtons is ON, show the SUBMIT button
     let isActive = false;
-    for (let node of [...button.parentNode.children]) {
+    for (const node of [...button.parentNode.children]) {
       if (node.classList.contains("active")) {
         isActive = true;
         break;
@@ -54,7 +56,7 @@ filterButtons.forEach((button) => {
 });
 
 // Custom filter input validators
-// Check that minAmount is always smaller than maxAmount
+// Check that minAmount is always smaller than maxAmount (if both exist)
 const minAmount = document.getElementById("minAmount");
 const maxAmount = document.getElementById("maxAmount");
 const amountInputs = [minAmount, maxAmount];
@@ -65,10 +67,15 @@ amountInputs.forEach((input) => {
       minAmount.checkValidity();
       maxAmount.setAttribute("min", minAmount.value);
       maxAmount.checkValidity();
+    } else {
+      minAmount.removeAttribute("max");
+      minAmount.checkValidity();
+      maxAmount.removeAttribute("min");
+      maxAmount.checkValidity();
     }
   });
 });
-// Check that minDate is always before than maxDate
+// Check that minDate is always before than maxDate (if both exist)
 const minDate = document.getElementById("minDate");
 const maxDate = document.getElementById("maxDate");
 const dateInputs = [minDate, maxDate];
@@ -79,14 +86,20 @@ dateInputs.forEach((input) => {
       minDate.checkValidity();
       maxDate.setAttribute("min", minDate.value);
       maxDate.checkValidity();
+    } else {
+      minDate.removeAttribute("max");
+      minDate.checkValidity();
+      maxDate.removeAttribute("min");
+      maxDate.checkValidity();
     }
   });
 });
 
-// submit multiple forms and send request with JSONified input
+// Submit multiple forms and send request with JSONified input
 const filterSubmit = document.getElementById("filterSubmit");
-filterSubmit.addEventListener("click", (e) => {
-  let inputs = {};
+filterSubmit.addEventListener("click", async function updateTransactions() {
+  // Object which will be filled with filter parameters and passed in the request
+  const inputs = {};
 
   // loop over all filter forms and extract inputs from each one
   const filterForms = document.querySelectorAll("form.filter-input");
@@ -97,12 +110,12 @@ filterSubmit.addEventListener("click", (e) => {
 
       // Crate object for input values
       if (form.name === "amount" || form.name === "date") {
-        let localInputs = {};
+        const localInputs = {};
         formData.forEach((value, key) => (localInputs[key] = value));
         inputs[form.name] = localInputs;
+        // Create an array for checkbox values
       } else {
-        // Create array for checkbox values
-        let localInputs = [];
+        const localInputs = [];
         formData.forEach((value, key) => localInputs.push(key));
         inputs[form.name] = localInputs;
       }
@@ -110,68 +123,132 @@ filterSubmit.addEventListener("click", (e) => {
     form.requestSubmit();
   });
 
-  console.log(JSON.stringify(inputs));
-  dupa = applyFilters("./api/filters/apply", inputs);
-});
-
-async function applyFilters(url = "", data = {}) {
-  const response = await fetch(url, {
+  // Request from server
+  transactions = await fetch("/api/filters/apply", {
     method: "POST", // *GET, POST, PUT, DELETE, etc.
     mode: "cors", // no-cors, *cors, same-origin
-    cache: "default", // *default, no-cache, reload, force-cache, only-if-cached
     credentials: "same-origin", // include, *same-origin, omit
     headers: { "Content-Type": "application/json" },
-    redirect: "follow", // manual, *follow, error
-    referrerPolicy: "no-referrer-when-downgrade", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-    body: JSON.stringify(data), // body data type must match "Content-Type" header
-  });
-  return response.json();
-}
+    body: JSON.stringify(inputs), // body data type must match "Content-Type" header
+  })
+    .then((response) => {
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      return response.json();
+    })
+    .catch((error) => console.error(error));
 
-async function fetchFilters(url = "/api/filters/fetch", data = {}) {
-  const response = await fetch(url, {
+  transactions = transactions.transactions;
+  for (let transaction of transactions) {
+    transaction.date = new Date(transaction.date);
+  }
+
+  reloadWindows(transactions);
+});
+
+async function updateFilters() {
+  // Fetch filter data based on user's transactions from server
+  const filters = await fetch((url = "/api/filters/fetch"), {
     method: "GET", // *GET, POST, PUT, DELETE, etc.
     mode: "cors", // no-cors, *cors, same-origin
-    cache: "default", // *default, no-cache, reload, force-cache, only-if-cached
     credentials: "same-origin", // include, *same-origin, omit
-    headers: { "Content-Type": "application/json" },
-    redirect: "follow", // manual, *follow, error
-    referrerPolicy: "no-referrer-when-downgrade", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-    body: JSON.stringify(data), // body data type must match "Content-Type" header
   })
-    .then((response) => response.json)
-    .then((data) => console.log(data));
+    .then((response) => {
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      return response.json();
+    })
+    .catch((error) => console.error(error));
+
+  // Find all filter forms with checkboxes
+  targetDivs = document.querySelectorAll(".filter-input .filter-set");
+  // Define filter categories which should display and in what order
+  renderOrder = ["base_currency", "category", "bank"];
+
+  // Dynamically create checkboxes for all the found filter categories
+  for (let [i, filterCategory] of Object.entries(renderOrder)) {
+    for (let parameter of filters[filterCategory]) {
+      const input = document.createElement("input");
+      input.setAttribute("type", "checkbox");
+      input.setAttribute("name", parameter);
+      input.setAttribute("id", parameter);
+
+      const label = document.createElement("label");
+      label.setAttribute("for", parameter);
+      label.textContent = parameter;
+
+      targetDivs[i].appendChild(input);
+      targetDivs[i].appendChild(label);
+    }
+  }
 }
 
-const appendUrl = function (url, keywords) {
-  return (
-    url +
-    (url.includes("?") == true ? "&" : "?") +
-    new URLSearchParams(keywords).toString()
-  );
-};
+// Format Transaction data into structure used by Category Chart
+function calculateCategoryWeights(transactions) {
+  let categoryWeights = {};
+
+  for (let transaction of transactions) {
+    if (!Object.keys(categoryWeights).includes(transaction.category)) {
+      categoryWeights[transaction.category] = transaction.amount;
+    } else {
+      categoryWeights[transaction.category] += transaction.amount;
+    }
+  }
+
+  // Round up any floating point errors
+  for (let [categoryName, categoryWeight] of Object.entries(categoryWeights)) {
+    categoryWeights[categoryName] = Math.round(categoryWeight * 100) / 100;
+  }
+
+  return categoryWeights;
+}
+
+function reloadTable(transactions) {
+  transactionsTable
+    .updateConfig({
+      data: () => {
+        // Keys to be retained in a new array passed to the Table
+        keysNeeded = [
+          "info",
+          "title",
+          "amount",
+          "category",
+          "date",
+          "place",
+          "bank",
+        ];
+        // Deep copy of queried transactions
+        formattedTransactions = structuredClone(transactions);
+
+        // Delete keys which are not used
+        for (let transaction of formattedTransactions) {
+          for (let key of Object.keys(transaction)) {
+            if (!keysNeeded.includes(key)) delete transaction[key];
+            if (transaction[key] instanceof Date)
+              transaction.date = `${transaction.date.getFullYear()}/${
+                transaction.date.getMonth() + 1
+              }/${transaction.date.getDate()}`;
+          }
+        }
+        return formattedTransactions;
+      },
+    })
+    .forceRender();
+}
 
 const transactionsTable = new gridjs.Grid({
   columns: [
     {
       id: "info",
       name: "Name",
-      search: {
-        enabled: true,
-      },
-      sort: {
-        enabled: false,
-      },
+      search: { enabled: true },
+      sort: { enabled: false },
     },
     {
       id: "title",
       name: "Title",
-      search: {
-        enabled: true,
-      },
-      sort: {
-        enabled: false,
-      },
+      search: { enabled: true },
+      sort: { enabled: false },
     },
     {
       id: "amount",
@@ -180,66 +257,23 @@ const transactionsTable = new gridjs.Grid({
         return `${cell} CZK`;
       },
     },
-    // {
-    //   id: "currency",
-    //   name: "Currency",
-    // },
-    {
-      id: "category",
-      name: "Category",
-    },
-    {
-      id: "date",
-      name: "Date",
-    },
-    {
-      id: "place",
-      name: "Place",
-    },
-    {
-      id: "bank",
-      name: "Bank",
-    },
+    { id: "category", name: "Category" },
+    { id: "date", name: "Date" },
+    { id: "place", name: "Place" },
+    { id: "bank", name: "Bank" },
   ],
+  data: [],
+  width: "1000px",
   autoWidth: false,
-  server: {
-    url: "/api/transactions",
-    then: (data) => data.transactions,
-    total: (data) => data.total,
-  },
   search: {
     enabled: true,
-    server: {
-      url: (prev, search) => appendUrl(prev, { search }),
-    },
   },
   sort: {
     enabled: true,
     multiColumn: true,
-    server: {
-      url: (prev, columns) => {
-        if (!columns.length) return prev;
-
-        // Create array of table columns for reference
-        const columnIds = transactionsTable.config.columns.map(
-          (column) => column.id
-        );
-        // Find which table columns have sorting applied and assign them sorting direction
-        let sort = columns.map(
-          (col) => (col.direction === 1 ? "+" : "-") + columnIds[col.index]
-        );
-        return appendUrl(prev, { sort });
-      },
-    },
   },
-  pagination: {
-    enabled: true,
-    limit: 10,
-    server: {
-      url: (prev, page, limit) =>
-        appendUrl(prev, { start: page * limit, limit }),
-    },
-  },
+  fixedHeader: true,
+  height: "350px",
   className: {
     container: "custom-container",
     table: "custom-table",
@@ -256,17 +290,24 @@ const transactionsTable = new gridjs.Grid({
     paginationButtonPrev: "custom-pagination-button-prev",
     loading: "custom-loading",
   },
-}).render(document.getElementById("poop"));
+}).render(document.getElementById("transactionTable"));
 
-const ctx = document.getElementById("myChart").getContext("2d");
-const myChart = new Chart(ctx, {
+const ctx = document.getElementById("categoryChart").getContext("2d");
+const categoryChart = new Chart(ctx, {
   type: "bar",
   data: {
-    labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
+    labels: [],
     datasets: [
       {
-        label: "# of Votes",
-        data: [12, 19, 3, 5, 2, 3],
+        label: "Spendings",
+        data: calculateCategoryWeights(transactions),
+        backgroundColor: ["rgba(255, 99, 132, 0.4)"],
+        borderColor: ["rgba(255, 99, 132, 1)"],
+        borderWidth: 2,
+      },
+      {
+        label: "Spendings",
+        data: calculateCategoryWeights(transactions),
         backgroundColor: [
           "rgba(255, 99, 132, 0.4)",
           "rgba(54, 162, 235, 0.4)",
@@ -289,9 +330,32 @@ const myChart = new Chart(ctx, {
   },
   options: {
     scales: {
+      x: {
+        stacked: true,
+      },
       y: {
         beginAtZero: true,
       },
     },
   },
 });
+
+function reloadChart(chart, dataObj) {
+  const labels = Object.keys(arguments[1]);
+  chart.data.labels = labels;
+
+  for (let i = 1; i < arguments.length; i++) {
+    const data = Object.values(arguments[i]);
+    chart.data.datasets[i - 1].data = data;
+  }
+  chart.update();
+}
+
+updateFilters();
+
+function reloadWindows(transactions) {
+  categoryData = calculateCategoryWeights(transactions);
+  reloadChart(categoryChart, categoryData);
+
+  reloadTable(transactions);
+}

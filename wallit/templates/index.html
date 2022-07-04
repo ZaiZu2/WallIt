@@ -100,34 +100,13 @@
                             </div>
                         </form>
                         <form name="base_currency" class="filter-input">
-                            <div class="filter-set">
-                                {% for currency in currencies %}
-                                    <input type="checkbox" name="{{ currency }}" id="{{ currency }}"/>
-                                    <label for="{{ currency }}">
-                                        {{ currency }}
-                                    </label>
-                                {% endfor %}
-                            </div>
+                            <div class="filter-set"></div>
                         </form>
                         <form name="category" class="filter-input">
-                            <div class="filter-set">
-                                {% for category in categories %}
-                                    <input type="checkbox" name="{{ category }}" id="{{ category }}"/>
-                                    <label for="{{ category }}">
-                                        {{ category }}
-                                    </label>
-                                {% endfor %}
-                            </div>
+                            <div class="filter-set"></div>
                         </form>
                         <form name="bank" class="filter-input">
-                            <div class="filter-set">
-                                {% for bank in banks %}
-                                    <input type="checkbox" name="{{ bank }}" id="{{ bank }}"/>
-                                    <label for="{{ bank }}">
-                                        {{ bank }}
-                                    </label>
-                                {% endfor %}
-                            </div>
+                            <div class="filter-set"></div>
                         </form>
                         <div id="submitContent" class="filter-input">
                             <button id="filterSubmit" type="submit">
@@ -145,7 +124,7 @@
                             Transactions
                         </h6>
                     </div>
-                    <div id="poop"></div>
+                    <div id="transactionTable"></div>
                 </div>
                 <div class="subwindow-outline statistics">
                     <div class="subwindow-header">
@@ -156,7 +135,7 @@
                             Statistics
                         </h6>
                     </div>
-                    <canvas id="myChart" width="500" height="400"></canvas>
+                    <canvas id="categoryChart" width="500px" height="400px"></canvas>
                 </div>
             </div>
         </div>
