@@ -11,7 +11,6 @@
         <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js" defer></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="../static/js/index.js" defer></script>
-
         <!-- CSS -->
         <link rel="stylesheet"
               href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"/>
@@ -53,7 +52,7 @@
                             </button>
                         </li>
                         <li>
-                            <button id="statements">
+                            <button id="import">
                                 <span class="material-symbols-rounded custom-medium-icon">upload_file</span>
                                 <h4>Statements</h4>
                             </button>
@@ -73,71 +72,142 @@
                 </a>
             </div>
             <div class="main-window">
-                <h2 class="subwindow-outline">Welcome back, {{ current_user.first_name }}</h2>
-                <div class="subwindow-outline filter" style="padding-bottom: 0px;">
-                    <div class="subwindow-header">
-                        <span class="material-symbols-rounded custom-small-icon">filter_alt</span>
-                        <h6>Filtering</h6>
-                    </div>
-                    <div class="filter-button-list">
-                        <button id="filteramount">Amount</button>
-                        <button id="filterdate">Date</button>
-                        <button id="filterbase_currency">Currency</button>
-                        <button id="filtercategory">Category</button>
-                        <button id="filterbank">Banks</button>
-                    </div>
-                    <div>
-                        <form name="amount" class="filter-input">
-                            <div class="filter-range">
-                                <input type="number" name="min" id="minAmount" placeholder="Minimum"/>
-                                <input type="number" name="max" id="maxAmount" placeholder="Maximum"/>
+                <div class="section">
+                    <div class="subwindow-outline filter">
+                        <div class="subwindow-header">
+                            <span class="material-symbols-rounded custom-small-icon">filter_alt</span>
+                            <h6>Filtering</h6>
+                        </div>
+                        <div class="button-list filter">
+                            <button id="amount" class="filter">Amount</button>
+                            <button id="date" class="filter">Date</button>
+                            <button id="base_currency" class="filter">Currency</button>
+                            <button id="category" class="filter">Category</button>
+                            <button id="bank" class="filter">Banks</button>
+                        </div>
+                        <div>
+                            <form name="amount" class="collapsible-form filter">
+                                <div class="form-range">
+                                    <input type="number" name="min" id="minAmount" placeholder="Minimum"/>
+                                    <input type="number" name="max" id="maxAmount" placeholder="Maximum"/>
+                                </div>
+                            </form>
+                            <form name="date" class="collapsible-form filter">
+                                <div class="form-range">
+                                    <input type="date" name="min" id="minDate"/>
+                                    <input type="date" name="max" id="maxDate"/>
+                                </div>
+                            </form>
+                            <form name="base_currency" class="collapsible-form filter">
+                                <div class="form-set">
+                                </div>
+                            </form>
+                            <form name="category" class="collapsible-form filter">
+                                <div class="form-set">
+                                </div>
+                            </form>
+                            <form name="bank" class="collapsible-form filter">
+                                <div class="form-set">
+                                </div>
+                            </form>
+                            <div id="filter_submit" class="collapsible-form filter">
+                                <button id="filter_submit_button" class="filter" type="submit">
+                                    Submit
+                                </button>
                             </div>
-                        </form>
-                        <form name="date" class="filter-input">
-                            <div class="filter-range">
-                                <input type="date" name="min" id="minDate"/>
-                                <input type="date" name="max" id="maxDate"/>
-                            </div>
-                        </form>
-                        <form name="base_currency" class="filter-input">
-                            <div class="filter-set"></div>
-                        </form>
-                        <form name="category" class="filter-input">
-                            <div class="filter-set"></div>
-                        </form>
-                        <form name="bank" class="filter-input">
-                            <div class="filter-set"></div>
-                        </form>
-                        <div id="submitContent" class="filter-input">
-                            <button id="filterSubmit" type="submit">
-                                Submit
+                        </div>
+                    </div>
+                    <div class="subwindow-outline import">
+                        <div class="subwindow-header">
+                            <span class="material-symbols-rounded custom-small-icon">upload_file</span>
+                            <h6>
+                                Load statement
+                            </h6>
+                        </div>
+                        <div class="button-list import">
+                            <button id="revolut" class="import">
+                                Revolut
                             </button>
+                            <button id="equabank" class="import">
+                                Equabank
+                            </button>
+                            <button id="mbank" class="import">
+                                mBank
+                            </button>
+                        </div>
+                        <div>
+                            <form name="revolut" class="collapsible-form import">
+                                <div class="form-range">
+                                    <input type="number" name="min" id="minAmount" placeholder="Minimum"/>
+                                </div>
+                            </form>
+                            <form name="equabank" class="collapsible-form import">
+                                <div class="form-range">
+                                    <input type="date" name="min" id="minDate"/>
+                                </div>
+                            </form>
+                            <form name="mbank" class="collapsible-form import">
+                                <div class="form-range">
+                                    <input type="date" name="min" id="minDate"/>
+                                </div>
+                            </form>
+                            <div id="import_submit" class="collapsible-form import">
+                                <button id="import_submit_button" class="import" type="submit">
+                                    Submit
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="subwindow-outline transactions">
-                    <div class="subwindow-header">
-                        <span class="material-symbols-rounded custom-small-icon">
-                            view_list
-                        </span>
-                        <h6>
-                            Transactions
-                        </h6>
+                <div class="section">
+                    <div class="subwindow-outline transactions">
+                        <div class="subwindow-header">
+                            <span class="material-symbols-rounded custom-small-icon">
+                                view_list
+                            </span>
+                            <h6>
+                                Transactions
+                            </h6>
+                        </div>
+                        <div id="transactionTable"></div>
                     </div>
-                    <div id="transactionTable"></div>
+                    <div class="subwindow-outline details">
+                        <div class="subwindow-header">
+                            <span class="material-symbols-rounded custom-small-icon">
+                                view_list
+                            </span>
+                            <h6>
+                                Details
+                            </h6>
+                        </div>
+                    </div>
                 </div>
-                <div class="subwindow-outline statistics">
-                    <div class="subwindow-header">
-                        <span class="material-symbols-rounded custom-small-icon">
-                            analytics
-                        </span>
-                        <h6>
-                            Statistics
-                        </h6>
+                <div class="section">
+                    <div class="subwindow-outline statistics">
+                        <div class="subwindow-header">
+                            <span class="material-symbols-rounded custom-small-icon">
+                                analytics
+                            </span>
+                            <h6>
+                                Category weights
+                            </h6>
+                        </div>
+                        <canvas id="categoryChart" width="500px" height="400px"></canvas>
                     </div>
-                    <canvas id="categoryChart" width="500px" height="400px"></canvas>
+                    <div class="subwindow-outline monthly">
+                        <div class="subwindow-header">
+                            <span class="material-symbols-rounded custom-small-icon">
+                                analytics
+                            </span>
+                            <h6>
+                                Monthly summary
+                            </h6>
+                        </div>
+                        <canvas id="monthlyChart" width="800px" height="400px"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
-    </body>
+    </div>
+</body>
 </html>

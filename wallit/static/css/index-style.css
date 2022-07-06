@@ -4,9 +4,16 @@
 /* ********** MAIN-STYLES ********** */
 /* ********************************* */
 
+.window {
+  height: 100%;
+  background-color: var(--main-window-bg-color);
+
+  display: flex;
+}
+
 body {
-  min-height: 100vh;
-  min-width: 100vw;
+  height: 100vh;
+  width: 100vw;
   color: var(--main-font-active-color);
 
   background-image: url(../img/alex-shutin-kKvQJ6rK6S4-unsplash.jpg);
@@ -14,9 +21,6 @@ body {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-
-  display: flex;
-  flex-direction: column;
 }
 
 /* Used as logo */
@@ -192,26 +196,23 @@ input[type="date"]::-webkit-datetime-edit-text {
 /* ********** MAIN-WINDOW ********** */
 /* ********************************* */
 
-.window {
-  flex: 1;
-  background-color: var(--main-window-bg-color);
-  overflow: hidden;
-  margin: 30px;
-
-  border-radius: 3rem;
-  -webkit-box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 0.7);
-  -moz-box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 0.7);
-  box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 0.7);
-
-  display: flex;
-}
-
 .main-window {
+  min-height: auto;
+  min-width: auto;
+
   flex: 1;
   padding: 20px;
 
   display: flex;
   flex-direction: column;
+  gap: 20px;
+
+  overflow: auto;
+}
+
+.section {
+  display: flex;
+
   gap: 20px;
 }
 
@@ -229,6 +230,11 @@ input[type="date"]::-webkit-datetime-edit-text {
   flex-direction: column;
 }
 
+.subwindow-outline.filter,
+.subwindow-outline.import {
+  padding-bottom: 0;
+}
+
 .subwindow-header {
   height: 2rem;
   padding-bottom: 8px;
@@ -239,12 +245,7 @@ input[type="date"]::-webkit-datetime-edit-text {
   gap: 14px;
 }
 
-.filter {
-  width: 450px;
-  max-width: 600px;
-}
-
-.filter-button-list {
+.button-list {
   height: fit-content;
   padding: 8px 0px;
 
@@ -254,7 +255,8 @@ input[type="date"]::-webkit-datetime-edit-text {
   gap: 8px;
 }
 
-.filter button {
+button.filter,
+button.import {
   flex: 1;
   width: fit-content;
   height: 2rem;
@@ -267,31 +269,33 @@ input[type="date"]::-webkit-datetime-edit-text {
   text-align: center;
 }
 
-.filter button.active {
+.button-list button.active {
   color: var(--main-font-active-color);
   outline: 1px solid var(--main-font-active-color);
 }
 
-#submitContent {
+#filter_submit,
+#import_submit {
   text-align: center;
 }
 
-#filterSubmit {
+#filter_submit_button,
+#import_submit_button {
   margin: 8px;
 }
 
-.filter-input {
+.collapsible-form {
   max-height: 0;
   overflow: hidden;
   transition: 0.2s ease-in-out;
   border-top: none;
 }
 
-.filter-input.active {
+.collapsible-form.active {
   border-top: 1px solid rgb(110, 110, 110);
 }
 
-.filter-range {
+.form-range {
   padding: 8px 0;
 
   display: grid;
@@ -299,7 +303,7 @@ input[type="date"]::-webkit-datetime-edit-text {
   gap: 16px;
 }
 
-.filter-set {
+.form-set {
   padding: 8px 0;
 
   display: grid;
@@ -311,7 +315,7 @@ input[type="date"]::-webkit-datetime-edit-text {
   align-items: center;
 }
 
-.filter-set label {
+.form-set label {
   width: 100%;
   white-space: nowrap;
   overflow: hidden;

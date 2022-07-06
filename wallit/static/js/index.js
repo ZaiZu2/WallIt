@@ -14,29 +14,20 @@ menuButtons.forEach((button) => {
   });
 });
 
-const toggleCollapsible = function (node) {
-  if (node.style.maxHeight) {
-    node.style.maxHeight = null;
-  } else {
-    node.style.maxHeight = node.scrollHeight + "px";
-  }
-};
-
 // Allows filtering buttons to extend FILTER menu to make it responsive
-const filterButtons = document.querySelectorAll(".filter-button-list button");
-filterButtons.forEach((button) => {
+const allFormButtons = document.querySelectorAll(".button-list button");
+allFormButtons.forEach((button) => {
   button.addEventListener("click", () => {
     button.classList.toggle("active");
 
-    // If button is switched OFF, hide corresponding FILTER menu
-    // If button is switched ON, show corresponding FILTER menu
-    const content = document.getElementsByName(button.id.substring(6))[0];
-    content.classList.toggle("active");
-    if (content.style.maxHeight) content.style.maxHeight = null;
-    else content.style.maxHeight = content.scrollHeight + "px";
+    // If button is switched ON/OFF, show/hide corresponding menu
+    // Distinct forms here have a distinct class assigned, only for their location
+    const formField = document.getElementsByName(button.id)[0];
+    formField.classList.toggle("active");
+    if (formField.style.maxHeight) formField.style.maxHeight = null;
+    else formField.style.maxHeight = formField.scrollHeight + "px";
 
-    //  If any of FilterButtons is OFF, hide the SUBMIT button
-    //  If any of FilterButtons is ON, show the SUBMIT button
+    //  Check if any form buttons are active (pressed)...
     let isActive = false;
     for (const node of [...button.parentNode.children]) {
       if (node.classList.contains("active")) {
@@ -44,13 +35,17 @@ filterButtons.forEach((button) => {
         break;
       }
     }
-    const submitButton = document.getElementById("submitContent");
+    // ... Find a submit button responsible for a specific form
+    // and hide it in case all form buttons are inactive.
+    const formSubmitButton = document.getElementById(
+      `${button.classList[0]}_submit`
+    );
     if (isActive === true) {
-      submitButton.classList.add("active");
-      submitButton.style.maxHeight = submitButton.scrollHeight + "px";
+      formSubmitButton.classList.add("active");
+      formSubmitButton.style.maxHeight = formSubmitButton.scrollHeight + "px";
     } else {
-      submitButton.classList.remove("active");
-      submitButton.style.maxHeight = null;
+      formSubmitButton.classList.remove("active");
+      formSubmitButton.style.maxHeight = null;
     }
   });
 });
@@ -96,13 +91,13 @@ dateInputs.forEach((input) => {
 });
 
 // Submit multiple forms and send request with JSONified input
-const filterSubmit = document.getElementById("filterSubmit");
+const filterSubmit = document.getElementById("filter_submit_button");
 filterSubmit.addEventListener("click", async function updateTransactions() {
   // Object which will be filled with filter parameters and passed in the request
   const inputs = {};
 
   // loop over all filter forms and extract inputs from each one
-  const filterForms = document.querySelectorAll("form.filter-input");
+  const filterForms = document.querySelectorAll("form.collapsible-form.filter");
   [...filterForms].forEach((form) => {
     form.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -161,7 +156,7 @@ async function updateFilters() {
     .catch((error) => console.error(error));
 
   // Find all filter forms with checkboxes
-  targetDivs = document.querySelectorAll(".filter-input .filter-set");
+  targetDivs = document.querySelectorAll(".filter > .form-set");
   // Define filter categories which should display and in what order
   renderOrder = ["base_currency", "category", "bank"];
 
@@ -225,9 +220,7 @@ function reloadTable(transactions) {
           for (let key of Object.keys(transaction)) {
             if (!keysNeeded.includes(key)) delete transaction[key];
             if (transaction[key] instanceof Date)
-              transaction.date = `${transaction.date.getFullYear()}/${
-                transaction.date.getMonth() + 1
-              }/${transaction.date.getDate()}`;
+              transaction[key] = transaction[key].toISOString().split("T")[0];
           }
         }
         return formattedTransactions;
@@ -273,7 +266,7 @@ const transactionsTable = new gridjs.Grid({
     multiColumn: true,
   },
   fixedHeader: true,
-  height: "350px",
+  height: "400px",
   className: {
     container: "custom-container",
     table: "custom-table",
@@ -305,30 +298,31 @@ const categoryChart = new Chart(ctx, {
         borderColor: ["rgba(255, 99, 132, 1)"],
         borderWidth: 2,
       },
-      {
-        label: "Spendings",
-        data: calculateCategoryWeights(transactions),
-        backgroundColor: [
-          "rgba(255, 99, 132, 0.4)",
-          "rgba(54, 162, 235, 0.4)",
-          "rgba(255, 206, 86, 0.4)",
-          "rgba(75, 192, 192, 0.4)",
-          "rgba(153, 102, 255, 0.4)",
-          "rgba(255, 159, 64, 0.4)",
-        ],
-        borderColor: [
-          "rgba(255, 99, 132, 1)",
-          "rgba(54, 162, 235, 1)",
-          "rgba(255, 206, 86, 1)",
-          "rgba(75, 192, 192, 1)",
-          "rgba(153, 102, 255, 1)",
-          "rgba(255, 159, 64, 1)",
-        ],
-        borderWidth: 2,
-      },
+      // {
+      //   label: "Spendings",
+      //   data: calculateCategoryWeights(transactions),
+      //   backgroundColor: [
+      //     "rgba(255, 99, 132, 0.4)",
+      //     "rgba(54, 162, 235, 0.4)",
+      //     "rgba(255, 206, 86, 0.4)",
+      //     "rgba(75, 192, 192, 0.4)",
+      //     "rgba(153, 102, 255, 0.4)",
+      //     "rgba(255, 159, 64, 0.4)",
+      //   ],
+      //   borderColor: [
+      //     "rgba(255, 99, 132, 1)",
+      //     "rgba(54, 162, 235, 1)",
+      //     "rgba(255, 206, 86, 1)",
+      //     "rgba(75, 192, 192, 1)",
+      //     "rgba(153, 102, 255, 1)",
+      //     "rgba(255, 159, 64, 1)",
+      //   ],
+      //   borderWidth: 2,
+      // },
     ],
   },
   options: {
+    responsive: false,
     scales: {
       x: {
         stacked: true,
