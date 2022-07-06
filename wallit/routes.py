@@ -207,7 +207,7 @@ def populate_transaction_table():
     return {"transactions": table_rows, "total": total_rows}
 
 
-@app.route("/api/filters/apply", methods=["POST"])
+@app.route("/api/transactions/fetch", methods=["POST"])
 @login_required
 def post_transactions():
     """Receive filter parameters in JSON, query DB for filtered values
@@ -260,7 +260,6 @@ def post_transactions():
 
     filters = request.json
 
-    #
     query = (
         select([column for column in TABLE_MAP.values()])
         .filter_by(user_id=current_user.id)
@@ -302,15 +301,35 @@ def post_transactions():
     return {"transactions": table_rows}
 
 
-@app.route("/api/filters/fetch", methods=["GET"])
+@app.route("/api/transactions/filters", methods=["GET"])
 @login_required
 def fetchFilters() -> dict:
     """Fetch dynamic filtering values for user
+
+    Response JSON structure example:
+    {
+        "bank": [
+            "Equabank",
+            "mBank",
+            "Revolut"
+        ],
+        "base_currency": [
+            "EUR",
+            "CZK",
+            "USD"
+        ],
+        "category": [
+            "groceries",
+            "restaurant",
+            "salary"
+        ]
+    }
 
     Returns:
         dict: lists containing values for each filtering parameter
     """
 
+    # Dict with prespecified filtering categories, to be filled with queried values
     filter_dict = {
         "base_currency": "",
         "category": "",
@@ -334,3 +353,16 @@ def fetchFilters() -> dict:
     filter_dict["base_currency"] = db.session.scalars(currency_query).all()
 
     return filter_dict
+
+
+@app.route(
+    "/api/import",
+    methods=[
+        "POST",
+    ],
+)
+@login_required
+def import_statement():
+
+    print("a")
+    pass

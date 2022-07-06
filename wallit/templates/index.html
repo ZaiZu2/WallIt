@@ -137,22 +137,34 @@
                         </div>
                         <div>
                             <form name="revolut" class="collapsible-form import">
-                                <div class="form-range">
-                                    <input type="number" name="min" id="minAmount" placeholder="Minimum"/>
+                                <div class="form-file">
+                                    <input type="file"
+                                           accept=".csv"
+                                           name="revolut_statement"
+                                           id="revolut_statement"
+                                           multiple/>
                                 </div>
                             </form>
                             <form name="equabank" class="collapsible-form import">
-                                <div class="form-range">
-                                    <input type="date" name="min" id="minDate"/>
+                                <div class="form-file">
+                                    <input type="file"
+                                           accept=".xml"
+                                           name="equabank_statement"
+                                           id="equabank_statement"
+                                           multiple/>
                                 </div>
                             </form>
                             <form name="mbank" class="collapsible-form import">
-                                <div class="form-range">
-                                    <input type="date" name="min" id="minDate"/>
+                                <div class="form-file">
+                                    <input type="file"
+                                           accept=".csv"
+                                           name="mbank_statement"
+                                           id="mbank_statement"
+                                           multiple/>
                                 </div>
                             </form>
                             <div id="import_submit" class="collapsible-form import">
-                                <button id="import_submit_button" class="import" type="submit">
+                                <button id="import_submit_button" class="import" type="submit" multiple>
                                     Submit
                                 </button>
                             </div>

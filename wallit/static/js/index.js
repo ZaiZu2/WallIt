@@ -97,7 +97,7 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
   const inputs = {};
 
   // loop over all filter forms and extract inputs from each one
-  const filterForms = document.querySelectorAll("form.collapsible-form.filter");
+  const filterForms = document.querySelectorAll("form.filter");
   [...filterForms].forEach((form) => {
     form.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -119,7 +119,7 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
   });
 
   // Request from server
-  transactions = await fetch("/api/filters/apply", {
+  transactions = await fetch("/api/transactions/fetch", {
     method: "POST", // *GET, POST, PUT, DELETE, etc.
     mode: "cors", // no-cors, *cors, same-origin
     credentials: "same-origin", // include, *same-origin, omit
@@ -141,9 +141,45 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
   reloadWindows(transactions);
 });
 
+// Submit multiple forms and send request with JSONified input
+const importSubmit = document.getElementById("import_submit_button");
+importSubmit.addEventListener("click", async function updateTransactions() {
+  // Object which will be filled with filter parameters and passed in the request
+  let allData = new FormData();
+
+  // loop over all filter forms and extract inputs from each one
+  const importForms = document.querySelectorAll("form.import");
+  [...importForms].forEach((form) => {
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const importData = new FormData(form);
+      for ([key, file] of importData) {
+        allData.append(key, file);
+      }
+    });
+    form.requestSubmit();
+  });
+
+  // Request from server
+  transactions = await fetch("/api/import", {
+    method: "POST", // *GET, POST, PUT, DELETE, etc.
+    mode: "cors", // no-cors, *cors, same-origin
+    credentials: "same-origin", // include, *same-origin, omit
+    // headers: { "Content-Type": "application/json" },
+    body: allData, // body data type must match "Content-Type" header
+  })
+    .then((response) => {
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      return response;
+    })
+    .catch((error) => console.error(error));
+});
+
 async function updateFilters() {
   // Fetch filter data based on user's transactions from server
-  const filters = await fetch((url = "/api/filters/fetch"), {
+  const filters = await fetch((url = "/api/transactions/filters"), {
     method: "GET", // *GET, POST, PUT, DELETE, etc.
     mode: "cors", // no-cors, *cors, same-origin
     credentials: "same-origin", // include, *same-origin, omit

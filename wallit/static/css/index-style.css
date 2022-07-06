@@ -44,7 +44,7 @@ h2 {
 h4 {
   flex: 1;
 
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   vertical-align: middle;
   line-height: 50px;
 }
@@ -217,8 +217,7 @@ input[type="date"]::-webkit-datetime-edit-text {
 }
 
 .subwindow-outline {
-  width: fit-content;
-  max-width: 100%;
+  width: min-content;
   height: fit-content;
 
   padding: 8px 16px;
@@ -228,6 +227,8 @@ input[type="date"]::-webkit-datetime-edit-text {
 
   display: flex;
   flex-direction: column;
+
+  transition: 0.5s ease-in-out;
 }
 
 .subwindow-outline.filter,
@@ -301,6 +302,13 @@ button.import {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+}
+
+.form-file {
+  padding: 8px 0;
+
+  display: grid;
+  grid-template-columns: 1fr;
 }
 
 .form-set {
