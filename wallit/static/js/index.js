@@ -123,7 +123,10 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
     method: "POST", // *GET, POST, PUT, DELETE, etc.
     mode: "cors", // no-cors, *cors, same-origin
     credentials: "same-origin", // include, *same-origin, omit
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
+    },
     body: JSON.stringify(inputs), // body data type must match "Content-Type" header
   })
     .then((response) => {
@@ -166,7 +169,9 @@ importSubmit.addEventListener("click", async function updateTransactions() {
     method: "POST", // *GET, POST, PUT, DELETE, etc.
     mode: "cors", // no-cors, *cors, same-origin
     credentials: "same-origin", // include, *same-origin, omit
-    // headers: { "Content-Type": "application/json" },
+    headers: {
+      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
+    },
     body: allData, // body data type must match "Content-Type" header
   })
     .then((response) => {
@@ -183,6 +188,9 @@ async function updateFilters() {
     method: "GET", // *GET, POST, PUT, DELETE, etc.
     mode: "cors", // no-cors, *cors, same-origin
     credentials: "same-origin", // include, *same-origin, omit
+    headers: {
+      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
+    },
   })
     .then((response) => {
       if (!response.ok)

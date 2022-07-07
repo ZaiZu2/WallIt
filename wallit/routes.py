@@ -1,7 +1,7 @@
 #! python3
 
 
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, func
 from wallit import app, db, logger
 from wallit.forms import LoginForm, SignUpForm, ResetPasswordForm
 from wallit.models import Transaction, User, Bank, Category
@@ -355,12 +355,7 @@ def fetchFilters() -> dict:
     return filter_dict
 
 
-@app.route(
-    "/api/import",
-    methods=[
-        "POST",
-    ],
-)
+@app.route("/api/import", methods=["POST"])
 @login_required
 def import_statement():
 

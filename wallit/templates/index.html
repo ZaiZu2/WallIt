@@ -7,6 +7,7 @@
         <meta name="author" content="Jakub Kawecki"/>
         <meta name="description"
               content="An easy way to have an eye on your change."/>
+        <meta name="csrf-token" content="{{ csrf_token() }}" />
         <!-- JS -->
         <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js" defer></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -83,7 +84,9 @@
                             <button id="date" class="filter">Date</button>
                             <button id="base_currency" class="filter">Currency</button>
                             <button id="category" class="filter">Category</button>
-                            <button id="bank" class="filter">Banks</button>
+                            <button id="bank" class="filter">
+                                Banks
+                            </button>
                         </div>
                         <div>
                             <form name="amount" class="collapsible-form filter">
