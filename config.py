@@ -12,3 +12,6 @@ class Config:
         or "postgresql://zaizu:admin@localhost:5433/wallit"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # File upload configuration
+    MAX_CONTENT_LENGTH = 1024 * 1024

@@ -1,13 +1,19 @@
 #! python3
 
-
+from typing import Callable
 from sqlalchemy import select, func
 from wallit import app, db, logger
 from wallit.forms import LoginForm, SignUpForm, ResetPasswordForm
 from wallit.models import Transaction, User, Bank, Category
+from wallit.imports import (
+    import_equabank_statement,
+    import_revolut_statement,
+    validate_statement,
+)
 
-from flask import redirect, url_for, render_template, flash, request
+from flask import redirect, url_for, render_template, flash, request, abort
 from flask_login import current_user, login_required, login_user, logout_user
+from werkzeug.utils import secure_filename
 
 from datetime import datetime
 
@@ -15,13 +21,9 @@ from datetime import datetime
 @app.route("/")
 @login_required
 def index():
-    currencies = ["CZK", "PLN", "EUR", "USD"]
-    categories = ["Groceries", "Salary", "Entertainment", "Hobby", "Restaurant", "Rent"]
-    banks = ["Equabank", "mBank", "Revolut"]
 
     return render_template(
-        "index.html",
-        current_user=current_user._get_current_object(),
+        "index.html", current_user=current_user._get_current_object()
     )
 
 
@@ -46,7 +48,7 @@ def welcome():
 def login():
     login_form = LoginForm()
     if login_form.validate_on_submit():
-        user = User.query.filter_by(username=login_form.username.data).first()
+        user = User.query.filter_by(username=login_form.username.data).one()
         if user is None or not user.check_password(login_form.password.data):
             flash("Invalid username or password", "login_message")
             return redirect(url_for("welcome"))
@@ -65,7 +67,7 @@ def login():
 def reset_password():
     reset_password_form = ResetPasswordForm()
     if reset_password_form.validate_on_submit():
-        if User.query.filter_by(email=reset_password_form.email.data).first():
+        if User.query.filter_by(email=reset_password_form.email.data).one():
             # send email with password reset form
             flash("Email with password reset form was sent", "reset_password_message")
             return redirect(url_for("welcome"))
@@ -83,10 +85,10 @@ def reset_password():
 def sign_up():
     sign_up_form = SignUpForm()
     if sign_up_form.validate_on_submit():
-        if User.query.filter_by(username=sign_up_form.username.data).first():
+        if User.query.filter_by(username=sign_up_form.username.data).one():
             flash("Username is already used, 'sign_up_message'")
             return redirect(url_for("welcome"))
-        if User.query.filter_by(email=sign_up_form.email.data).first():
+        if User.query.filter_by(email=sign_up_form.email.data).one():
             flash("Email is already used", "sign_up_message")
             return redirect(url_for("welcome"))
 
@@ -114,97 +116,6 @@ def sign_up():
 def logout():
     logout_user()
     return redirect(url_for("welcome"))
-
-
-@app.route("/api/transactions")
-@login_required
-def populate_transaction_table():
-    """Generate serialized transaction records used for populating Transaction Table
-
-    Returns:
-        dict: serialized transaction data and transaction count
-    """
-
-    # Dictionary mapping queried values to the keys used for serialization
-    table_map = {
-        "info": Transaction.info,
-        "title": Transaction.title,
-        "amount": Transaction.main_amount,
-        "main_currency": User.main_currency,
-        "base_amount": Transaction.base_amount,
-        "base_currency": Transaction.base_currency,
-        "date": Transaction.transaction_date,
-        "place": Transaction.place,
-        "category": Category.name,
-        "bank": Bank.name,
-    }
-
-    # Build a base query
-    query = (
-        select([column_name for column_name in table_map.values()])
-        .filter_by(user_id=current_user.id)
-        .select_from(Transaction)
-        .join(Bank)
-        .join(Category)
-    )
-    # Query for number of Transactions found
-    count_query = select(func.count(Transaction.id)).filter_by(user_id=current_user.id)
-
-    # Apply search phrase to the base queries
-    search = request.args.get("search")
-    if search:
-        query = query.filter(
-            db.or_(
-                table_map["info"].ilike(f"%{search}%"),
-                table_map["title"].ilike(f"%{search}%"),
-            )
-        )
-        count_query = count_query.filter(
-            db.or_(
-                table_map["info"].ilike(f"%{search}%"),
-                table_map["title"].ilike(f"%{search}%"),
-            )
-        )
-
-    # Apply sorting to the base query
-    sort = request.args.get("sort")
-    if sort:
-        ordered_columns = []
-        for substring in sort.split(","):
-            direction = substring[0]
-            column_name = substring[1:]
-            column = table_map[column_name]
-
-            if direction == "-":
-                column = column.desc()
-            ordered_columns.append(column)
-
-        if ordered_columns:
-            query = query.order_by(*ordered_columns)
-
-    # Pagination
-    start = request.args.get("start", type=int)
-    length = request.args.get("limit", type=int)
-    query = query.offset(start).limit(length)
-
-    # Query execution
-    total_rows = db.session.execute(count_query).scalar()
-    results = db.session.execute(query).all()
-    logger.debug(query.compile().string)
-    logger.debug(count_query.compile().string)
-
-    # Serializing data received from the DB
-    table_rows = []
-    for row in results:
-        result_dict = {}
-        for name, transaction in zip(table_map.keys(), row):
-            if isinstance(transaction, datetime):
-                result_dict[name] = transaction.strftime(f"%Y/%m/%d")
-            else:
-                result_dict[name] = transaction
-        table_rows.append(result_dict)
-
-    return {"transactions": table_rows, "total": total_rows}
 
 
 @app.route("/api/transactions/fetch", methods=["POST"])
@@ -290,7 +201,7 @@ def post_transactions():
     for row in results:
         result_dict = {}
         for column_name, column_value in zip(TABLE_MAP.keys(), row):
-            # serialize date to ISO 8601 format
+            # serialize date to ISO 8601 string format
             if isinstance(column_value, datetime):
                 result_dict[column_name] = column_value.isoformat()
             else:
@@ -355,9 +266,52 @@ def fetchFilters() -> dict:
     return filter_dict
 
 
-@app.route("/api/import", methods=["POST"])
+@app.route("/api/upload", methods=["POST"])
 @login_required
-def import_statement():
+def upload_statement():
 
-    print("a")
-    pass
+    # TODO: Needed check for duplicate Transactions
+    # both in files being loaded, and in the DB
+
+    # Maps request parameters to corresponding banks
+    BANK_MAP = {
+        "revolut": {
+            "import_func": import_revolut_statement,
+            "instance": Bank.query.filter_by(name="Revolut").one(),
+        },
+        "equabank": {
+            "import_func": import_equabank_statement,
+            "instance": Bank.query.filter_by(name="Equabank").one(),
+        },
+    }
+    # dictionary holding filenames which failed validation
+    failed_validation: dict[str, str] = {}
+    # list holding all imported transactions
+    imported_transactions: list[Transaction] = []
+
+    for statement_origin, file in request.files.items(True):
+        # Sanitize the filename
+        filename = secure_filename(file.filename)
+
+        # Check if user attached file to a form
+        if filename:
+            if validate_statement(statement_origin, filename, file.stream):
+                # Run import function corresponding to statement_origin
+                import_function: Callable = BANK_MAP[statement_origin]["import_func"]
+                temp_transactions: list[Transaction] = import_function(
+                    file, current_user, BANK_MAP[statement_origin]["instance"]
+                )
+                # Append transactions from all files to the main list
+                imported_transactions.extend(temp_transactions)
+                logger.debug(f"{filename} validated successfully")
+            else:
+                failed_validation[statement_origin] = filename
+
+    # db.session.add_all(imported_transactions)
+    # db.session.commit()
+
+    # If only some files were loaded, report partial success
+    if failed_validation:
+        return {"failed": failed_validation}, 206
+    # If all files were loaded, report success
+    return "", 201

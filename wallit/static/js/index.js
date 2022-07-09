@@ -165,7 +165,7 @@ importSubmit.addEventListener("click", async function updateTransactions() {
   });
 
   // Request from server
-  transactions = await fetch("/api/import", {
+  transactions = await fetch("/api/upload", {
     method: "POST", // *GET, POST, PUT, DELETE, etc.
     mode: "cors", // no-cors, *cors, same-origin
     credentials: "same-origin", // include, *same-origin, omit

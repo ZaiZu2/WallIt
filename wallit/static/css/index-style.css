@@ -9,6 +9,7 @@
   background-color: var(--main-window-bg-color);
 
   display: flex;
+  overflow: auto;
 }
 
 body {
@@ -128,7 +129,7 @@ input[type="date"]::-webkit-datetime-edit-text {
 
 .side-bar {
   background-color: var(--main-window-bg-color);
-  width: 220px;
+  min-width: 220px;
   overflow: visible;
 
   display: flex;
@@ -206,8 +207,6 @@ input[type="date"]::-webkit-datetime-edit-text {
   display: flex;
   flex-direction: column;
   gap: 20px;
-
-  overflow: auto;
 }
 
 .section {
