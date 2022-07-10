@@ -1,6 +1,7 @@
 #!python3
 
-from wallit import app
+from re import I
+from wallit import app, db
 from wallit.models import Transaction, User, Bank
 from wallit.exceptions import FileError, InvalidConfigError
 from wallit import logger
@@ -26,16 +27,23 @@ def validate_statement(origin: str, filename: str, file: typing.BinaryIO) -> boo
         bool: True if successfully validated
     """
     # TODO: Additional file content validation
-    # TODO: Later on it can be queried from DB
-    statement_extensions = {"revolut": ".csv", "equabank": ".xml"}
+
     # Flag denoting if validation was successful
     is_validated = False
 
-    # Check origin of statement and correct type of the associated file
-    for bank, extension in statement_extensions.items():
-        if origin == bank and Path(filename).suffix == extension:
+    # Query for acceptable statement extensions associated with each bank
+    results = db.session.query(Bank.name, Bank.statement_type)
+    extension_map = {
+        bank_name.lower(): file_extension for (bank_name, file_extension) in results
+    }
+
+    try:
+        # Check correctness of the associated filetype
+        if Path(filename).suffix == extension_map[origin]:
             is_validated = True
             return is_validated
+    except KeyError:
+        raise InvalidConfigError
 
     return is_validated
 
@@ -237,6 +245,18 @@ def import_equabank_statement(
 def convert_currency(
     transactions: list[Transaction], user_currency: str
 ) -> list[Transaction]:
+    """Convert all main_amounts in transactions to the currency set by user.
+
+    Args:
+        transactions (list[Transaction]): list of transactions to convert
+        user_currency (str): the currency set by user
+
+    Raises:
+        InvalidConfigError: raised in case API key is not attached to apps config file
+
+    Returns:
+        list[Transaction]: list of converted transactions
+    """
 
     base_url = (
         "https://api.currencyscoop.com/v1/historical?api_key={key}&base={user_currency}"
@@ -257,7 +277,10 @@ def convert_currency(
         # Check if conversion is necessary
         if transaction.base_currency == user_currency:
             transaction.main_amount = transaction.base_amount
-            # logger.debug(f'{transaction.base_amount} {transaction.base_currency} -> {transaction.main_amount} {user_currency}')
+            logger.log(
+                "DEBUG_HIGH",
+                f"{transaction.base_amount} {transaction.base_currency} -> {transaction.main_amount} {user_currency}",
+            )
             continue
 
         # Stringified transaction date used for
@@ -279,7 +302,10 @@ def convert_currency(
             / date_cache[date]["rates"][transaction.base_currency],
             2,
         )
-        # logger.debug(f'{transaction.base_amount} {transaction.base_currency} -> {transaction.main_amount} {user_currency}')
+        logger.log(
+            "DEBUG_HIGH",
+            f"{transaction.base_amount} {transaction.base_currency} -> {transaction.main_amount} {user_currency}",
+        )
 
     logger.debug(
         f"API was consumed {API_counter} times for {len(transactions)} transactions"

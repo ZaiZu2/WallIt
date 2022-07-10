@@ -11,8 +11,10 @@ import sys
 from loguru import logger
 
 logger.remove()
+DEBUG_HIGH = logger.level("DEBUG_HIGH", no=8)
 logger.add(
     sys.stderr,
+    level="DEBUG",
     format="<BLUE>{time:HH:mm:ss} | {level} | {name}:{function}:{line}</BLUE>\n"
     "<cyan>{message}</cyan>",
     colorize=True,

@@ -313,7 +313,6 @@ def upload_statements():
                 # Append transactions from all files to the main list
                 uploaded_transactions.extend(temp_transactions)
                 success_upload[statement_origin] = filename
-                logger.debug(f"{filename} validated successfully")
             else:
                 failed_upload[statement_origin] = filename
 

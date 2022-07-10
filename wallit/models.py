@@ -63,7 +63,8 @@ class Transaction(db.Model):
     main_amount = db.Column(db.Float, index=True, nullable=False)
     base_amount = db.Column(db.Float, index=True, nullable=False)
     base_currency = db.Column(db.String(3), index=True, nullable=False)
-    transaction_date = db.Column(
+    transaction_date = db.Column(db.DateTime, index=True, nullable=False)
+    creation_date = db.Column(
         db.DateTime, index=True, nullable=False, default=datetime.utcnow
     )
     place = db.Column(db.Text)
@@ -76,7 +77,7 @@ class Transaction(db.Model):
     bank_id = db.Column(db.Integer, db.ForeignKey("banks.id"), nullable=False)
 
     def __repr__(self) -> str:
-        return f"Transaction: {self.amount} {self.currency} on {self.transaction_date}"
+        return f"Transaction: {self.base_amount} {self.base_currency} on {self.transaction_date}"
 
 
 class Bank(db.Model):
@@ -84,6 +85,7 @@ class Bank(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Text, index=True, unique=True, nullable=False)
+    statement_type = db.Column(db.String(10), nullable=False)
 
     # model name used for relationship()!
     transactions = db.relationship("Transaction", backref="bank", lazy=True)
