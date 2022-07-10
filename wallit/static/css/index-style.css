@@ -200,6 +200,7 @@ input[type="date"]::-webkit-datetime-edit-text {
 .main-window {
   min-height: auto;
   min-width: auto;
+  overflow: auto;
 
   flex: 1;
   padding: 20px;

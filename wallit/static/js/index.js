@@ -145,8 +145,8 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
 });
 
 // Submit multiple forms and send request with JSONified input
-const importSubmit = document.getElementById("import_submit_button");
-importSubmit.addEventListener("click", async function updateTransactions() {
+const uploadSubmit = document.getElementById("import_submit_button");
+uploadSubmit.addEventListener("click", async function updateTransactions() {
   // Object which will be filled with filter parameters and passed in the request
   let allData = new FormData();
 
@@ -165,7 +165,7 @@ importSubmit.addEventListener("click", async function updateTransactions() {
   });
 
   // Request from server
-  transactions = await fetch("/api/upload", {
+  transactions = await fetch("/api/transactions/upload", {
     method: "POST", // *GET, POST, PUT, DELETE, etc.
     mode: "cors", // no-cors, *cors, same-origin
     credentials: "same-origin", // include, *same-origin, omit

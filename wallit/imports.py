@@ -1,7 +1,9 @@
 #!python3
 
+from wallit import app
 from wallit.models import Transaction, User, Bank
-from wallit.exceptions import FileError
+from wallit.exceptions import FileError, InvalidConfigError
+from wallit import logger
 
 from pathlib import Path
 import typing
@@ -9,6 +11,7 @@ import io
 import csv
 from datetime import datetime
 import xml.etree.ElementTree as ET
+import requests
 
 
 def validate_statement(origin: str, filename: str, file: typing.BinaryIO) -> bool:
@@ -59,18 +62,21 @@ def import_revolut_statement(
             reader = csv.DictReader(csv_file, delimiter=",")
 
             for row in reader:
-                transaction = Transaction()
+                # Ignore rows with internal revolut exchanges
+                if row["Type"] != "EXCHANGE":
+                    transaction = Transaction()
 
-                transaction.base_amount = row["Amount"]
-                transaction.base_currency = row["Currency"]
-                transaction.transaction_date = datetime.strptime(
-                    row["Completed Date"], "%Y-%m-%d %H:%M:%S"
-                ).isoformat()
-                transaction.title = row["Description"]
-                transaction.bank_id = bank.id
-                transaction.user_id = user.id
+                    transaction.info = row["Type"]
+                    transaction.title = row["Description"]
+                    transaction.base_amount = float(row["Amount"])
+                    transaction.base_currency = row["Currency"]
+                    transaction.transaction_date = datetime.strptime(
+                        row["Completed Date"], "%Y-%m-%d %H:%M:%S"
+                    )
+                    transaction.bank_id = bank.id
+                    transaction.user_id = user.id
 
-                transactions.append(transaction)
+                    transactions.append(transaction)
         except Exception as e:
             raise FileError("Error during parsing necessary statement details") from e
 
@@ -144,12 +150,12 @@ def import_equabank_statement(
                 "Error during parsing necessary statement details - amount/currency"
             )
 
-    def parse_date(root_obj: ET.Element, XPath: str) -> str:
+    def parse_date(root_obj: ET.Element, XPath: str) -> datetime:
         """Parse date string from transaction element"""
 
         date_element = root_obj.find(XPath, namespace)
         if isinstance(date_element, ET.Element) and isinstance(date_element.text, str):
-            return datetime.strptime(date_element.text, "%Y-%m-%d+%H:%M").isoformat()
+            return datetime.strptime(date_element.text, "%Y-%m-%d+%H:%M")
         else:
             raise FileError("Error during parsing necessary statement details - date")
 
@@ -189,7 +195,7 @@ def import_equabank_statement(
             root = tree.getroot()
             namespace = {"nms": "urn:iso:std:iso:20022:tech:xsd:camt.053.001.06"}
 
-            # iterate through <Ntry> nodes in the statement tree
+            # iterate through transaction elements in the statement tree
             for transaction_element in root.findall(".//nms:Ntry", namespace):
 
                 # Parsing transaction data
@@ -215,7 +221,7 @@ def import_equabank_statement(
                 transactions.append(transaction)
                 calculated_sum += transaction.base_amount
         except (ET.ParseError) as e:
-            raise FileError(f"Wrong .xml file structure. Import aborted.") from e
+            raise FileError("Error during parsing statement - general failure") from e
 
         if not validate_sum(
             root_obj=root,
@@ -225,4 +231,57 @@ def import_equabank_statement(
         ):
             raise FileError("Error during parsing statement - validation failed")
 
+    return transactions
+
+
+def convert_currency(
+    transactions: list[Transaction], user_currency: str
+) -> list[Transaction]:
+
+    base_url = (
+        "https://api.currencyscoop.com/v1/historical?api_key={key}&base={user_currency}"
+    )
+    date_template = "&date={date}"
+
+    date_cache: dict[str, dict] = {}
+    API_counter = 0
+
+    if "CURRENCYSCOOP_API_KEY" in app.config:
+        base_url = base_url.format(
+            key=app.config["CURRENCYSCOOP_API_KEY"], user_currency=user_currency
+        )
+    else:
+        raise InvalidConfigError("CurrencyScoop API key is not accessible")
+
+    for transaction in transactions:
+        # Check if conversion is necessary
+        if transaction.base_currency == user_currency:
+            transaction.main_amount = transaction.base_amount
+            # logger.debug(f'{transaction.base_amount} {transaction.base_currency} -> {transaction.main_amount} {user_currency}')
+            continue
+
+        # Stringified transaction date used for
+        date = transaction.transaction_date.strftime("%Y-%m-%d")
+
+        # Check if currency exchange rates are already cached for this date
+        # If not, consume API and populate the date_cache with it
+        if date not in date_cache:
+            date_param = date_template.format(date=date)
+            r = requests.get(base_url + date_param)
+            r.raise_for_status()
+
+            date_cache[date] = r.json()["response"]
+            API_counter += 1
+
+        # Calculate the amount
+        transaction.main_amount = round(
+            transaction.base_amount
+            / date_cache[date]["rates"][transaction.base_currency],
+            2,
+        )
+        # logger.debug(f'{transaction.base_amount} {transaction.base_currency} -> {transaction.main_amount} {user_currency}')
+
+    logger.debug(
+        f"API was consumed {API_counter} times for {len(transactions)} transactions"
+    )
     return transactions

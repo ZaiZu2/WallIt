@@ -1,7 +1,7 @@
 #! python3
 
-from typing import Callable
-from sqlalchemy import select, func
+from click import FileError
+from sqlalchemy import select
 from wallit import app, db, logger
 from wallit.forms import LoginForm, SignUpForm, ResetPasswordForm
 from wallit.models import Transaction, User, Bank, Category
@@ -9,6 +9,7 @@ from wallit.imports import (
     import_equabank_statement,
     import_revolut_statement,
     validate_statement,
+    convert_currency,
 )
 
 from flask import redirect, url_for, render_template, flash, request, abort
@@ -16,6 +17,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.utils import secure_filename
 
 from datetime import datetime
+from typing import Callable
 
 
 @app.route("/")
@@ -175,8 +177,8 @@ def post_transactions():
         select([column for column in TABLE_MAP.values()])
         .filter_by(user_id=current_user.id)
         .select_from(Transaction)
-        .join(Category)
-        .join(Bank)
+        .join(Category, isouter=True)  # left outer join
+        .join(Bank, isouter=True)  # left outer join
     )
 
     # iterate over dict of filters
@@ -194,7 +196,7 @@ def post_transactions():
                 query = query.filter(TABLE_MAP[filter_name].in_(filter_values))
 
     results = db.session.execute(query).all()
-    logger.debug(query.compile().string)
+    logger.debug(query.compile(compile_kwargs={"literal_binds": True}).string)
 
     # Serializing data received from the DB
     table_rows = []
@@ -214,7 +216,7 @@ def post_transactions():
 
 @app.route("/api/transactions/filters", methods=["GET"])
 @login_required
-def fetchFilters() -> dict:
+def fetch_filters() -> dict:
     """Fetch dynamic filtering values for user
 
     Response JSON structure example:
@@ -266,9 +268,9 @@ def fetchFilters() -> dict:
     return filter_dict
 
 
-@app.route("/api/upload", methods=["POST"])
+@app.route("/api/transactions/upload", methods=["POST"])
 @login_required
-def upload_statement():
+def upload_statements():
 
     # TODO: Needed check for duplicate Transactions
     # both in files being loaded, and in the DB
@@ -284,10 +286,12 @@ def upload_statement():
             "instance": Bank.query.filter_by(name="Equabank").one(),
         },
     }
-    # dictionary holding filenames which failed validation
-    failed_validation: dict[str, str] = {}
+    # dictionary holding filenames which failed to upload
+    failed_upload: dict[str, str] = {}
+    # dictionary holding filenames which were successfully uploaded
+    success_upload: dict[str, str] = {}
     # list holding all imported transactions
-    imported_transactions: list[Transaction] = []
+    uploaded_transactions: list[Transaction] = []
 
     for statement_origin, file in request.files.items(True):
         # Sanitize the filename
@@ -298,20 +302,31 @@ def upload_statement():
             if validate_statement(statement_origin, filename, file.stream):
                 # Run import function corresponding to statement_origin
                 import_function: Callable = BANK_MAP[statement_origin]["import_func"]
-                temp_transactions: list[Transaction] = import_function(
-                    file, current_user, BANK_MAP[statement_origin]["instance"]
-                )
+
+                try:
+                    temp_transactions: list[Transaction] = import_function(
+                        file, current_user, BANK_MAP[statement_origin]["instance"]
+                    )
+                except FileError as e:
+                    failed_upload[statement_origin] = filename
+
                 # Append transactions from all files to the main list
-                imported_transactions.extend(temp_transactions)
+                uploaded_transactions.extend(temp_transactions)
+                success_upload[statement_origin] = filename
                 logger.debug(f"{filename} validated successfully")
             else:
-                failed_validation[statement_origin] = filename
+                failed_upload[statement_origin] = filename
 
-    # db.session.add_all(imported_transactions)
-    # db.session.commit()
+    uploaded_transactions = convert_currency(
+        uploaded_transactions, current_user.main_currency
+    )
+    db.session.add_all(uploaded_transactions)
+    db.session.commit()
 
-    # If only some files were loaded, report partial success
-    if failed_validation:
-        return {"failed": failed_validation}, 206
-    # If all files were loaded, report success
-    return "", 201
+    # If only some files were uploaded, report partial success
+    if len(failed_upload) > 0 and len(success_upload) > 0:
+        return {"failed": failed_upload, "success": success_upload}, 206
+    if len(success_upload) == 0:
+        abort(400)
+    if len(failed_upload) == 0:
+        return "", 201
