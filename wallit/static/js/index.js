@@ -252,23 +252,28 @@ function reloadTable(transactions) {
           "info",
           "title",
           "amount",
+          "base_amount",
           "category",
           "date",
           "place",
           "bank",
+          "creation_date",
         ];
-        // Deep copy of queried transactions
-        formattedTransactions = structuredClone(transactions);
 
-        // Delete keys which are not used
-        for (let transaction of formattedTransactions) {
+        formattedTransactions2 = structuredClone(transactions);
+
+        for (let transaction of formattedTransactions2) {
           for (let key of Object.keys(transaction)) {
             if (!keysNeeded.includes(key)) delete transaction[key];
             if (transaction[key] instanceof Date)
               transaction[key] = transaction[key].toISOString().split("T")[0];
+            if (key == "base_amount")
+              transaction[key] =
+                transaction[key] + " " + transaction["base_currency"];
           }
         }
-        return formattedTransactions;
+
+        return formattedTransactions2;
       },
     })
     .forceRender();
@@ -295,13 +300,15 @@ const transactionsTable = new gridjs.Grid({
         return `${cell} CZK`;
       },
     },
+    { id: "base_amount", name: "Base amount", search: { enabled: false } },
     { id: "category", name: "Category" },
-    { id: "date", name: "Date" },
-    { id: "place", name: "Place" },
+    { id: "date", name: "Date", search: { enabled: false } },
+    { id: "place", name: "Place", sort: { enabled: false } },
     { id: "bank", name: "Bank" },
+    { id: "creation_date", name: "Creation date", search: { enabled: false } },
   ],
   data: [],
-  width: "1000px",
+  width: "auto",
   autoWidth: false,
   search: {
     enabled: true,
