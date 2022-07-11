@@ -166,6 +166,7 @@ def post_transactions():
         "base_amount": Transaction.base_amount,
         "base_currency": Transaction.base_currency,
         "date": Transaction.transaction_date,
+        "creation_date": Transaction.creation_date,
         "place": Transaction.place,
         "category": Category.name,
         "bank": Bank.name,

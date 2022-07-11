@@ -343,11 +343,6 @@ button.import {
   transform: scale(0.95);
 }
 
-.transactions {
-  width: fit-content;
-  max-width: 100%;
-}
-
 .hidden {
   display: none;
 }

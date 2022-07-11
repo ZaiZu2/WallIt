@@ -139,6 +139,7 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
   transactions = transactions.transactions;
   for (let transaction of transactions) {
     transaction.date = new Date(transaction.date);
+    transaction.creation_date = new Date(transaction.creation_date);
   }
 
   reloadWindows(transactions);

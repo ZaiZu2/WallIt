@@ -49,7 +49,7 @@
 
 .custom-thead .custom-th:focus,
 .custom-thead .custom-th:hover {
-  background: none;
+  background: black;
 }
 
 th.custom-th {
