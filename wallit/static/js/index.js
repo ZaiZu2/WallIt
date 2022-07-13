@@ -1,5 +1,13 @@
 let transactions = [];
 
+const modalButton = document.getElementById("modal-button");
+modalButton.addEventListener("click", () => {
+  modal = document.getElementsByClassName("modal")[0];
+  modal.classList.add("inactive");
+  backgroundDim = document.getElementsByClassName("dim-background")[0];
+  backgroundDim.classList.add("inactive");
+});
+
 // Allows button to toggle menu windows ON/OFF with responsive button behavior
 const menuButtons = document.querySelectorAll(".menu button");
 menuButtons.forEach((button) => {
@@ -134,13 +142,14 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
         throw new Error(`HTTP error! Status: ${response.status}`);
       return response.json();
     })
+    .then((data) => {
+      for (let transaction of data.transactions) {
+        transaction.date = new Date(transaction.date);
+        transaction.creation_date = new Date(transaction.creation_date);
+      }
+      return data.transactions;
+    })
     .catch((error) => console.error(error));
-
-  transactions = transactions.transactions;
-  for (let transaction of transactions) {
-    transaction.date = new Date(transaction.date);
-    transaction.creation_date = new Date(transaction.creation_date);
-  }
 
   reloadWindows(transactions);
 });
@@ -166,7 +175,8 @@ uploadSubmit.addEventListener("click", async function updateTransactions() {
   });
 
   // Request from server
-  transactions = await fetch("/api/transactions/upload", {
+  responseStatus = 0;
+  uploadResults = await fetch("/api/transactions/upload", {
     method: "POST", // *GET, POST, PUT, DELETE, etc.
     mode: "cors", // no-cors, *cors, same-origin
     credentials: "same-origin", // include, *same-origin, omit
@@ -178,9 +188,13 @@ uploadSubmit.addEventListener("click", async function updateTransactions() {
     .then((response) => {
       if (!response.ok)
         throw new Error(`HTTP error! Status: ${response.status}`);
-      return response;
+      responseStatus = response.status;
+      return response.json();
     })
+    .then((data) => data)
     .catch((error) => console.error(error));
+
+  showUploadModal(responseStatus, uploadResults);
 });
 
 async function updateFilters() {
@@ -201,12 +215,14 @@ async function updateFilters() {
     .catch((error) => console.error(error));
 
   // Find all filter forms with checkboxes
-  targetDivs = document.querySelectorAll(".filter > .form-set");
+  checkboxFields = document.querySelectorAll(".filter > .form-set");
   // Define filter categories which should display and in what order
   renderOrder = ["base_currency", "category", "bank"];
 
   // Dynamically create checkboxes for all the found filter categories
   for (let [i, filterCategory] of Object.entries(renderOrder)) {
+    temporaryFields = [];
+
     for (let parameter of filters[filterCategory]) {
       const input = document.createElement("input");
       input.setAttribute("type", "checkbox");
@@ -217,13 +233,19 @@ async function updateFilters() {
       label.setAttribute("for", parameter);
       label.textContent = parameter;
 
-      targetDivs[i].appendChild(input);
-      targetDivs[i].appendChild(label);
+      temporaryFields.push(input);
+      temporaryFields.push(label);
     }
+    if (temporaryFields.length == false) {
+      const message = document.createElement("p");
+      message.textContent = "No filters available";
+      temporaryFields.push(message);
+    }
+    checkboxFields[i].append(...temporaryFields);
   }
 }
 
-// Format Transaction data into structure used by Category Chart
+// Format Transaction (structure used by Category Chart
 function calculateCategoryWeights(transactions) {
   let categoryWeights = {};
 
@@ -279,6 +301,14 @@ function reloadTable(transactions) {
     .forceRender();
 }
 
+const editableCellAttributes = (data, row, col) => {
+  if (row) {
+    return { contentEditable: "true", "data-element-id": row.cells[0].data };
+  } else {
+    return {};
+  }
+};
+
 const transactionsTable = new gridjs.Grid({
   columns: [
     {
@@ -286,12 +316,14 @@ const transactionsTable = new gridjs.Grid({
       name: "Name",
       search: { enabled: true },
       sort: { enabled: false },
+      attributes: editableCellAttributes,
     },
     {
       id: "title",
       name: "Title",
       search: { enabled: true },
       sort: { enabled: false },
+      attributes: editableCellAttributes,
     },
     {
       id: "amount",
@@ -303,7 +335,12 @@ const transactionsTable = new gridjs.Grid({
     { id: "base_amount", name: "Base amount", search: { enabled: false } },
     { id: "category", name: "Category" },
     { id: "date", name: "Date", search: { enabled: false } },
-    { id: "place", name: "Place", sort: { enabled: false } },
+    {
+      id: "place",
+      name: "Place",
+      sort: { enabled: false },
+      attributes: editableCellAttributes,
+    },
     { id: "bank", name: "Bank" },
     { id: "creation_date", name: "Creation date", search: { enabled: false } },
   ],
@@ -395,6 +432,52 @@ function reloadChart(chart, dataObj) {
     chart.data.datasets[i - 1].data = data;
   }
   chart.update();
+}
+
+function showUploadModal(responseStatus, uploadResults) {
+  backgroundDim = document.getElementsByClassName("dim-background")[0];
+  backgroundDim.classList.remove("inactive");
+
+  modal = document.getElementsByClassName("modal")[0];
+  modal.classList.remove("inactive");
+
+  modalHeader = modal.getElementsByClassName("modal-header")[0];
+  modalHeader.textContent = "Statement upload results";
+
+  modalContent = modal.getElementsByClassName("modal-content")[0];
+  while (modalContent.firstChild) {
+    modalContent.removeChild(modalContent.lastChild);
+  }
+
+  p = document.createElement("p");
+  p.textContent = `${uploadResults.amount} transactions were loaded successfully.`;
+  modalContent.append(p);
+
+  if (responseStatus == 201 || responseStatus == 206) {
+    p = document.createElement("p");
+    p.textContent =
+      "Following statements were uploaded and converted succesfully:";
+
+    ul = document.createElement("ul");
+    for ([statementFilename, bank] of Object.entries(uploadResults.success)) {
+      li = document.createElement("li");
+      li.textContent = `${bank}: ${statementFilename}`;
+      ul.append(li);
+    }
+    modalContent.append(p, ul);
+  }
+  if (responseStatus == 206 || responseStatus == 400) {
+    p = document.createElement("p");
+    p.textContent = "Following statements were discarded due to an error:";
+
+    ul = document.createElement("ul");
+    for ([statementFilename, bank] of Object.entries(uploadResults.failed)) {
+      li = document.createElement("li");
+      li.textContent = `${bank}: ${statementFilename}`;
+      ul.append(li);
+    }
+    modalContent.append(p, ul);
+  }
 }
 
 updateFilters();

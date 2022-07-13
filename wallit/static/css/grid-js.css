@@ -85,6 +85,10 @@ td.custom-td {
   overflow: hidden;
 }
 
+td.custom-td:focus-visible {
+  outline: none;
+}
+
 /* SORTING ICON */
 
 .custom-thead .gridjs-sort-neutral {

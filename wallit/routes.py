@@ -308,14 +308,14 @@ def upload_statements():
                     temp_transactions: list[Transaction] = import_function(
                         file, current_user, BANK_MAP[statement_origin]["instance"]
                     )
-                except FileError as e:
-                    failed_upload[statement_origin] = filename
+                except FileError:
+                    failed_upload[filename] = statement_origin
 
                 # Append transactions from all files to the main list
                 uploaded_transactions.extend(temp_transactions)
-                success_upload[statement_origin] = filename
+                success_upload[filename] = statement_origin
             else:
-                failed_upload[statement_origin] = filename
+                failed_upload[filename] = statement_origin
 
     uploaded_transactions = convert_currency(
         uploaded_transactions, current_user.main_currency
@@ -323,10 +323,15 @@ def upload_statements():
     db.session.add_all(uploaded_transactions)
     db.session.commit()
 
+    upload_results = {
+        "failed": failed_upload,
+        "success": success_upload,
+        "amount": len(uploaded_transactions),
+    }
     # If only some files were uploaded, report partial success
-    if len(failed_upload) > 0 and len(success_upload) > 0:
-        return {"failed": failed_upload, "success": success_upload}, 206
-    if len(success_upload) == 0:
-        abort(400)
-    if len(failed_upload) == 0:
-        return "", 201
+    if failed_upload and success_upload:
+        return upload_results, 206
+    if not success_upload:
+        return upload_results, 400
+    if not failed_upload:
+        return upload_results, 201
