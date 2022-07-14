@@ -123,6 +123,59 @@ input[type="date"]::-webkit-datetime-edit-text {
   padding: 0 0.2rem;
 }
 
+/*********** CUSTOM-BUTTONS ***********/
+
+.button-std {
+  width: fit-content;
+  height: 2rem;
+  padding: 0 8px;
+  margin: 8px;
+  box-sizing: border-box;
+
+  background: none;
+  border-radius: 0.8rem;
+
+  text-align: center;
+  color: var(--main-font-inactive-color);
+  outline: var(--border-inactive);
+  /* outline: 1px solid var(--main-font-active-color); */
+}
+.button-std:hover {
+  color: var(--main-font-active-color);
+  border: var(--border-active);
+}
+
+.button-no-outline {
+  flex: 1;
+  width: fit-content;
+  height: 2rem;
+  padding: 0 8px;
+  box-sizing: border-box;
+
+  background: none;
+  border-radius: 0.8rem;
+
+  text-align: center;
+}
+.button-no-outline:hover {
+  color: var(--main-font-active-color);
+}
+
+.button-no-outline:active,
+.button-std:active {
+  background-color: var(--main-font-active-color);
+  outline: none;
+  color: black;
+
+  position: relative;
+  transform: scale(0.95);
+}
+
+button.active {
+  color: var(--main-font-active-color);
+  outline: var(--border-active);
+}
+
 /* ****************************** */
 /* ********** SIDE-BAR ********** */
 /* ****************************** */
@@ -255,38 +308,6 @@ input[type="date"]::-webkit-datetime-edit-text {
   gap: 8px;
 }
 
-button.filter,
-button.import {
-  flex: 1;
-  width: fit-content;
-  height: 2rem;
-  padding: 0 8px;
-  box-sizing: border-box;
-
-  background: none;
-  border-radius: 0.8rem;
-
-  text-align: center;
-}
-
-.button-list button.active {
-  color: var(--main-font-active-color);
-  outline: var(--border-active);
-}
-
-.button-list > button:hover {
-  color: var(--main-font-active-color);
-}
-
-.button-list > button:active {
-  background-color: var(--main-font-active-color);
-  outline: none;
-  color: black;
-
-  position: relative;
-  transform: scale(0.95);
-}
-
 #filter_submit,
 #import_submit {
   text-align: center;
@@ -395,36 +416,6 @@ button.import {
   padding-bottom: 0px;
   list-style: circle;
   list-style-position: inside;
-}
-
-.button-std {
-  width: fit-content;
-  height: 2rem;
-  padding: 0 8px;
-  margin: 8px;
-  box-sizing: border-box;
-
-  background: none;
-  border-radius: 0.8rem;
-
-  text-align: center;
-  color: var(--main-font-inactive-color);
-  outline: var(--border-inactive);
-  /* outline: 1px solid var(--main-font-active-color); */
-}
-
-.button-std:hover {
-  color: var(--main-font-active-color);
-  outline: var(--border-active);
-}
-
-.button-std:active {
-  background-color: var(--main-font-active-color);
-  outline: none;
-  color: black;
-
-  position: relative;
-  transform: scale(0.95);
 }
 
 .dim-background {

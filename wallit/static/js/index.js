@@ -46,7 +46,7 @@ allFormButtons.forEach((button) => {
     // ... Find a submit button responsible for a specific form
     // and hide it in case all form buttons are inactive.
     const formSubmitButton = document.getElementById(
-      `${button.classList[0]}_submit`
+      `${button.classList[1]}_submit`
     );
     if (isActive === true) {
       formSubmitButton.classList.add("active");
