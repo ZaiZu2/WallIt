@@ -186,7 +186,7 @@ uploadSubmit.addEventListener("click", async function updateTransactions() {
     body: allData, // body data type must match "Content-Type" header
   })
     .then((response) => {
-      if (!response.ok)
+      if (!response.ok && response.status != 400 && response.status != 415)
         throw new Error(`HTTP error! Status: ${response.status}`);
       responseStatus = response.status;
       return response.json();
@@ -437,21 +437,30 @@ function reloadChart(chart, dataObj) {
 function showUploadModal(responseStatus, uploadResults) {
   backgroundDim = document.getElementsByClassName("dim-background")[0];
   backgroundDim.classList.remove("inactive");
-
   modal = document.getElementsByClassName("modal")[0];
   modal.classList.remove("inactive");
 
   modalHeader = modal.getElementsByClassName("modal-header")[0];
   modalHeader.textContent = "Statement upload results";
-
   modalContent = modal.getElementsByClassName("modal-content")[0];
+
   while (modalContent.firstChild) {
     modalContent.removeChild(modalContent.lastChild);
   }
 
-  p = document.createElement("p");
-  p.textContent = `${uploadResults.amount} transactions were loaded successfully.`;
-  modalContent.append(p);
+  if (uploadResults.amount) {
+    p = document.createElement("p");
+    p.textContent = `${uploadResults.amount} transactions were loaded successfully.`;
+    modalContent.append(p);
+  }
+
+  // Print any attached messages from server
+  if (uploadResults.info) {
+    p = document.createElement("p");
+    p.textContent = uploadResults.info;
+
+    modalContent.append(p);
+  }
 
   if (responseStatus == 201 || responseStatus == 206) {
     p = document.createElement("p");
@@ -466,7 +475,7 @@ function showUploadModal(responseStatus, uploadResults) {
     }
     modalContent.append(p, ul);
   }
-  if (responseStatus == 206 || responseStatus == 400) {
+  if (responseStatus == 206 || responseStatus == 415) {
     p = document.createElement("p");
     p.textContent = "Following statements were discarded due to an error:";
 

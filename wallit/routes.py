@@ -272,9 +272,33 @@ def fetch_filters() -> dict:
 @app.route("/api/transactions/upload", methods=["POST"])
 @login_required
 def upload_statements():
+    """Parse and save transactions from uploaded files
+
+    Response JSON structure example:
+    {
+        'amount': 34,
+        'info': '',
+        'failed': {
+            '1029848317_20191231_2019005.xml': 'revolut',
+            '1029848317_20210131_2021001.xml': 'revolut'
+        }
+        'success': {'1029848317_20210131_2021001.xml': 'equabank'}
+    }
+
+    Returns:
+        dict: response containing data about upload outcome
+    """
 
     # TODO: Needed check for duplicate Transactions
     # both in files being loaded, and in the DB
+
+    # Check if user uploaded any statements
+    is_empty = True
+    for file in request.files.values():
+        if file.filename:
+            is_empty = False
+    if is_empty:
+        return {"info": "No files were uploaded."}, 400
 
     # Maps request parameters to corresponding banks
     BANK_MAP = {
@@ -327,11 +351,12 @@ def upload_statements():
         "failed": failed_upload,
         "success": success_upload,
         "amount": len(uploaded_transactions),
+        "info": "",
     }
-    # If only some files were uploaded, report partial success
+
     if failed_upload and success_upload:
         return upload_results, 206
     if not success_upload:
-        return upload_results, 400
+        return upload_results, 415
     if not failed_upload:
         return upload_results, 201
