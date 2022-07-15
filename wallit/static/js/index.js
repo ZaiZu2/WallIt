@@ -1,4 +1,5 @@
-let transactions = [];
+import { transactionsTable, reloadTable } from "./gridjs.js";
+import { categoryChart, reloadCategoryChart } from "./chartjs.js";
 
 const modalButton = document.getElementById("modal-button");
 modalButton.addEventListener("click", () => {
@@ -127,7 +128,7 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
   });
 
   // Request from server
-  transactions = await fetch("/api/transactions/fetch", {
+  const transactions = await fetch("/api/transactions/fetch", {
     method: "POST", // *GET, POST, PUT, DELETE, etc.
     mode: "cors", // no-cors, *cors, same-origin
     credentials: "same-origin", // include, *same-origin, omit
@@ -142,21 +143,17 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
         throw new Error(`HTTP error! Status: ${response.status}`);
       return response.json();
     })
-    .then((data) => {
-      for (let transaction of data.transactions) {
-        transaction.date = new Date(transaction.date);
-        transaction.creation_date = new Date(transaction.creation_date);
-      }
-      return data.transactions;
-    })
+    .then((data) => data.transactions)
     .catch((error) => console.error(error));
 
+  // Save filtered transactions to browser's tab memory so they are available to all elements
+  sessionStorage.setItem("transactions", JSON.stringify(transactions));
   reloadWindows(transactions);
 });
 
 // Submit multiple forms and send request with JSONified input
 const uploadSubmit = document.getElementById("import_submit_button");
-uploadSubmit.addEventListener("click", async function updateTransactions() {
+uploadSubmit.addEventListener("click", async function uploadStatements() {
   // Object which will be filled with filter parameters and passed in the request
   let allData = new FormData();
 
@@ -199,7 +196,7 @@ uploadSubmit.addEventListener("click", async function updateTransactions() {
 
 async function updateFilters() {
   // Fetch filter data based on user's transactions from server
-  const filters = await fetch((url = "/api/transactions/filters"), {
+  const filters = await fetch("/api/transactions/filters", {
     method: "GET", // *GET, POST, PUT, DELETE, etc.
     mode: "cors", // no-cors, *cors, same-origin
     credentials: "same-origin", // include, *same-origin, omit
@@ -215,13 +212,13 @@ async function updateFilters() {
     .catch((error) => console.error(error));
 
   // Find all filter forms with checkboxes
-  checkboxFields = document.querySelectorAll(".filter > .form-set");
+  const checkboxFields = document.querySelectorAll(".filter > .form-set");
   // Define filter categories which should display and in what order
-  renderOrder = ["base_currency", "category", "bank"];
+  const renderOrder = ["base_currency", "category", "bank"];
 
   // Dynamically create checkboxes for all the found filter categories
   for (let [i, filterCategory] of Object.entries(renderOrder)) {
-    temporaryFields = [];
+    let temporaryFields = [];
 
     for (let parameter of filters[filterCategory]) {
       const input = document.createElement("input");
@@ -243,195 +240,6 @@ async function updateFilters() {
     }
     checkboxFields[i].append(...temporaryFields);
   }
-}
-
-// Format Transaction (structure used by Category Chart
-function calculateCategoryWeights(transactions) {
-  let categoryWeights = {};
-
-  for (let transaction of transactions) {
-    if (!Object.keys(categoryWeights).includes(transaction.category)) {
-      categoryWeights[transaction.category] = transaction.amount;
-    } else {
-      categoryWeights[transaction.category] += transaction.amount;
-    }
-  }
-
-  // Round up any floating point errors
-  for (let [categoryName, categoryWeight] of Object.entries(categoryWeights)) {
-    categoryWeights[categoryName] = Math.round(categoryWeight * 100) / 100;
-  }
-
-  return categoryWeights;
-}
-
-function reloadTable(transactions) {
-  transactionsTable
-    .updateConfig({
-      data: () => {
-        // Keys to be retained in a new array passed to the Table
-        keysNeeded = [
-          "info",
-          "title",
-          "amount",
-          "base_amount",
-          "category",
-          "date",
-          "place",
-          "bank",
-          "creation_date",
-        ];
-
-        formattedTransactions2 = structuredClone(transactions);
-
-        for (let transaction of formattedTransactions2) {
-          for (let key of Object.keys(transaction)) {
-            if (!keysNeeded.includes(key)) delete transaction[key];
-            if (transaction[key] instanceof Date)
-              transaction[key] = transaction[key].toISOString().split("T")[0];
-            if (key == "base_amount")
-              transaction[key] =
-                transaction[key] + " " + transaction["base_currency"];
-          }
-        }
-
-        return formattedTransactions2;
-      },
-    })
-    .forceRender();
-}
-
-const editableCellAttributes = (data, row, col) => {
-  if (row) {
-    return { contentEditable: "true", "data-element-id": row.cells[0].data };
-  } else {
-    return {};
-  }
-};
-
-const transactionsTable = new gridjs.Grid({
-  columns: [
-    {
-      id: "info",
-      name: "Name",
-      search: { enabled: true },
-      sort: { enabled: false },
-      attributes: editableCellAttributes,
-    },
-    {
-      id: "title",
-      name: "Title",
-      search: { enabled: true },
-      sort: { enabled: false },
-      attributes: editableCellAttributes,
-    },
-    {
-      id: "amount",
-      name: "Amount",
-      formatter: (cell) => {
-        return `${cell} CZK`;
-      },
-    },
-    { id: "base_amount", name: "Base amount", search: { enabled: false } },
-    { id: "category", name: "Category" },
-    { id: "date", name: "Date", search: { enabled: false } },
-    {
-      id: "place",
-      name: "Place",
-      sort: { enabled: false },
-      attributes: editableCellAttributes,
-    },
-    { id: "bank", name: "Bank" },
-    { id: "creation_date", name: "Creation date", search: { enabled: false } },
-  ],
-  data: [],
-  width: "auto",
-  autoWidth: false,
-  search: {
-    enabled: true,
-  },
-  sort: {
-    enabled: true,
-    multiColumn: true,
-  },
-  fixedHeader: true,
-  height: "400px",
-  className: {
-    container: "custom-container",
-    table: "custom-table",
-    tbody: "custom-tbody",
-    thead: "custom-thead",
-    header: "custom-header",
-    footer: "custom-footer",
-    td: "custom-td",
-    th: "custom-th",
-    paginationSummary: "custom-pagination-summary",
-    paginationButton: "custom-pagination-button",
-    paginationButtonNext: "custom-pagination-button-next",
-    paginationButtonCurrent: "custom-pagination-button-current",
-    paginationButtonPrev: "custom-pagination-button-prev",
-    loading: "custom-loading",
-  },
-}).render(document.getElementById("transactionTable"));
-
-const ctx = document.getElementById("categoryChart").getContext("2d");
-const categoryChart = new Chart(ctx, {
-  type: "bar",
-  data: {
-    labels: [],
-    datasets: [
-      {
-        label: "Spendings",
-        data: calculateCategoryWeights(transactions),
-        backgroundColor: ["rgba(255, 99, 132, 0.4)"],
-        borderColor: ["rgba(255, 99, 132, 1)"],
-        borderWidth: 2,
-      },
-      // {
-      //   label: "Spendings",
-      //   data: calculateCategoryWeights(transactions),
-      //   backgroundColor: [
-      //     "rgba(255, 99, 132, 0.4)",
-      //     "rgba(54, 162, 235, 0.4)",
-      //     "rgba(255, 206, 86, 0.4)",
-      //     "rgba(75, 192, 192, 0.4)",
-      //     "rgba(153, 102, 255, 0.4)",
-      //     "rgba(255, 159, 64, 0.4)",
-      //   ],
-      //   borderColor: [
-      //     "rgba(255, 99, 132, 1)",
-      //     "rgba(54, 162, 235, 1)",
-      //     "rgba(255, 206, 86, 1)",
-      //     "rgba(75, 192, 192, 1)",
-      //     "rgba(153, 102, 255, 1)",
-      //     "rgba(255, 159, 64, 1)",
-      //   ],
-      //   borderWidth: 2,
-      // },
-    ],
-  },
-  options: {
-    responsive: false,
-    scales: {
-      x: {
-        stacked: true,
-      },
-      y: {
-        beginAtZero: true,
-      },
-    },
-  },
-});
-
-function reloadChart(chart, dataObj) {
-  const labels = Object.keys(arguments[1]);
-  chart.data.labels = labels;
-
-  for (let i = 1; i < arguments.length; i++) {
-    const data = Object.values(arguments[i]);
-    chart.data.datasets[i - 1].data = data;
-  }
-  chart.update();
 }
 
 function showUploadModal(responseStatus, uploadResults) {
@@ -489,11 +297,12 @@ function showUploadModal(responseStatus, uploadResults) {
   }
 }
 
-updateFilters();
-
-function reloadWindows(transactions) {
-  categoryData = calculateCategoryWeights(transactions);
-  reloadChart(categoryChart, categoryData);
-
-  reloadTable(transactions);
+function reloadWindows() {
+  const transactions = JSON.parse(sessionStorage.getItem("transactions"));
+  reloadCategoryChart(categoryChart, transactions);
+  reloadTable(transactionsTable, transactions);
 }
+
+window.onload = () => {
+  updateFilters();
+};

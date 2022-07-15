@@ -80,6 +80,7 @@ td.custom-td {
   border-right: none;
 
   color: white;
+  vertical-align: middle;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
