@@ -116,8 +116,19 @@ td.custom-td:focus-visible {
 
 th[data-column-id="info"].custom-th,
 th[data-column-id="title"].custom-th {
-  /* width: 250px !important; */
+  min-width: 150px;
 }
+th[data-column-id="base_amount"].custom-th,
+th[data-column-id="creation_date"].custom-th {
+  min-width: 120px;
+}
+th[data-column-id="actions"].custom-th {
+  min-width: 40px;
+}
+th[data-column-id="category"].custom-th {
+  min-width: 95px;
+}
+
 td[data-column-id="info"].custom-td,
 td[data-column-id="title"].custom-td {
   text-align: left;
@@ -129,4 +140,18 @@ th[data-column-id="amount"].custom-th {
 td[data-column-id="amount"].custom-td,
 td[data-column-id="base_amount"].custom-td {
   text-align: right;
+}
+
+td[data-column-id="actions"].custom-td {
+  padding: 0px;
+}
+
+.button-table {
+  height: 24px;
+  width: 24px;
+
+  color: white;
+}
+.button-table:hover > span {
+  font-variation-settings: "FILL" 1, "wght" 300, "GRAD" 0, "opsz" 48;
 }

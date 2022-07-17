@@ -159,7 +159,8 @@ def post_transactions():
 
     # Dictionary mapping queried values to the keys used for serialization and request processing
     # Request JSON filter names must remain the same as the keys used here
-    TABLE_MAP = {
+    TABLE_TO_JSON = {
+        "id": Transaction.id,
         "info": Transaction.info,
         "title": Transaction.title,
         "amount": Transaction.main_amount,
@@ -175,7 +176,7 @@ def post_transactions():
     filters = request.json
 
     query = (
-        select([column for column in TABLE_MAP.values()])
+        select([column for column in TABLE_TO_JSON.values()])
         .filter_by(user_id=current_user.id)
         .select_from(Transaction)
         .join(Category, isouter=True)  # left outer join
@@ -187,14 +188,14 @@ def post_transactions():
         # check if filter is a range (dict), then read 'min' and 'max' values if they were given
         if isinstance(filter_values, dict):
             if filter_values["min"]:
-                query = query.filter(TABLE_MAP[filter_name] >= filter_values["min"])
+                query = query.filter(TABLE_TO_JSON[filter_name] >= filter_values["min"])
             if filter_values["max"]:
-                query = query.filter(TABLE_MAP[filter_name] <= filter_values["max"])
+                query = query.filter(TABLE_TO_JSON[filter_name] <= filter_values["max"])
 
         # check if filter holds checkbox values (list), then read contained values if there are any
         if isinstance(filter_values, list):
             if filter_values:
-                query = query.filter(TABLE_MAP[filter_name].in_(filter_values))
+                query = query.filter(TABLE_TO_JSON[filter_name].in_(filter_values))
 
     results = db.session.execute(query).all()
     logger.debug(query.compile(compile_kwargs={"literal_binds": True}).string)
@@ -203,7 +204,7 @@ def post_transactions():
     table_rows = []
     for row in results:
         result_dict = {}
-        for column_name, column_value in zip(TABLE_MAP.keys(), row):
+        for column_name, column_value in zip(TABLE_TO_JSON.keys(), row):
             # serialize date to ISO 8601 string format
             if isinstance(column_value, datetime):
                 result_dict[column_name] = column_value.isoformat()
@@ -360,3 +361,64 @@ def upload_statements():
         return upload_results, 415
     if not failed_upload:
         return upload_results, 201
+
+
+@app.route("/api/transactions/delete/<id>", methods=["DELETE"])
+@login_required
+def delete_transaction(id):
+
+    transaction_id = id
+    query = Transaction.query.filter_by(id=transaction_id)
+    queried_transaction = query.first()
+
+    # Check if transaction actually exists
+    if not queried_transaction:
+        return "", 404
+    # Check if user tries to delete his own transaction
+    if queried_transaction.user_id == current_user.id:
+        query.delete()
+        db.session.commit()
+        return "", 200
+    else:
+        return "", 403
+
+
+@app.route("/api/transactions/add", methods=["POST"])
+@login_required
+def add_transaction():
+
+    # TODO: Bank id is not nullable, meaning this will crash when provided with manually input transaction without it.
+
+    transaction_json = request.json
+
+    if transaction_json["category"]:
+        category_id = (
+            Category.query.filter_by(name=transaction_json["category"]).one().id
+        )
+    else:
+        category_id = None
+    # This one is not nullable in model definition!
+    if transaction_json["bank"]:
+        bank_id = Bank.query.filter_by(name=transaction_json["bank"]).one().id
+
+    transaction = Transaction()
+    transaction.info = transaction_json["info"]
+    transaction.title = transaction_json["title"]
+    transaction.main_amount = transaction_json["amount"]
+    transaction.base_amount = transaction_json["base_amount"]
+    transaction.base_currency = transaction_json["base_currency"]
+    transaction.transaction_date = datetime.fromisoformat(transaction_json["date"])
+    transaction.creation_date = datetime.fromisoformat(
+        transaction_json["creation_date"]
+    )
+    transaction.place = transaction_json["place"]
+    transaction.category_id = category_id
+    # This one is not nullable in model definition!
+    transaction.bank_id = bank_id
+    transaction.user_id = current_user.id
+
+    db.session.add(transaction)
+    db.session.commit()
+
+    # Successful deletion, returning new ID of the transaction for client-side synchronization
+    return {"id": transaction.id}, 200

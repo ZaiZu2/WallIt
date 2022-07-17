@@ -1,9 +1,12 @@
+import { Grid, h } from "https://unpkg.com/gridjs?module";
+
 export function reloadTable(table, transactions) {
   table
     .updateConfig({
       data: () => {
         // Keys to be retained in a new array passed to the Table
         const keysNeeded = [
+          "id",
           "info",
           "title",
           "amount",
@@ -32,16 +35,43 @@ export function reloadTable(table, transactions) {
     .forceRender();
 }
 
-export const editableCellAttributes = (data, row, col) => {
+const editableCellAttributes = (cell, row, col) => {
   if (row) {
-    return { contentEditable: "true", "data-element-id": row.cells[0].data };
+    return { contentEditable: "true", "data-id": row.cells[0].data };
   } else {
     return {};
   }
 };
 
-export const transactionsTable = new gridjs.Grid({
+async function deleteTransaction(id) {
+  await fetch(`/api/transactions/delete/${id}`, {
+    method: "DELETE",
+    mode: "cors", // no-cors, *cors, same-origin
+    credentials: "same-origin", // include, *same-origin, omit
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
+    },
+  }).then((response) => {
+    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+    // Pop the transactions element with specified id into a deletedTransactions array
+    for (let i = 0; i < transactions.length; i++) {
+      if (transactions[i].id == id)
+        deletedTransactions.push(transactions.splice(i, 1)[0]);
+    }
+
+    sessionStorage.setItem("transactions", JSON.stringify(transactions));
+    sessionStorage.setItem(
+      "deletedTransactions",
+      JSON.stringify(deletedTransactions)
+    );
+  });
+}
+
+export const transactionsTable = new Grid({
   columns: [
+    { id: "id", hidden: true, search: { enabled: true } },
     {
       id: "info",
       name: "Name",
@@ -68,7 +98,7 @@ export const transactionsTable = new gridjs.Grid({
       name: "Base amount",
       search: { enabled: false },
       formatter: (cell, row) => {
-        return `${cell} ${row.cells[4].data}`;
+        return `${cell} ${row.cells[5].data}`;
       },
     },
     { id: "base_currency", name: "Base currency", hidden: true },
@@ -82,6 +112,58 @@ export const transactionsTable = new gridjs.Grid({
     },
     { id: "bank", name: "Bank" },
     { id: "creation_date", name: "Creation date", search: { enabled: false } },
+    {
+      id: "actions",
+      name: "Actions",
+      search: { enabled: false },
+      sort: { enabled: false },
+      attributes: (cell, row) => {
+        if (row) {
+          return { "data-id": row.cells[0].data };
+        } else {
+          return {};
+        }
+      },
+      formatter: (cell, row) => {
+        return [
+          h(
+            "button",
+            {
+              className: "button-table",
+              title: "Delete transaction",
+              onClick: async (event) => {
+                const transactionId = event.target
+                  .closest("td")
+                  .getAttribute("data-id");
+                await deleteTransaction(transactionId);
+                event.target.closest("tr").classList.add("hidden");
+              },
+            },
+            h(
+              "span",
+              {
+                className: "material-symbols-rounded custom-small-icon",
+              },
+              "delete_forever"
+            )
+          ),
+          h(
+            "button",
+            {
+              className: "button-table",
+              onClick: () => alert(`Transaction 2nd operation`),
+            },
+            h(
+              "span",
+              {
+                className: "material-symbols-rounded custom-small-icon",
+              },
+              "sync"
+            )
+          ),
+        ];
+      },
+    },
   ],
   data: [],
   width: "auto",
@@ -112,3 +194,61 @@ export const transactionsTable = new gridjs.Grid({
     loading: "custom-loading",
   },
 }).render(document.getElementById("transactionTable"));
+
+const undoDeletionButton = document.getElementById("undo_deletion");
+undoDeletionButton.addEventListener("click", async () => {
+  if (deletedTransactions.length > 0) {
+    const transaction = deletedTransactions[deletedTransactions.length - 1];
+
+    // Find table cells corresponding to the last deleted transaction
+    const transactionDataCells = document.querySelectorAll(
+      `td[data-id="${transaction.id}"]`
+    );
+
+    // Send request to insert transaction
+    const newTransactionId = await addTransaction(transaction);
+    // Server responds with a new Id for transaction after successful insertion
+    transaction.id = newTransactionId;
+
+    transactions.push(transaction);
+    deletedTransactions.pop();
+
+    // Change data-attributes to correct transactionId
+    [...transactionDataCells].forEach((dataCell) => {
+      dataCell.setAttribute("data-id", newTransactionId);
+    });
+    // Show the table row corresponding to transaction dataCells
+    const transactionRow = transactionDataCells[0].closest("tr");
+    transactionRow.classList.remove("hidden");
+
+    // Update session storage
+    sessionStorage.setItem("transactions", JSON.stringify(transactions));
+    sessionStorage.setItem(
+      "deletedTransactions",
+      JSON.stringify(deletedTransactions)
+    );
+  }
+});
+
+async function addTransaction(transaction) {
+  const newTransactionId = await fetch("/api/transactions/add", {
+    method: "POST",
+    mode: "cors", // no-cors, *cors, same-origin
+    credentials: "same-origin", // include, *same-origin, omit
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
+    },
+    body: JSON.stringify(transaction),
+  })
+    .then((response) => {
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      return response.json();
+    })
+    .then((data) => {
+      return data.id;
+    });
+
+  return newTransactionId;
+}

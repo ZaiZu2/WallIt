@@ -3,9 +3,9 @@ import { categoryChart, reloadCategoryChart } from "./chartjs.js";
 
 const modalButton = document.getElementById("modal-button");
 modalButton.addEventListener("click", () => {
-  modal = document.getElementsByClassName("modal")[0];
+  const modal = document.getElementsByClassName("modal")[0];
   modal.classList.add("inactive");
-  backgroundDim = document.getElementsByClassName("dim-background")[0];
+  const backgroundDim = document.getElementsByClassName("dim-background")[0];
   backgroundDim.classList.add("inactive");
 });
 
@@ -128,10 +128,8 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
   });
 
   // Request from server
-  const transactions = await fetch("/api/transactions/fetch", {
-    method: "POST", // *GET, POST, PUT, DELETE, etc.
-    mode: "cors", // no-cors, *cors, same-origin
-    credentials: "same-origin", // include, *same-origin, omit
+  transactions = await fetch("/api/transactions/fetch", {
+    method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
@@ -164,7 +162,7 @@ uploadSubmit.addEventListener("click", async function uploadStatements() {
       e.preventDefault();
 
       const importData = new FormData(form);
-      for ([key, file] of importData) {
+      for (let [key, file] of importData) {
         allData.append(key, file);
       }
     });
@@ -172,8 +170,8 @@ uploadSubmit.addEventListener("click", async function uploadStatements() {
   });
 
   // Request from server
-  responseStatus = 0;
-  uploadResults = await fetch("/api/transactions/upload", {
+  let responseStatus = 0;
+  const uploadResults = await fetch("/api/transactions/upload", {
     method: "POST", // *GET, POST, PUT, DELETE, etc.
     mode: "cors", // no-cors, *cors, same-origin
     credentials: "same-origin", // include, *same-origin, omit
@@ -243,53 +241,57 @@ async function updateFilters() {
 }
 
 function showUploadModal(responseStatus, uploadResults) {
-  backgroundDim = document.getElementsByClassName("dim-background")[0];
+  const backgroundDim = document.getElementsByClassName("dim-background")[0];
   backgroundDim.classList.remove("inactive");
-  modal = document.getElementsByClassName("modal")[0];
+  const modal = document.getElementsByClassName("modal")[0];
   modal.classList.remove("inactive");
 
-  modalHeader = modal.getElementsByClassName("modal-header")[0];
+  const modalHeader = modal.getElementsByClassName("modal-header")[0];
   modalHeader.textContent = "Statement upload results";
-  modalContent = modal.getElementsByClassName("modal-content")[0];
+  const modalContent = modal.getElementsByClassName("modal-content")[0];
 
   while (modalContent.firstChild) {
     modalContent.removeChild(modalContent.lastChild);
   }
 
   if (uploadResults.amount) {
-    p = document.createElement("p");
+    const p = document.createElement("p");
     p.textContent = `${uploadResults.amount} transactions were loaded successfully.`;
     modalContent.append(p);
   }
 
   // Print any attached messages from server
   if (uploadResults.info) {
-    p = document.createElement("p");
+    const p = document.createElement("p");
     p.textContent = uploadResults.info;
 
     modalContent.append(p);
   }
 
   if (responseStatus == 201 || responseStatus == 206) {
-    p = document.createElement("p");
+    const p = document.createElement("p");
     p.textContent =
       "Following statements were uploaded and converted succesfully:";
 
-    ul = document.createElement("ul");
-    for ([statementFilename, bank] of Object.entries(uploadResults.success)) {
-      li = document.createElement("li");
+    const ul = document.createElement("ul");
+    for (let [statementFilename, bank] of Object.entries(
+      uploadResults.success
+    )) {
+      const li = document.createElement("li");
       li.textContent = `${bank}: ${statementFilename}`;
       ul.append(li);
     }
     modalContent.append(p, ul);
   }
   if (responseStatus == 206 || responseStatus == 415) {
-    p = document.createElement("p");
+    const p = document.createElement("p");
     p.textContent = "Following statements were discarded due to an error:";
 
-    ul = document.createElement("ul");
-    for ([statementFilename, bank] of Object.entries(uploadResults.failed)) {
-      li = document.createElement("li");
+    const ul = document.createElement("ul");
+    for (let [statementFilename, bank] of Object.entries(
+      uploadResults.failed
+    )) {
+      const li = document.createElement("li");
       li.textContent = `${bank}: ${statementFilename}`;
       ul.append(li);
     }
@@ -297,12 +299,29 @@ function showUploadModal(responseStatus, uploadResults) {
   }
 }
 
-function reloadWindows() {
-  const transactions = JSON.parse(sessionStorage.getItem("transactions"));
+function reloadWindows(transactions) {
   reloadCategoryChart(categoryChart, transactions);
   reloadTable(transactionsTable, transactions);
 }
 
-window.onload = () => {
+window.addEventListener("onload", () => {
+  // Load storage into temporary arrays
+  if (sessionStorage.getItem("transactions") != null)
+    transactions = JSON.parse(sessionStorage.getItem("transactions"));
+  if (sessionStorage.getItem("deletedTransactions") != null)
+    deletedTransactions = JSON.parse(
+      sessionStorage.getItem("deletedTransactions")
+    );
+
+  reloadWindows(transactions);
   updateFilters();
-};
+});
+
+window.addEventListener("beforeunload", () => {
+  // Update session storage
+  sessionStorage.setItem("transactions", JSON.stringify(transactions));
+  sessionStorage.setItem(
+    "deletedTransactions",
+    JSON.stringify(deletedTransactions)
+  );
+});

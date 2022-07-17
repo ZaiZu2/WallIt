@@ -9,7 +9,12 @@
               content="An easy way to have an eye on your change."/>
         <meta name="csrf-token" content="{{ csrf_token() }}" />
         <!-- JS -->
-        <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js" defer></script>
+        <script>
+            // Array holding loaded transactions during session
+            let transactions = [];
+            // Array holding deleted transactions during session
+            let deletedTransactions = [];
+        </script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script type="module" src="../static/js/index.js" defer></script>
         <!-- CSS -->
@@ -84,9 +89,7 @@
                             <button id="date" class="button-no-outline filter">Date</button>
                             <button id="base_currency" class="button-no-outline filter">Currency</button>
                             <button id="category" class="button-no-outline filter">Category</button>
-                            <button id="bank" class="button-no-outline filter">
-                                Banks
-                            </button>
+                            <button id="bank" class="button-no-outline filter">Banks</button>
                         </div>
                         <div>
                             <form name="amount" class="collapsible-form filter">
@@ -102,8 +105,7 @@
                                 </div>
                             </form>
                             <form name="base_currency" class="collapsible-form filter">
-                                <div class="form-set">
-                                </div>
+                                <div class="form-set"></div>
                             </form>
                             <form name="category" class="collapsible-form filter">
                                 <div class="form-set">
@@ -114,7 +116,9 @@
                                 </div>
                             </form>
                             <div id="filter_submit" class="collapsible-form filter">
-                                <button id="filter_submit_button" class="button-no-outline filter" type="submit">
+                                <button id="filter_submit_button"
+                                        class="button-no-outline filter"
+                                        type="submit">
                                     Submit
                                 </button>
                             </div>
@@ -138,30 +142,24 @@
                         <div>
                             <form name="revolut" class="collapsible-form import">
                                 <div class="form-file">
-                                    <input type="file"
-                                           accept=".csv"
-                                           name="revolut"
-                                           multiple/>
+                                    <input type="file" accept=".csv" name="revolut" multiple/>
                                 </div>
                             </form>
                             <form name="equabank" class="collapsible-form import">
                                 <div class="form-file">
-                                    <input type="file"
-                                           accept=".xml"
-                                           name="equabank"
-                                           multiple/>
+                                    <input type="file" accept=".xml" name="equabank" multiple/>
                                 </div>
                             </form>
                             <form name="mbank" class="collapsible-form import">
                                 <div class="form-file">
-                                    <input type="file"
-                                           accept=".csv"
-                                           name="mbank"
-                                           multiple/>
+                                    <input type="file" accept=".csv" name="mbank" multiple/>
                                 </div>
                             </form>
                             <div id="import_submit" class="collapsible-form import">
-                                <button id="import_submit_button" class="button-no-outline import" type="submit" multiple>
+                                <button id="import_submit_button"
+                                        class="button-no-outline import"
+                                        type="submit"
+                                        multiple>
                                     Submit
                                 </button>
                             </div>
@@ -177,6 +175,11 @@
                             <h6>
                                 Transactions
                             </h6>
+                            <button id="undo_deletion" class="button-no-outline" title="Undo deletion">
+                                <span class="material-symbols-rounded custom-small-icon">
+                                    undo
+                                </span>
+                            </button>
                         </div>
                         <div id="transactionTable"></div>
                     </div>
@@ -207,11 +210,16 @@
                 </div>
             </div>
         </div>
-        <div class="dim-background inactive"></div>
-        <div class="modal inactive">
-            <h6 class="modal-header"></h6>
-            <div class="modal-content"></div>
-            <button id="modal-button" class="button-std">Close</button>
+        <div class="dim-background inactive">
         </div>
-</body>
+        <div class="modal inactive">
+            <h6 class="modal-header">
+            </h6>
+            <div class="modal-content">
+            </div>
+            <button id="modal-button" class="button-std">
+                Close
+            </button>
+        </div>
+    </body>
 </html>

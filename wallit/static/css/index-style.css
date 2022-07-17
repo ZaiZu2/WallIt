@@ -150,7 +150,6 @@ input[type="date"]::-webkit-datetime-edit-text {
 }
 
 .button-no-outline {
-  flex: 1;
   width: fit-content;
   height: 2rem;
   padding: 0 8px;
