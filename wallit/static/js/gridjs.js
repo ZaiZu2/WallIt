@@ -1,6 +1,6 @@
 import { Grid, h } from "https://unpkg.com/gridjs?module";
 
-export function reloadTable(table, transactions) {
+export function reloadTable(table) {
   table
     .updateConfig({
       data: () => {
@@ -60,13 +60,30 @@ async function deleteTransaction(id) {
       if (transactions[i].id == id)
         deletedTransactions.push(transactions.splice(i, 1)[0]);
     }
-
-    sessionStorage.setItem("transactions", JSON.stringify(transactions));
-    sessionStorage.setItem(
-      "deletedTransactions",
-      JSON.stringify(deletedTransactions)
-    );
   });
+}
+
+async function addTransaction(transaction) {
+  const newTransactionId = await fetch("/api/transactions/add", {
+    method: "POST",
+    mode: "cors", // no-cors, *cors, same-origin
+    credentials: "same-origin", // include, *same-origin, omit
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
+    },
+    body: JSON.stringify(transaction),
+  })
+    .then((response) => {
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      return response.json();
+    })
+    .then((data) => {
+      return data.id;
+    });
+
+  return newTransactionId;
 }
 
 export const transactionsTable = new Grid({
@@ -124,7 +141,7 @@ export const transactionsTable = new Grid({
           return {};
         }
       },
-      formatter: (cell, row) => {
+      formatter: () => {
         return [
           h(
             "button",
@@ -183,14 +200,8 @@ export const transactionsTable = new Grid({
     tbody: "custom-tbody",
     thead: "custom-thead",
     header: "custom-header",
-    footer: "custom-footer",
     td: "custom-td",
     th: "custom-th",
-    paginationSummary: "custom-pagination-summary",
-    paginationButton: "custom-pagination-button",
-    paginationButtonNext: "custom-pagination-button-next",
-    paginationButtonCurrent: "custom-pagination-button-current",
-    paginationButtonPrev: "custom-pagination-button-prev",
     loading: "custom-loading",
   },
 }).render(document.getElementById("transactionTable"));
@@ -220,35 +231,5 @@ undoDeletionButton.addEventListener("click", async () => {
     // Show the table row corresponding to transaction dataCells
     const transactionRow = transactionDataCells[0].closest("tr");
     transactionRow.classList.remove("hidden");
-
-    // Update session storage
-    sessionStorage.setItem("transactions", JSON.stringify(transactions));
-    sessionStorage.setItem(
-      "deletedTransactions",
-      JSON.stringify(deletedTransactions)
-    );
   }
 });
-
-async function addTransaction(transaction) {
-  const newTransactionId = await fetch("/api/transactions/add", {
-    method: "POST",
-    mode: "cors", // no-cors, *cors, same-origin
-    credentials: "same-origin", // include, *same-origin, omit
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
-    },
-    body: JSON.stringify(transaction),
-  })
-    .then((response) => {
-      if (!response.ok)
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      return response.json();
-    })
-    .then((data) => {
-      return data.id;
-    });
-
-  return newTransactionId;
-}

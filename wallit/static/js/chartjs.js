@@ -1,5 +1,5 @@
 // Format transactions into used by Category Chart
-export function calculateCategoryWeights(transactions) {
+function calculateCategoryWeights() {
   let categoryWeights = {};
 
   for (let transaction of transactions) {
@@ -16,8 +16,8 @@ export function calculateCategoryWeights(transactions) {
   return categoryWeights;
 }
 
-export function reloadCategoryChart(chart, transactions) {
-  const weights = calculateCategoryWeights(transactions);
+export function reloadCategoryChart(chart) {
+  const weights = calculateCategoryWeights();
   chart.data.labels = Object.keys(weights);
   chart.data.datasets[0].data = Object.values(weights);
   chart.update();

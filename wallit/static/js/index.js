@@ -134,7 +134,7 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
       "Content-Type": "application/json",
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
     },
-    body: JSON.stringify(inputs), // body data type must match "Content-Type" header
+    body: JSON.stringify(inputs),
   })
     .then((response) => {
       if (!response.ok)
@@ -144,9 +144,7 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
     .then((data) => data.transactions)
     .catch((error) => console.error(error));
 
-  // Save filtered transactions to browser's tab memory so they are available to all elements
-  sessionStorage.setItem("transactions", JSON.stringify(transactions));
-  reloadWindows(transactions);
+  reloadWindows();
 });
 
 // Submit multiple forms and send request with JSONified input
@@ -299,21 +297,17 @@ function showUploadModal(responseStatus, uploadResults) {
   }
 }
 
-function reloadWindows(transactions) {
-  reloadCategoryChart(categoryChart, transactions);
-  reloadTable(transactionsTable, transactions);
+function reloadWindows() {
+  reloadCategoryChart(categoryChart);
+  reloadTable(transactionsTable);
 }
 
-window.addEventListener("onload", () => {
+window.addEventListener("load", () => {
   // Load storage into temporary arrays
   if (sessionStorage.getItem("transactions") != null)
     transactions = JSON.parse(sessionStorage.getItem("transactions"));
-  if (sessionStorage.getItem("deletedTransactions") != null)
-    deletedTransactions = JSON.parse(
-      sessionStorage.getItem("deletedTransactions")
-    );
 
-  reloadWindows(transactions);
+  reloadWindows();
   updateFilters();
 });
 
