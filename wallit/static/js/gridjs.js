@@ -154,6 +154,10 @@ export const transactionsTable = new Grid({
                   .getAttribute("data-id");
                 await deleteTransaction(transactionId);
                 event.target.closest("tr").classList.add("hidden");
+
+                const undoDeletionButton =
+                  document.getElementById("undo_deletion");
+                undoDeletionButton.classList.remove("hidden");
               },
             },
             h(
@@ -232,4 +236,7 @@ undoDeletionButton.addEventListener("click", async () => {
     const transactionRow = transactionDataCells[0].closest("tr");
     transactionRow.classList.remove("hidden");
   }
+
+  if (deletedTransactions.length == 0)
+    undoDeletionButton.classList.add("hidden");
 });

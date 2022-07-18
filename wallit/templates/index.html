@@ -71,11 +71,11 @@
                         </li>
                     </ol>
                 </div>
-                <a id="log-out" href="{{ url_for('logout') }}">
+                <button id="log-out" href="{{ url_for('logout') }}">
                     <span class="material-symbols-rounded custom-medium-icon"
-                          style="font-size: 48px !important;">logout</span>
+                          style="font-size: 48px;">logout</span>
                     <h3>Log out</h3>
-                </a>
+                </button>
             </div>
             <div class="main-window">
                 <div class="section">
@@ -175,7 +175,7 @@
                             <h6>
                                 Transactions
                             </h6>
-                            <button id="undo_deletion" class="button-no-outline" title="Undo deletion">
+                            <button id="undo_deletion" class="button-no-outline hidden" title="Undo deletion">
                                 <span class="material-symbols-rounded custom-small-icon">
                                     undo
                                 </span>

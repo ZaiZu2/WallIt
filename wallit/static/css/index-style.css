@@ -160,7 +160,8 @@ input[type="date"]::-webkit-datetime-edit-text {
 
   text-align: center;
 }
-.button-no-outline:hover {
+.button-no-outline:hover,
+.button-no-outline:focus {
   color: var(--main-font-active-color);
 }
 
@@ -205,7 +206,8 @@ button.active {
   display: flex;
 }
 
-.menu button:hover:not(.active) {
+.menu button:hover:not(.active),
+.menu button:focus:not(.active) {
   color: var(--main-font-active-color);
 }
 
@@ -239,7 +241,7 @@ button.active {
 }
 
 #log-out:hover,
-#log-out:hover span {
+#log-out:focus {
   color: var(--main-font-active-color);
   font-variation-settings: "wght" 600;
 }
@@ -367,7 +369,9 @@ button.active {
 }
 
 .hidden {
-  display: none;
+  visibility: hidden;
+  pointer-events: none;
+  position: absolute;
 }
 
 .modal {
