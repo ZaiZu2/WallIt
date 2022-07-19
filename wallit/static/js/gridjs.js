@@ -44,7 +44,7 @@ const editableCellAttributes = (cell, row, col) => {
 };
 
 async function deleteTransaction(id) {
-  await fetch(`/api/transactions/delete/${id}`, {
+  await fetch(`/api/transactions/${id}/delete`, {
     method: "DELETE",
     mode: "cors", // no-cors, *cors, same-origin
     credentials: "same-origin", // include, *same-origin, omit
@@ -239,4 +239,53 @@ undoDeletionButton.addEventListener("click", async () => {
 
   if (deletedTransactions.length == 0)
     undoDeletionButton.classList.add("hidden");
+});
+
+let oldValue;
+
+const tableBody = document.getElementById("transactionTable");
+tableBody.addEventListener("focusin", (event) => {
+  if (event.target.contentEditable == "true")
+    oldValue = event.target.textContent;
+});
+
+tableBody.addEventListener("focusout", async (event) => {
+  if (event.target.contentEditable == "true") {
+    if (event.target.textContent != oldValue) {
+      const transactionId = event.target.dataset.id;
+      const columnName = event.target.dataset.columnId;
+
+      await fetch(`/api/transactions/${transactionId}/modify`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
+        },
+        body: JSON.stringify({
+          [columnName]: event.target.textContent,
+        }),
+      }).then((response) => {
+        if (!response.ok)
+          throw new Error(`HTTP error! Status: ${response.status}`);
+      });
+
+      const modifiedTransaction = transactions.find(
+        (transaction) => transaction.id == transactionId
+      );
+      modifiedTransaction[columnName] = event.target.textContent;
+    }
+  }
+  oldValue = undefined;
+});
+
+tableBody.addEventListener("keydown", (event) => {
+  if (event.target.contentEditable == "true") {
+    if (event.key == "Escape") {
+      event.target.textContent = oldValue;
+      event.target.blur();
+    } else if (event.key === "Enter" || event.key === "Tab") {
+      event.preventDefault();
+      event.target.blur();
+    }
+  }
 });

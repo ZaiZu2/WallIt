@@ -1,6 +1,5 @@
 #! python3
 
-from click import FileError
 from sqlalchemy import select
 from wallit import app, db, logger
 from wallit.forms import LoginForm, SignUpForm, ResetPasswordForm
@@ -11,6 +10,7 @@ from wallit.imports import (
     validate_statement,
     convert_currency,
 )
+from wallit.exceptions import FileError
 
 from flask import redirect, url_for, render_template, flash, request, abort
 from flask_login import current_user, login_required, login_user, logout_user
@@ -363,24 +363,20 @@ def upload_statements():
         return upload_results, 201
 
 
-@app.route("/api/transactions/delete/<id>", methods=["DELETE"])
+@app.route("/api/transactions/<id>/delete", methods=["DELETE"])
 @login_required
 def delete_transaction(id):
 
-    transaction_id = id
-    query = Transaction.query.filter_by(id=transaction_id)
-    queried_transaction = query.first()
-
+    transaction = Transaction.query.get(id)
     # Check if transaction actually exists
-    if not queried_transaction:
-        return "", 404
     # Check if user tries to delete his own transaction
-    if queried_transaction.user_id == current_user.id:
-        query.delete()
-        db.session.commit()
-        return "", 200
-    else:
-        return "", 403
+    if not transaction or transaction.user_id != current_user.id:
+        # Don't provide explanation to possibly malicious attempt
+        abort(404)
+
+    db.session.delete(transaction)
+    db.session.commit()
+    return "", 200
 
 
 @app.route("/api/transactions/add", methods=["POST"])
@@ -422,3 +418,33 @@ def add_transaction():
 
     # Successful deletion, returning new ID of the transaction for client-side synchronization
     return {"id": transaction.id}, 200
+
+
+@app.route("/api/transactions/<id>/modify", methods=["PATCH"])
+@login_required
+def modify_transaction(id):
+
+    JSON_TO_TRANSACTION = {
+        "info": "info",
+        "title": "title",
+        "place": "place",
+    }
+
+    transaction = Transaction.query.get(id)
+    if transaction.user_id != current_user.id or transaction == None:
+        # Don't provide explanation to possibly malicious attempt
+        abort(404)
+
+    # Read the only existing element in request body
+    changed_param = request.json
+
+    setattr(
+        transaction,
+        JSON_TO_TRANSACTION[next(iter(changed_param.keys()))],
+        next(iter(changed_param.values())),
+    )
+
+    db.session.commit()
+
+    # Resource update successful
+    return "", 204

@@ -243,7 +243,6 @@ button.active {
 #log-out:hover,
 #log-out:focus {
   color: var(--main-font-active-color);
-  font-variation-settings: "wght" 600;
 }
 
 #log-out h3 {
