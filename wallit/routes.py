@@ -4,6 +4,7 @@ from sqlalchemy import select
 from wallit import app, db, logger
 from wallit.forms import LoginForm, SignUpForm, ResetPasswordForm
 from wallit.models import Transaction, User, Bank, Category
+from wallit.schemas import FilterSchema
 from wallit.imports import (
     import_equabank_statement,
     import_revolut_statement,
@@ -106,7 +107,7 @@ def sign_up():
         flash("Account created successfully", "sign_up_message")
         return redirect(url_for("welcome"))
 
-    # Reassign form.errors to flash as they will be inaccessible after after redirection
+    # Reassign form.errors to flash as they will be inaccessible after redirection
     for field in sign_up_form._fields.values():
         for error in field.errors:
             flash(error, "sign_up_message")
@@ -266,6 +267,24 @@ def fetch_filters() -> dict:
         Transaction.user_id == current_user.id
     )
     filter_dict["base_currency"] = db.session.scalars(currency_query).all()
+
+    filter_query = (
+        select(
+            Transaction.base_currency.distinct(),
+            Transaction.base_currency.distinct(),
+            Bank.name.distinct(),
+        )
+        .select_from(Transaction)
+        .join(Bank)
+        .filter(Transaction.user_id == current_user.id)
+    )
+
+    body = FilterSchema()
+    body.dump(
+        currencies=db.session.scalars(currency_query).all(),
+        categories=db.session.scalars(category_query).all(),
+        banks=db.session.scalars(bank_query).all(),
+    )
 
     return filter_dict
 
