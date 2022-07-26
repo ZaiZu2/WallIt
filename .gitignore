@@ -146,9 +146,7 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-node_modules/
-
-
 # private
 statements
 .vscode/
+database

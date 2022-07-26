@@ -7,6 +7,7 @@ from wallit.exceptions import FileError, InvalidConfigError
 from wallit import logger
 
 from pathlib import Path
+from typing import Dict
 import typing
 import io
 import csv
@@ -33,7 +34,7 @@ def validate_statement(origin: str, filename: str, file: typing.BinaryIO) -> boo
 
     # Query for acceptable statement extensions associated with each bank
     results = db.session.query(Bank.name, Bank.statement_type)
-    extension_map = {
+    extension_map: Dict[str, str] = {
         bank_name.lower(): file_extension for (bank_name, file_extension) in results
     }
 

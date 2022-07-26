@@ -1,4 +1,4 @@
-"""empty message
+"""new structure of transactions table
 
 Revision ID: 3f0d65263524
 Revises: 070705a0d556
@@ -7,7 +7,6 @@ Create Date: 2022-06-30 21:15:37.906410
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "3f0d65263524"
@@ -23,6 +22,9 @@ def upgrade():
     op.add_column(
         "transactions", sa.Column("base_currency", sa.String(length=3), nullable=True)
     )
+    op.add_column(
+        "users", sa.Column("main_currency", sa.String(length=3), nullable=False)
+    )
     op.drop_index("ix_transactions_amount", table_name="transactions")
     op.drop_index("ix_transactions_currency", table_name="transactions")
     op.create_index(
@@ -35,9 +37,6 @@ def upgrade():
     op.drop_column("transactions", "src_amount")
     op.drop_column("transactions", "currency")
     op.drop_column("transactions", "src_currency")
-    op.add_column(
-        "users", sa.Column("main_currency", sa.String(length=3), nullable=False)
-    )
     # ### end Alembic commands ###
 
 
@@ -46,17 +45,17 @@ def downgrade():
     op.drop_column("users", "main_currency")
     op.add_column(
         "transactions",
-        sa.Column("src_currency", sa.TEXT(), autoincrement=False, nullable=True),
+        sa.Column("src_currency", sa.Text(), autoincrement=False, nullable=True),
     )
     op.add_column(
         "transactions",
-        sa.Column("currency", sa.TEXT(), autoincrement=False, nullable=False),
+        sa.Column("currency", sa.Text(), autoincrement=False, nullable=False),
     )
     op.add_column(
         "transactions",
         sa.Column(
             "src_amount",
-            postgresql.DOUBLE_PRECISION(precision=53),
+            sa.Float(),
             autoincrement=False,
             nullable=True,
         ),
@@ -65,7 +64,7 @@ def downgrade():
         "transactions",
         sa.Column(
             "amount",
-            postgresql.DOUBLE_PRECISION(precision=53),
+            sa.Float(),
             autoincrement=False,
             nullable=False,
         ),
