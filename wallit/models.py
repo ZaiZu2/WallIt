@@ -19,19 +19,18 @@ class User(UserMixin, db.Model):
     last_name = db.Column(db.Text)
     main_currency = db.Column(db.String(3), default="CZK", nullable=False)
 
-    # model name used for relationship()!
     transactions = db.relationship(
         "Transaction",
         cascade="all, delete",
         passive_deletes=True,
-        backref="user",
+        back_populates="user",
         lazy=True,
     )
     categories = db.relationship(
         "Category",
         cascade="all, delete",
         passive_deletes=True,
-        backref="user",
+        back_populates="user",
         lazy=True,
     )
 
@@ -69,12 +68,15 @@ class Transaction(db.Model):
     )
     place = db.Column(db.Text)
 
-    # table name used for ForeignKey()!
     category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), index=True)
     user_id = db.Column(
         db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    bank_id = db.Column(db.Integer, db.ForeignKey("banks.id"), nullable=False)
+    bank_id = db.Column(db.Integer, db.ForeignKey("banks.id"))
+
+    category = db.relationship("Category", back_populates="transactions")
+    user = db.relationship("User", back_populates="transactions")
+    bank = db.relationship("Bank", back_populates="transactions")
 
     def __repr__(self) -> str:
         return f"Transaction: {self.base_amount} {self.base_currency} on {self.transaction_date}"
@@ -87,8 +89,7 @@ class Bank(db.Model):
     name = db.Column(db.Text, index=True, unique=True, nullable=False)
     statement_type = db.Column(db.String(10), nullable=False)
 
-    # model name used for relationship()!
-    transactions = db.relationship("Transaction", backref="bank", lazy=True)
+    transactions = db.relationship("Transaction", back_populates="bank", lazy=True)
 
     def __repr__(self) -> str:
         return f"Bank: {self.name}"
@@ -99,13 +100,12 @@ class Category(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Text, index=True, nullable=False)
-
-    # table name used for ForeignKey()!
     user_id = db.Column(
         db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
 
-    transactions = db.relationship("Transaction", backref="category", lazy=True)
+    user = db.relationship("User", back_populates="categories", lazy=True)
+    transactions = db.relationship("Transaction", back_populates="category", lazy=True)
 
     def __repr__(self) -> str:
         return f"Category: {self.name}"
