@@ -82,7 +82,7 @@ td.custom-td {
   color: white;
   vertical-align: middle;
   white-space: nowrap;
-  text-overflow: ellipsis;
+  /* text-overflow: ellipsis; */
   overflow: hidden;
 }
 
@@ -131,12 +131,11 @@ th[data-column-id="category"].custom-th {
 
 td[data-column-id="info"].custom-td,
 td[data-column-id="title"].custom-td {
+  max-width: 350px;
+
   text-align: left;
 }
 
-th[data-column-id="amount"].custom-th {
-  /* width: 120px !important; */
-}
 td[data-column-id="amount"].custom-td,
 td[data-column-id="base_amount"].custom-td {
   text-align: right;

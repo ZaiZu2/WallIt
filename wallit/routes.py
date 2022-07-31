@@ -4,13 +4,14 @@ from sqlalchemy import select
 from wallit import app, db, logger
 from wallit.forms import LoginForm, SignUpForm, ResetPasswordForm
 from wallit.models import Transaction, User, Bank, Category
-from wallit.schemas import FilterSchema
+from wallit.schemas import TransactionFilterSchema, TransactionSchema
 from wallit.imports import (
     import_equabank_statement,
     import_revolut_statement,
     validate_statement,
     convert_currency,
 )
+from wallit.queries import filter_transactions
 from wallit.exceptions import FileError
 
 from flask import redirect, url_for, render_template, flash, request, abort
@@ -88,10 +89,10 @@ def reset_password():
 def sign_up():
     sign_up_form = SignUpForm()
     if sign_up_form.validate_on_submit():
-        if User.query.filter_by(username=sign_up_form.username.data).one():
+        if User.query.filter_by(username=sign_up_form.username.data).first():
             flash("Username is already used, 'sign_up_message'")
             return redirect(url_for("welcome"))
-        if User.query.filter_by(email=sign_up_form.email.data).one():
+        if User.query.filter_by(email=sign_up_form.email.data).first():
             flash("Email is already used", "sign_up_message")
             return redirect(url_for("welcome"))
 
@@ -158,63 +159,9 @@ def post_transactions():
         dict: JSON with transaction data
     """
 
-    # Dictionary mapping queried values to the keys used for serialization and request processing
-    # Request JSON filter names must remain the same as the keys used here
-    TABLE_TO_JSON = {
-        "id": Transaction.id,
-        "info": Transaction.info,
-        "title": Transaction.title,
-        "amount": Transaction.main_amount,
-        "base_amount": Transaction.base_amount,
-        "base_currency": Transaction.base_currency,
-        "date": Transaction.transaction_date,
-        "creation_date": Transaction.creation_date,
-        "place": Transaction.place,
-        "category": Category.name,
-        "bank": Bank.name,
-    }
-
-    filters = request.json
-
-    query = (
-        select([column for column in TABLE_TO_JSON.values()])
-        .filter_by(user_id=current_user.id)
-        .select_from(Transaction)
-        .join(Category, isouter=True)  # left outer join
-        .join(Bank, isouter=True)  # left outer join
-    )
-
-    # iterate over dict of filters
-    for filter_name, filter_values in filters.items():
-        # check if filter is a range (dict), then read 'min' and 'max' values if they were given
-        if isinstance(filter_values, dict):
-            if filter_values["min"]:
-                query = query.filter(TABLE_TO_JSON[filter_name] >= filter_values["min"])
-            if filter_values["max"]:
-                query = query.filter(TABLE_TO_JSON[filter_name] <= filter_values["max"])
-
-        # check if filter holds checkbox values (list), then read contained values if there are any
-        if isinstance(filter_values, list):
-            if filter_values:
-                query = query.filter(TABLE_TO_JSON[filter_name].in_(filter_values))
-
-    results = db.session.execute(query).all()
-    logger.debug(query.compile(compile_kwargs={"literal_binds": True}).string)
-
-    # Serializing data received from the DB
-    table_rows = []
-    for row in results:
-        result_dict = {}
-        for column_name, column_value in zip(TABLE_TO_JSON.keys(), row):
-            # serialize date to ISO 8601 string format
-            if isinstance(column_value, datetime):
-                result_dict[column_name] = column_value.isoformat()
-            else:
-                result_dict[column_name] = column_value
-
-        table_rows.append(result_dict)
-
-    return {"transactions": table_rows}
+    transaction_filters = TransactionFilterSchema().load(request.json)
+    transactions = filter_transactions(transaction_filters)
+    return TransactionSchema(many=True).dump(transactions), 201
 
 
 @app.route("/api/transactions/filters", methods=["GET"])
@@ -268,23 +215,23 @@ def fetch_filters() -> dict:
     )
     filter_dict["base_currency"] = db.session.scalars(currency_query).all()
 
-    filter_query = (
-        select(
-            Transaction.base_currency.distinct(),
-            Transaction.base_currency.distinct(),
-            Bank.name.distinct(),
-        )
-        .select_from(Transaction)
-        .join(Bank)
-        .filter(Transaction.user_id == current_user.id)
-    )
+    # filter_query = (
+    #     select(
+    #         Transaction.base_currency.distinct(),
+    #         Transaction.base_currency.distinct(),
+    #         Bank.name.distinct(),
+    #     )
+    #     .select_from(Transaction)
+    #     .join(Bank)
+    #     .filter(Transaction.user_id == current_user.id)
+    # )
 
-    body = FilterSchema()
-    body.dump(
-        currencies=db.session.scalars(currency_query).all(),
-        categories=db.session.scalars(category_query).all(),
-        banks=db.session.scalars(bank_query).all(),
-    )
+    # body = FilterSchema()
+    # body.dump(
+    #     currencies=db.session.scalars(currency_query).all(),
+    #     categories=db.session.scalars(category_query).all(),
+    #     banks=db.session.scalars(bank_query).all(),
+    # )
 
     return filter_dict
 
@@ -385,11 +332,10 @@ def upload_statements():
 @app.route("/api/transactions/<id>/delete", methods=["DELETE"])
 @login_required
 def delete_transaction(id):
+    """Delete transaction with given Id"""
 
-    transaction = Transaction.query.get(id)
-    # Check if transaction actually exists
-    # Check if user tries to delete his own transaction
-    if not transaction or transaction.user_id != current_user.id:
+    transaction = Transaction.query.get_or_404(id)
+    if transaction.user != current_user:
         # Don't provide explanation to possibly malicious attempt
         abort(404)
 
@@ -401,36 +347,10 @@ def delete_transaction(id):
 @app.route("/api/transactions/add", methods=["POST"])
 @login_required
 def add_transaction():
+    """Add transaction"""
 
-    # TODO: Bank id is not nullable, meaning this will crash when provided with manually input transaction without it.
-
-    transaction_json = request.json
-
-    if transaction_json["category"]:
-        category_id = (
-            Category.query.filter_by(name=transaction_json["category"]).one().id
-        )
-    else:
-        category_id = None
-    # This one is not nullable in model definition!
-    if transaction_json["bank"]:
-        bank_id = Bank.query.filter_by(name=transaction_json["bank"]).one().id
-
-    transaction = Transaction()
-    transaction.info = transaction_json["info"]
-    transaction.title = transaction_json["title"]
-    transaction.main_amount = transaction_json["amount"]
-    transaction.base_amount = transaction_json["base_amount"]
-    transaction.base_currency = transaction_json["base_currency"]
-    transaction.transaction_date = datetime.fromisoformat(transaction_json["date"])
-    transaction.creation_date = datetime.fromisoformat(
-        transaction_json["creation_date"]
-    )
-    transaction.place = transaction_json["place"]
-    transaction.category_id = category_id
-    # This one is not nullable in model definition!
-    transaction.bank_id = bank_id
-    transaction.user_id = current_user.id
+    transactionSchema = TransactionSchema()
+    transaction = transactionSchema.load(request.json)
 
     db.session.add(transaction)
     db.session.commit()

@@ -1,4 +1,5 @@
 #!python3
+from __future__ import annotations
 
 from wallit import db, login
 
@@ -6,6 +7,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin
 
 from datetime import datetime
+from typing import Optional
 
 
 class User(UserMixin, db.Model):
@@ -25,6 +27,7 @@ class User(UserMixin, db.Model):
         passive_deletes=True,
         back_populates="user",
         lazy=True,
+        uselist=True,
     )
     categories = db.relationship(
         "Category",
@@ -32,6 +35,7 @@ class User(UserMixin, db.Model):
         passive_deletes=True,
         back_populates="user",
         lazy=True,
+        uselist=True,
     )
 
     def __init__(self, password: str, **kwargs) -> None:
@@ -89,10 +93,16 @@ class Bank(db.Model):
     name = db.Column(db.Text, index=True, unique=True, nullable=False)
     statement_type = db.Column(db.String(10), nullable=False)
 
-    transactions = db.relationship("Transaction", back_populates="bank", lazy=True)
+    transactions = db.relationship(
+        "Transaction", back_populates="bank", lazy=True, uselist=True
+    )
 
     def __repr__(self) -> str:
         return f"Bank: {self.name}"
+
+    def get_from_name(self, bank_name: str) -> Optional[Bank]:
+        """Query for Bank with a name"""
+        return self.query.filter_by(name=bank_name).first()
 
 
 class Category(db.Model):
@@ -109,3 +119,7 @@ class Category(db.Model):
 
     def __repr__(self) -> str:
         return f"Category: {self.name}"
+
+    def get_from_name(self, category_name: str) -> Optional[Category]:
+        """Query for Category with a name"""
+        return self.query.filter_by(name=category_name).first()
