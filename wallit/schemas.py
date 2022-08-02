@@ -2,7 +2,15 @@ from flask_login import current_user
 from wallit.models import Bank, Category, Transaction, User
 from wallit import ma
 
-from marshmallow import fields, post_dump, pre_load, post_load, validate
+from marshmallow import (
+    fields,
+    post_dump,
+    pre_load,
+    post_load,
+    validate,
+    validates_schema,
+    ValidationError,
+)
 from copy import deepcopy
 
 
@@ -28,6 +36,7 @@ class CategorySchema(ma.SQLAlchemySchema):
     name = ma.auto_field()
     user = ma.auto_field()
 
+
 class BankSchema(ma.SQLAlchemySchema):
     class Meta:
         model = Bank
@@ -37,7 +46,7 @@ class BankSchema(ma.SQLAlchemySchema):
     name = ma.auto_field()
     statement_type = ma.auto_field()
     transactions = ma.auto_field()
-    
+
 
 class TransactionSchema(ma.SQLAlchemySchema):
     class Meta:
@@ -51,7 +60,7 @@ class TransactionSchema(ma.SQLAlchemySchema):
     base_amount = ma.auto_field(required=True)
     base_currency = ma.auto_field(required=True, validate=validate.Length(equal=3))
     date = ma.auto_field("transaction_date", required=True)
-    creation_date = ma.auto_field(required=True)
+    creation_date = ma.auto_field()
     place = ma.auto_field()
     category = fields.Pluck(CategorySchema, "name", allow_none=True)
     bank = fields.Pluck(BankSchema, "name", allow_none=True)
@@ -62,23 +71,30 @@ class TransactionSchema(ma.SQLAlchemySchema):
         # TODO: Pluck field results in a nested orderedDict during deserialization.
         # No clue how to avoid this.
 
-        category_name = data.get("category")
-        del data["category"]
-        bank_name = data.get("bank")
-        del data["bank"]
-        transaction = Transaction(user=current_user, **data)
+        # Modify transaction instance passed in load()
+        if self.instance:
+            for column_name, value in data.items():
+                setattr(self.instance, column_name, value)
+            return self.instance
+        # Create a new transaction if no instance was passed
+        else:
+            category_name = data.get("category")
+            del data["category"]
+            bank_name = data.get("bank")
+            del data["bank"]
+            transaction = Transaction(user=current_user, **data)
 
-        if category_name:
-            category = Category.query.filter_by(
-                name=category_name["name"], user=current_user
-            ).first()
-            transaction.category = category
+            if category_name:
+                category = Category.query.filter_by(
+                    name=category_name["name"], user=current_user
+                ).first_or_404()
+                transaction.category = category
 
-        if bank_name:
-            bank = Bank.query.filter_by(name=bank_name["name"]).first()
-            transaction.bank = bank
+            if bank_name:
+                bank = Bank.query.filter_by(name=bank_name["name"]).first_or_404()
+                transaction.bank = bank
 
-        return transaction
+            return transaction
 
     @post_dump(pass_many=True)
     def _create_envelope(self, data, **kwargs):
@@ -97,7 +113,10 @@ class TransactionFilterSchema(ma.Schema):
     )
     banks = fields.List(fields.String(), allow_none=True, data_key="bank")
     base_currencies = fields.List(
-        fields.String(), allow_none=True, data_key="base_currency"
+        fields.String(),
+        allow_none=True,
+        data_key="base_currency",
+        validate=validate.Length(equal=3),
     )
     categories = fields.List(fields.String(), allow_none=True, data_key="category")
 
@@ -115,3 +134,13 @@ class TransactionFilterSchema(ma.Schema):
                 cleaned_data[key] = None
 
         return cleaned_data
+
+    @validates_schema
+    def _check_range_filters(self, data: dict, **kwargs):
+        for filter in ["amount", "date"]:
+            if (
+                data[filter]["min"]
+                and data[filter]["max"]
+                and data[filter]["min"] > data[filter]["max"]
+            ):
+                raise ValidationError("Lower end cannot be higher than higher end")

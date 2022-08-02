@@ -4,7 +4,8 @@ from __future__ import annotations
 from wallit import db, login
 
 from werkzeug.security import check_password_hash, generate_password_hash
-from flask_login import UserMixin
+from flask_login import UserMixin, current_user
+from flask import abort
 
 from datetime import datetime
 from typing import Optional
@@ -85,6 +86,22 @@ class Transaction(db.Model):
     def __repr__(self) -> str:
         return f"Transaction: {self.base_amount} {self.base_currency} on {self.transaction_date}"
 
+    @classmethod
+    def get_users_transaction(cls, id: int, user: User) -> Transaction:
+        """Get transaction by id and check if it belongs to specified user. Abort in case user/id is incorrect.
+
+        Args:
+            id (int): id of transaction
+
+        Returns:
+            Transaction: transaction found
+        """
+
+        transaction = cls.query.get_or_404(id)
+        if transaction.user != user:
+            # Don't provide explanation to possibly malicious request
+            abort(404)
+        return transaction
 
 class Bank(db.Model):
     __tablename__ = "banks"
@@ -100,9 +117,10 @@ class Bank(db.Model):
     def __repr__(self) -> str:
         return f"Bank: {self.name}"
 
-    def get_from_name(self, bank_name: str) -> Optional[Bank]:
+    @classmethod
+    def get_from_name(cls, bank_name: str) -> Optional[Bank]:
         """Query for Bank with a name"""
-        return self.query.filter_by(name=bank_name).first()
+        return cls.query.filter_by(name=bank_name).first()
 
 
 class Category(db.Model):

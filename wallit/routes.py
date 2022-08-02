@@ -194,46 +194,30 @@ def fetch_filters() -> dict:
 
     # Dict with prespecified filtering categories, to be filled with queried values
     filter_dict = {
-        "base_currency": "",
-        "category": "",
-        "bank": "",
+        "base_currencies": "",
+        "categories": "",
+        "banks": "",
     }
 
-    category_query = select(Category.name.distinct()).filter_by(user_id=current_user.id)
-    filter_dict["category"] = db.session.scalars(category_query).all()
+    category_query = select(Category.name.distinct()).filter_by(user=current_user)
+    filter_dict["categories"] = db.session.scalars(category_query).all()
 
     bank_query = (
         select(Bank.name.distinct())
         .select_from(Transaction)
         .join(Bank)
-        .filter(Transaction.user_id == current_user.id)
+        .filter(Transaction.user == current_user)
     )
-    filter_dict["bank"] = db.session.scalars(bank_query).all()
+    filter_dict["banks"] = db.session.scalars(bank_query).all()
 
     currency_query = select(Transaction.base_currency.distinct()).filter(
-        Transaction.user_id == current_user.id
+        Transaction.user == current_user
     )
-    filter_dict["base_currency"] = db.session.scalars(currency_query).all()
+    filter_dict["base_currencies"] = db.session.scalars(currency_query).all()
 
-    # filter_query = (
-    #     select(
-    #         Transaction.base_currency.distinct(),
-    #         Transaction.base_currency.distinct(),
-    #         Bank.name.distinct(),
-    #     )
-    #     .select_from(Transaction)
-    #     .join(Bank)
-    #     .filter(Transaction.user_id == current_user.id)
-    # )
-
-    # body = FilterSchema()
-    # body.dump(
-    #     currencies=db.session.scalars(currency_query).all(),
-    #     categories=db.session.scalars(category_query).all(),
-    #     banks=db.session.scalars(bank_query).all(),
-    # )
-
-    return filter_dict
+    # Schema used only to map server-side 'json' names to general ones specified by schema
+    schema = TransactionFilterSchema(only=("banks", "base_currencies", "categories"))
+    return schema.dump(filter_dict)
 
 
 @app.route("/api/transactions/upload", methods=["POST"])
@@ -288,7 +272,6 @@ def upload_statements():
     for statement_origin, file in request.files.items(True):
         # Sanitize the filename
         filename = secure_filename(file.filename)
-
         # Check if user attached file to a form
         if filename:
             if validate_statement(statement_origin, filename, file.stream):
@@ -334,11 +317,7 @@ def upload_statements():
 def delete_transaction(id):
     """Delete transaction with given Id"""
 
-    transaction = Transaction.query.get_or_404(id)
-    if transaction.user != current_user:
-        # Don't provide explanation to possibly malicious attempt
-        abort(404)
-
+    transaction = Transaction.get_users_transaction(id, current_user)
     db.session.delete(transaction)
     db.session.commit()
     return "", 200
@@ -351,10 +330,8 @@ def add_transaction():
 
     transactionSchema = TransactionSchema()
     transaction = transactionSchema.load(request.json)
-
     db.session.add(transaction)
     db.session.commit()
-
     # Successful deletion, returning new ID of the transaction for client-side synchronization
     return {"id": transaction.id}, 200
 
@@ -362,28 +339,11 @@ def add_transaction():
 @app.route("/api/transactions/<id>/modify", methods=["PATCH"])
 @login_required
 def modify_transaction(id):
-
-    JSON_TO_TRANSACTION = {
-        "info": "info",
-        "title": "title",
-        "place": "place",
-    }
-
-    transaction = Transaction.query.get(id)
-    if transaction.user_id != current_user.id or transaction == None:
-        # Don't provide explanation to possibly malicious attempt
-        abort(404)
-
-    # Read the only existing element in request body
-    changed_param = request.json
-
-    setattr(
-        transaction,
-        JSON_TO_TRANSACTION[next(iter(changed_param.keys()))],
-        next(iter(changed_param.values())),
-    )
-
+    "Modify 'info','title','place' column of the transaction"
+    
+    transaction = Transaction.get_users_transaction(id, current_user)
+    schema = TransactionSchema(only=("info","title","place"))
+    transaction = schema.load(request.json, instance=transaction)
     db.session.commit()
-
     # Resource update successful
     return "", 204
