@@ -1,0 +1,20 @@
+{
+    "files.autoSave": "afterDelay",
+
+    "python.formatting.provider": "black",
+
+    // "python.linting.enabled": true,
+    "python.linting.mypyEnabled": true,
+    "mypy.configFile": "mypy.ini",
+    "mypy.runUsingActiveInterpreter": true,
+
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+
+    "emmet.includeLanguages": {
+        "jinja-html": "html"
+    },
+}

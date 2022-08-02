@@ -146,7 +146,11 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+# VisualStudioCode
+.vscode/*      # Maybe .vscode/**/* instead - see comments
+!.vscode/settings.json
+!.vscode/launch.json
+
 # private
 statements
-.vscode/
 database
