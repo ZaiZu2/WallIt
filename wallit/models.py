@@ -1,4 +1,3 @@
-#!python3
 from __future__ import annotations
 
 from wallit import db, login
@@ -8,7 +7,7 @@ from flask_login import UserMixin, current_user
 from flask import abort
 
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 
 class User(UserMixin, db.Model):
@@ -39,7 +38,7 @@ class User(UserMixin, db.Model):
         uselist=True,
     )
 
-    def __init__(self, password: str, **kwargs) -> None:
+    def __init__(self, password: str, **kwargs: dict[str, Any]) -> None:
         super(User, self).__init__(**kwargs)
         self.set_password(password)
 
@@ -87,7 +86,7 @@ class Transaction(db.Model):
         return f"Transaction: {self.base_amount} {self.base_currency} on {self.transaction_date}"
 
     @classmethod
-    def get_users_transaction(cls, id: int, user: User) -> Transaction:
+    def get_from_id(cls, id: int, user: User) -> Transaction:
         """Get transaction by id and check if it belongs to specified user. Abort in case user/id is incorrect.
 
         Args:
@@ -96,12 +95,7 @@ class Transaction(db.Model):
         Returns:
             Transaction: transaction found
         """
-
-        transaction = cls.query.get_or_404(id)
-        if transaction.user != user:
-            # Don't provide explanation to possibly malicious request
-            abort(404)
-        return transaction
+        return cls.query.filter_by(id=id, user=user).first()
 
 class Bank(db.Model):
     __tablename__ = "banks"
@@ -138,6 +132,7 @@ class Category(db.Model):
     def __repr__(self) -> str:
         return f"Category: {self.name}"
 
-    def get_from_name(self, category_name: str) -> Optional[Category]:
+    @classmethod
+    def get_from_name(cls, category_name: str, user: User) -> Optional[Category]:
         """Query for Category with a name"""
-        return self.query.filter_by(name=category_name).first()
+        return cls.query.filter_by(name=category_name, user=user).first()

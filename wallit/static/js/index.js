@@ -46,9 +46,7 @@ allFormButtons.forEach((button) => {
     }
     // ... Find a submit button responsible for a specific form
     // and hide it in case all form buttons are inactive.
-    const formSubmitButton = document.getElementById(
-      `${button.classList[1]}_submit`
-    );
+    const formSubmitButton = document.getElementById(`${button.classList[1]}_submit`);
     if (isActive === true) {
       formSubmitButton.classList.add("active");
       formSubmitButton.style.maxHeight = formSubmitButton.scrollHeight + "px";
@@ -127,7 +125,6 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
     form.requestSubmit();
   });
 
-  // Request from server
   transactions = await fetch("/api/transactions/fetch", {
     method: "POST",
     headers: {
@@ -167,7 +164,6 @@ uploadSubmit.addEventListener("click", async function uploadStatements() {
     form.requestSubmit();
   });
 
-  // Request from server
   let responseStatus = 0;
   const uploadResults = await fetch("/api/transactions/upload", {
     method: "POST", // *GET, POST, PUT, DELETE, etc.
@@ -207,6 +203,8 @@ async function updateFilters() {
     })
     .catch((error) => console.error(error));
 
+  // Save categories into a global variable
+  categories = filters['category']
   // Find all filter forms with checkboxes
   const checkboxFields = document.querySelectorAll(".filter > .form-set");
   // Define filter categories which should display and in what order
@@ -298,17 +296,21 @@ function showUploadModal(responseStatus, uploadResults) {
 }
 
 function reloadWindows() {
-  reloadCategoryChart(categoryChart);
   reloadTable(transactionsTable);
+  reloadCategoryChart(categoryChart);
 }
 
 window.addEventListener("load", () => {
   // Load storage into temporary arrays
   if (sessionStorage.getItem("transactions") != null)
     transactions = JSON.parse(sessionStorage.getItem("transactions"));
+  if (sessionStorage.getItem("deletedTransactions") != null)
+    transactions = JSON.parse(sessionStorage.getItem("deletedTransactions"));
+  if (sessionStorage.getItem("categories") != null)
+    transactions = JSON.parse(sessionStorage.getItem("categories"));
 
-  reloadWindows();
   updateFilters();
+  reloadWindows();
 });
 
 window.addEventListener("beforeunload", () => {
@@ -318,4 +320,5 @@ window.addEventListener("beforeunload", () => {
     "deletedTransactions",
     JSON.stringify(deletedTransactions)
   );
+  sessionStorage.setItem("categories", JSON.stringify(deletedTransactions));
 });

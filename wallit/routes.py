@@ -17,14 +17,15 @@ from wallit.exceptions import FileError
 from flask import redirect, url_for, render_template, flash, request, abort
 from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.utils import secure_filename
+from werkzeug.wrappers import Response
 
 from datetime import datetime
-from typing import Callable
+from typing import Any, Callable, Tuple
 
 
 @app.route("/")
 @login_required
-def index():
+def index() -> str:
 
     return render_template(
         "index.html", current_user=current_user._get_current_object()
@@ -32,7 +33,7 @@ def index():
 
 
 @app.route("/welcome", methods=["GET"])
-def welcome():
+def welcome() -> str | Response:
     if current_user.is_authenticated:
         return redirect(url_for("index"))
 
@@ -49,7 +50,7 @@ def welcome():
 
 
 @app.route("/login", methods=["POST"])
-def login():
+def login() -> Response:
     login_form = LoginForm()
     if login_form.validate_on_submit():
         user = User.query.filter_by(username=login_form.username.data).one()
@@ -68,7 +69,7 @@ def login():
 
 
 @app.route("/account/reset", methods=["POST"])
-def reset_password():
+def reset_password() -> Response:
     reset_password_form = ResetPasswordForm()
     if reset_password_form.validate_on_submit():
         if User.query.filter_by(email=reset_password_form.email.data).one():
@@ -86,7 +87,7 @@ def reset_password():
 
 
 @app.route("/account/new", methods=["POST"])
-def sign_up():
+def sign_up() -> Response:
     sign_up_form = SignUpForm()
     if sign_up_form.validate_on_submit():
         if User.query.filter_by(username=sign_up_form.username.data).first():
@@ -117,14 +118,14 @@ def sign_up():
 
 @app.route("/logout", methods=["GET"])
 @login_required
-def logout():
+def logout() -> Response:
     logout_user()
     return redirect(url_for("welcome"))
 
 
 @app.route("/api/transactions/fetch", methods=["POST"])
 @login_required
-def post_transactions():
+def post_transactions() -> Tuple[str, int]:
     """Receive filter parameters in JSON, query DB for filtered values
     and return Transactions serialized to JSON
 
@@ -161,12 +162,12 @@ def post_transactions():
 
     transaction_filters = TransactionFilterSchema().load(request.json)
     transactions = filter_transactions(transaction_filters)
-    return TransactionSchema(many=True).dump(transactions), 201
+    return TransactionSchema(many=True).dumps(transactions), 201
 
 
 @app.route("/api/transactions/filters", methods=["GET"])
 @login_required
-def fetch_filters() -> dict:
+def fetch_filters() -> str:
     """Fetch dynamic filtering values for user
 
     Response JSON structure example:
@@ -217,12 +218,12 @@ def fetch_filters() -> dict:
 
     # Schema used only to map server-side 'json' names to general ones specified by schema
     schema = TransactionFilterSchema(only=("banks", "base_currencies", "categories"))
-    return schema.dump(filter_dict)
+    return schema.dumps(filter_dict)
 
 
 @app.route("/api/transactions/upload", methods=["POST"])
 @login_required
-def upload_statements():
+def upload_statements() -> Tuple[dict[str, Any], int]:
     """Parse and save transactions from uploaded files
 
     Response JSON structure example:
@@ -256,6 +257,7 @@ def upload_statements():
         "revolut": {
             "import_func": import_revolut_statement,
             "instance": Bank.query.filter_by(name="Revolut").one(),
+            "aaa": Bank.get_from_name('Revolut')
         },
         "equabank": {
             "import_func": import_equabank_statement,
@@ -312,12 +314,12 @@ def upload_statements():
         return upload_results, 201
 
 
-@app.route("/api/transactions/<id>/delete", methods=["DELETE"])
+@app.route("/api/transactions/<int:id>/delete", methods=["DELETE"])
 @login_required
-def delete_transaction(id):
+def delete_transaction(id: int) -> Tuple[str, int]:
     """Delete transaction with given Id"""
 
-    transaction = Transaction.get_users_transaction(id, current_user)
+    transaction = Transaction.get_from_id(id, current_user)
     db.session.delete(transaction)
     db.session.commit()
     return "", 200
@@ -325,7 +327,7 @@ def delete_transaction(id):
 
 @app.route("/api/transactions/add", methods=["POST"])
 @login_required
-def add_transaction():
+def add_transaction() -> Tuple[dict[str, int], int]:
     """Add transaction"""
 
     transactionSchema = TransactionSchema()
@@ -336,13 +338,13 @@ def add_transaction():
     return {"id": transaction.id}, 200
 
 
-@app.route("/api/transactions/<id>/modify", methods=["PATCH"])
+@app.route("/api/transactions/<int:id>/modify", methods=["PATCH"])
 @login_required
-def modify_transaction(id):
+def modify_transaction(id: int) -> Tuple[str, int]:
     "Modify 'info','title','place' column of the transaction"
     
-    transaction = Transaction.get_users_transaction(id, current_user)
-    schema = TransactionSchema(only=("info","title","place"))
+    transaction = Transaction.get_from_id(id, current_user)
+    schema = TransactionSchema(only=("info","title","place", "category"))
     transaction = schema.load(request.json, instance=transaction)
     db.session.commit()
     # Resource update successful

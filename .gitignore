@@ -147,7 +147,7 @@ cython_debug/
 #.idea/
 
 # VisualStudioCode
-.vscode/*      # Maybe .vscode/**/* instead - see comments
+.vscode/*
 !.vscode/settings.json
 !.vscode/launch.json
 

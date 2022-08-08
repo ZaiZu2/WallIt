@@ -16,7 +16,7 @@ import xml.etree.ElementTree as ET
 import requests
 
 
-def validate_statement(origin: str, filename: str, file: typing.BinaryIO) -> bool:
+def validate_statement(origin: str, filename: str, file: typing.IO[bytes]) -> bool:
     """Validate the uploaded file for correct extension and content (to be implemented)
 
     Args:
@@ -29,7 +29,6 @@ def validate_statement(origin: str, filename: str, file: typing.BinaryIO) -> boo
     """
     # TODO: Additional file content validation
 
-    # Flag denoting if validation was successful
     is_validated = False
 
     # Query for acceptable statement extensions associated with each bank
@@ -128,7 +127,7 @@ def import_equabank_statement(
             return None
 
     def parse_amount(
-        root_obj: ET.Element, amount_XPath: str, vector_XPath
+        root_obj: ET.Element, amount_XPath: str, vector_XPath: str
     ) -> tuple[float, str]:
         """Parse tuple (Amount, Currency) from transaction element"""
 

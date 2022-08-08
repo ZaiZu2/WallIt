@@ -113,6 +113,7 @@ td.custom-td:focus-visible {
 }
 
 /* TABLE WIDTH SIZING */
+/* gridjs.io library does not provide sensible way how to dynamically size widths of ths/tds */
 
 th[data-column-id="info"].custom-th,
 th[data-column-id="title"].custom-th {
@@ -139,6 +140,25 @@ td[data-column-id="title"].custom-td {
 td[data-column-id="amount"].custom-td,
 td[data-column-id="base_amount"].custom-td {
   text-align: right;
+}
+
+td[data-column-id="category"].custom-td {
+  padding: 0px;
+}
+td[data-column-id="category"].custom-td > form {
+  height: 100%;
+  width: 100%;
+}
+td[data-column-id="category"].custom-td select {
+  height: 100%;
+  width: 100%;
+
+  border: none;
+  background-color: var(--subwindow-bg-color);
+
+ 
+  color: var(--main-font-active-color);
+  font-size: 16px;
 }
 
 td[data-column-id="actions"].custom-td {

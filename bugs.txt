@@ -1,0 +1,3 @@
+JS browser scripts:
+
+1. Thrown Exceptions never silence EventListeners - the code in the eventlistener is executed even after the error is thrown

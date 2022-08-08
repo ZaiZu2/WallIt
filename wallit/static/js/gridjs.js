@@ -35,13 +35,66 @@ export function reloadTable(table) {
     .forceRender();
 }
 
-const editableCellAttributes = (cell, row, col) => {
+const editableCellAttributes = (cell, row, column) => {
   if (row) {
     return { contentEditable: "true", "data-id": row.cells[0].data };
   } else {
     return {};
   }
 };
+
+const createCategoryDropdown = (cell, row, column) => {
+
+  let options = []
+  // Disgustingly ugly, but works. I don't have time for frontend fun.
+  // I swear, this is terrible, but so be it.
+  let currentCategory = h(
+    "option",
+    { value: row.cells[6].data },
+    row.cells[6].data
+  );
+  options.push(currentCategory)
+
+  // Delete duplicate corresponding to above option element from temporary category array
+  const tempCategories = [...categories]
+  const index = tempCategories.indexOf(row.cells[6].data)
+  if (index > -1) tempCategories.splice(index, 1);
+  
+  // Create the rest of possible categories
+  for (let category of tempCategories) {
+    let option = h(
+      "option",
+      { value: category },
+      category
+    );
+    options.push(option)
+  }
+
+  const select = h(
+    "select",
+    {
+      name: "category",
+      onchange: (event) => {
+        const formData = new FormData(event.target.parentNode)
+        modifyTransaction({ id: row.cells[0].data, category: formData.get("category") })
+      }
+    },
+    options
+  );
+
+  const form = h(
+    "form",
+    {
+      name: "category_change",
+      onsubmit: () => {
+        preventDefault()
+      }
+    },
+    select
+  )
+
+  return form
+}
 
 async function deleteTransaction(id) {
   await fetch(`/api/transactions/${id}/delete`, {
@@ -53,14 +106,14 @@ async function deleteTransaction(id) {
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
     },
   }).then((response) => {
-    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`)
 
     // Pop the transactions element with specified id into a deletedTransactions array
     for (let i = 0; i < transactions.length; i++) {
       if (transactions[i].id == id)
         deletedTransactions.push(transactions.splice(i, 1)[0]);
     }
-  });
+  }).catch((error) => console.error(error));;
 }
 
 async function addTransaction(transaction) {
@@ -73,17 +126,36 @@ async function addTransaction(transaction) {
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
     },
     body: JSON.stringify(transaction),
-  })
-    .then((response) => {
-      if (!response.ok)
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      return response.json();
-    })
-    .then((data) => {
-      return data.id;
-    });
+  }).then((response) => {
+    if (!response.ok)
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    return response.json();
+  }).then((data) => {
+    return data.id;
+  }).catch((error) => console.error(error));
 
   return newTransactionId;
+}
+
+async function modifyTransaction({ id, ...kwargs }) {
+
+  await fetch(`/api/transactions/${id}/modify`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
+    },
+    body: JSON.stringify(kwargs),
+  }).then((response) => {
+    if (!response.ok)
+      throw new Error(`HTTP error! Status: ${response.status}`);
+  }).catch((error) => console.error(error));
+
+  // const modifiedTransaction = transactions.find(
+  //   (transaction) => transaction.id == transactionId
+  // );
+  // modifiedTransaction[columnName] = event.target.textContent;
+
 }
 
 export const transactionsTable = new Grid({
@@ -119,7 +191,11 @@ export const transactionsTable = new Grid({
       },
     },
     { id: "base_currency", name: "Base currency", hidden: true },
-    { id: "category", name: "Category" },
+    {
+      id: "category",
+      name: "Category",
+      formatter: createCategoryDropdown
+    },
     { id: "date", name: "Date", search: { enabled: false } },
     {
       id: "place",
@@ -152,6 +228,7 @@ export const transactionsTable = new Grid({
                 const transactionId = event.target
                   .closest("td")
                   .getAttribute("data-id");
+
                 await deleteTransaction(transactionId);
                 event.target.closest("tr").classList.add("hidden");
 

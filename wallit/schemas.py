@@ -1,3 +1,4 @@
+from typing import Any
 from flask_login import current_user
 from wallit.models import Bank, Category, Transaction, User
 from wallit import ma
@@ -66,15 +67,19 @@ class TransactionSchema(ma.SQLAlchemySchema):
     bank = fields.Pluck(BankSchema, "name", allow_none=True)
 
     @post_load
-    def _convert_to_transaction(self, data: dict, **kwargs):
+    def _convert_to_transaction(self, data: dict, **kwargs: dict[str, Any]) -> Transaction:
         """Convert nested schema name to foreign key relationships and load into Transaction object"""
-        # TODO: Pluck field results in a nested orderedDict during deserialization.
+        # TODO: Pluck field results in a nested orderedDict (with the Plucked field's key:value) during deserialization.
         # No clue how to avoid this.
 
         # Modify transaction instance passed in load()
         if self.instance:
             for column_name, value in data.items():
-                setattr(self.instance, column_name, value)
+                if issubclass(type(value), dict): # temporary fix for issue described above
+                    category = Category.get_from_name(value["name"], current_user)
+                    setattr(self.instance, column_name, category)
+                else:
+                    setattr(self.instance, column_name, value)
             return self.instance
         # Create a new transaction if no instance was passed
         else:
@@ -85,19 +90,17 @@ class TransactionSchema(ma.SQLAlchemySchema):
             transaction = Transaction(user=current_user, **data)
 
             if category_name:
-                category = Category.query.filter_by(
-                    name=category_name["name"], user=current_user
-                ).first_or_404()
+                category = Category.get_from_name(category_name["name"], current_user) # temporary fix for issue described above
                 transaction.category = category
 
             if bank_name:
-                bank = Bank.query.filter_by(name=bank_name["name"]).first_or_404()
+                bank = Bank.get_from_name(bank_name["name"]) # temporary fix for issue described above
                 transaction.bank = bank
 
             return transaction
 
     @post_dump(pass_many=True)
-    def _create_envelope(self, data, **kwargs):
+    def _create_envelope(self, data: dict, **kwargs: dict[str, Any]) -> dict[str, dict]:
         return {"transactions": data}
 
 
@@ -121,7 +124,7 @@ class TransactionFilterSchema(ma.Schema):
     categories = fields.List(fields.String(), allow_none=True, data_key="category")
 
     @pre_load
-    def _remove_blanks(self, data: dict, **kwargs) -> dict:
+    def _remove_blanks(self, data: dict, **kwargs: dict[str, Any]) -> dict:
         """Replace empty values (strings) with None"""
 
         cleaned_data = deepcopy(data)
@@ -136,7 +139,7 @@ class TransactionFilterSchema(ma.Schema):
         return cleaned_data
 
     @validates_schema
-    def _check_range_filters(self, data: dict, **kwargs):
+    def _check_range_filters(self, data: dict, **kwargs: dict[str, Any]) -> None:
         for filter in ["amount", "date"]:
             if (
                 data[filter]["min"]
