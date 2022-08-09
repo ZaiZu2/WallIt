@@ -1,20 +1,22 @@
 // Format transactions into used by Category Chart
 function calculateCategoryWeights() {
-  let categoryWeights = {};
+  // map array of categories into object
+  let categoryWeights = categories.reduce((obj, category) => {
+    obj[category] = 0;
+    return obj;
+  }, {});
 
   for (let transaction of transactions) {
     if (transaction.amount < 0 && transaction.category != null) {
-      if (Object.keys(categoryWeights).includes(transaction.category)) {
-        categoryWeights[transaction.category] += -1 * transaction.amount;
-      } else {
-        categoryWeights[transaction.category] = -1 * transaction.amount;
-      }
+      categoryWeights[transaction.category] += -1 * transaction.amount;
     }
   }
-  // Round up any floating point errors
+  // Round up any floating point errors and delete blank categories
   for (let [categoryName, categoryWeight] of Object.entries(categoryWeights)) {
     categoryWeights[categoryName] = Math.round(categoryWeight * 100) / 100;
+    if (categoryWeight == false) delete categoryWeights[categoryName];
   }
+
   return categoryWeights;
 }
 

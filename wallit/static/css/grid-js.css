@@ -144,8 +144,10 @@ td[data-column-id="base_amount"].custom-td {
 }
 
 td[data-column-id="place"].custom-td {
-  text-align: left;
+  min-width: 50px;
   max-width: 110px;
+
+  text-align: left;
 }
 
 td[data-column-id="category"].custom-td {

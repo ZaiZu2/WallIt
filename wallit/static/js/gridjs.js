@@ -240,6 +240,8 @@ undoDeletionButton.addEventListener("click", async () => {
     // Show the table row corresponding to transaction dataCells
     const transactionRow = transactionDataCells[0].closest("tr");
     transactionRow.classList.remove("hidden");
+
+    reloadCategoryChart(categoryChart);
   }
 
   if (deletedTransactions.length == 0)
@@ -318,6 +320,7 @@ export const transactionsTable = new Grid({
     {
       id: "category",
       name: "Category",
+      sort: { enabled: false },
       formatter: createCategoryDropdown,
     },
     { id: "date", name: "Date", search: { enabled: false } },
