@@ -46,7 +46,9 @@ allFormButtons.forEach((button) => {
     }
     // ... Find a submit button responsible for a specific form
     // and hide it in case all form buttons are inactive.
-    const formSubmitButton = document.getElementById(`${button.classList[1]}_submit`);
+    const formSubmitButton = document.getElementById(
+      `${button.classList[1]}_submit`
+    );
     if (isActive === true) {
       formSubmitButton.classList.add("active");
       formSubmitButton.style.maxHeight = formSubmitButton.scrollHeight + "px";
@@ -203,8 +205,8 @@ async function updateFilters() {
     })
     .catch((error) => console.error(error));
 
-  // Save categories into a global variable
-  categories = filters['category']
+  // Save categories into a global variable with additional 'empty' category
+  categories = [...filters.category, null];
   // Find all filter forms with checkboxes
   const checkboxFields = document.querySelectorAll(".filter > .form-set");
   // Define filter categories which should display and in what order

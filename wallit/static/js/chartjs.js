@@ -3,10 +3,12 @@ function calculateCategoryWeights() {
   let categoryWeights = {};
 
   for (let transaction of transactions) {
-    if (Object.keys(categoryWeights).includes(transaction.category)) {
-      categoryWeights[transaction.category] += transaction.amount;
-    } else {
-      categoryWeights[transaction.category] = transaction.amount;
+    if (transaction.amount < 0 && transaction.category != null) {
+      if (Object.keys(categoryWeights).includes(transaction.category)) {
+        categoryWeights[transaction.category] += -1 * transaction.amount;
+      } else {
+        categoryWeights[transaction.category] = -1 * transaction.amount;
+      }
     }
   }
   // Round up any floating point errors

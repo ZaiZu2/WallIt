@@ -7,15 +7,15 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY") or "less_secret_key"
 
     # postgres
-    # SQLALCHEMY_DATABASE_URI = (
-    #     os.environ.get("DATABASE_URL")
-    #     or "postgresql://zaizu:admin@localhost:5433/wallit"
-    # )
-    #sqlite3
     SQLALCHEMY_DATABASE_URI = (
         os.environ.get("DATABASE_URL")
-        or "sqlite:///C:/Users/z0043xev/Git/WallIt/database/data.db"
+        or "postgresql://zaizu:admin@localhost:5433/wallit"
     )
+    # #sqlite3
+    # SQLALCHEMY_DATABASE_URI = (
+    #     os.environ.get("DATABASE_URL")
+    #     or "sqlite:///C:/Users/z0043xev/Git/WallIt/database/data.db"
+    # )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # File upload configuration

@@ -1,4 +1,5 @@
 import { Grid, h } from "https://unpkg.com/gridjs?module";
+import { categoryChart, reloadCategoryChart } from "./chartjs.js";
 
 export function reloadTable(table) {
   table
@@ -44,40 +45,40 @@ const editableCellAttributes = (cell, row, column) => {
 };
 
 const createCategoryDropdown = (cell, row, column) => {
+  // Disgustingly ugly, but works.
+  let options = [];
 
-  let options = []
-  // Disgustingly ugly, but works. I don't have time for frontend fun.
-  // I swear, this is terrible, but so be it.
   let currentCategory = h(
     "option",
     { value: row.cells[6].data },
     row.cells[6].data
   );
-  options.push(currentCategory)
+  options.push(currentCategory);
 
   // Delete duplicate corresponding to above option element from temporary category array
-  const tempCategories = [...categories]
-  const index = tempCategories.indexOf(row.cells[6].data)
+  const tempCategories = [...categories];
+  const index = tempCategories.indexOf(row.cells[6].data);
   if (index > -1) tempCategories.splice(index, 1);
-  
+
   // Create the rest of possible categories
   for (let category of tempCategories) {
-    let option = h(
-      "option",
-      { value: category },
-      category
-    );
-    options.push(option)
+    let option = h("option", { value: category }, category);
+    options.push(option);
   }
 
   const select = h(
     "select",
     {
       name: "category",
-      onchange: (event) => {
-        const formData = new FormData(event.target.parentNode)
-        modifyTransaction({ id: row.cells[0].data, category: formData.get("category") })
-      }
+      onchange: async (event) => {
+        const formData = new FormData(event.target.parentNode);
+        await modifyTransaction({
+          id: row.cells[0].data,
+          category:
+            formData.get("category") === "" ? null : formData.get("category"),
+        });
+        reloadCategoryChart(categoryChart);
+      },
     },
     options
   );
@@ -87,14 +88,62 @@ const createCategoryDropdown = (cell, row, column) => {
     {
       name: "category_change",
       onsubmit: () => {
-        preventDefault()
-      }
+        preventDefault();
+      },
     },
     select
-  )
+  );
 
-  return form
-}
+  return form;
+};
+
+const createActionButtons = () => {
+  const span = h(
+    "span",
+    {
+      className: "material-symbols-rounded custom-small-icon",
+    },
+    "delete_forever"
+  );
+
+  const deletionButton = h(
+    "button",
+    {
+      className: "button-table",
+      title: "Delete transaction",
+      onClick: async (event) => {
+        const transactionId = event.target
+          .closest("td")
+          .getAttribute("data-id");
+
+        await deleteTransaction(transactionId);
+        reloadCategoryChart(categoryChart);
+        event.target.closest("tr").classList.add("hidden");
+
+        const undoDeletionButton = document.getElementById("undo_deletion");
+        undoDeletionButton.classList.remove("hidden");
+      },
+    },
+    span
+  );
+
+  const secondButton = h(
+    "button",
+    {
+      className: "button-table",
+      onClick: () => alert(`Transaction 2nd operation`),
+    },
+    h(
+      "span",
+      {
+        className: "material-symbols-rounded custom-small-icon",
+      },
+      "sync"
+    )
+  );
+
+  return [deletionButton, secondButton];
+};
 
 async function deleteTransaction(id) {
   await fetch(`/api/transactions/${id}/delete`, {
@@ -105,15 +154,18 @@ async function deleteTransaction(id) {
       "Content-Type": "application/x-www-form-urlencoded",
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
     },
-  }).then((response) => {
-    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`)
+  })
+    .then((response) => {
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
 
-    // Pop the transactions element with specified id into a deletedTransactions array
-    for (let i = 0; i < transactions.length; i++) {
-      if (transactions[i].id == id)
-        deletedTransactions.push(transactions.splice(i, 1)[0]);
-    }
-  }).catch((error) => console.error(error));;
+      // Pop the transactions element with specified id into a deletedTransactions array
+      for (let i = 0; i < transactions.length; i++) {
+        if (transactions[i].id == id)
+          deletedTransactions.push(transactions.splice(i, 1)[0]);
+      }
+    })
+    .catch((error) => console.error(error));
 }
 
 async function addTransaction(transaction) {
@@ -126,166 +178,42 @@ async function addTransaction(transaction) {
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
     },
     body: JSON.stringify(transaction),
-  }).then((response) => {
-    if (!response.ok)
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    return response.json();
-  }).then((data) => {
-    return data.id;
-  }).catch((error) => console.error(error));
+  })
+    .then((response) => {
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      return response.json();
+    })
+    .then((data) => {
+      return data.id;
+    })
+    .catch((error) => console.error(error));
 
   return newTransactionId;
 }
 
-async function modifyTransaction({ id, ...kwargs }) {
-
+async function modifyTransaction({ id, ...modifiedColumns }) {
   await fetch(`/api/transactions/${id}/modify`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
     },
-    body: JSON.stringify(kwargs),
-  }).then((response) => {
-    if (!response.ok)
-      throw new Error(`HTTP error! Status: ${response.status}`);
-  }).catch((error) => console.error(error));
+    body: JSON.stringify(modifiedColumns),
+  })
+    .then((response) => {
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
+    })
+    .catch((error) => console.error(error));
 
-  // const modifiedTransaction = transactions.find(
-  //   (transaction) => transaction.id == transactionId
-  // );
-  // modifiedTransaction[columnName] = event.target.textContent;
+  const modifiedTransaction = transactions.find(
+    (transaction) => transaction.id == id
+  );
 
+  for (let [columnName, columnValue] of Object.entries(modifiedColumns))
+    modifiedTransaction[columnName] = columnValue;
 }
-
-export const transactionsTable = new Grid({
-  columns: [
-    { id: "id", hidden: true, search: { enabled: true } },
-    {
-      id: "info",
-      name: "Name",
-      search: { enabled: true },
-      sort: { enabled: false },
-      attributes: editableCellAttributes,
-    },
-    {
-      id: "title",
-      name: "Title",
-      search: { enabled: true },
-      sort: { enabled: false },
-      attributes: editableCellAttributes,
-    },
-    {
-      id: "amount",
-      name: "Amount",
-      formatter: (cell) => {
-        return `${cell} CZK`;
-      },
-    },
-    {
-      id: "base_amount",
-      name: "Base amount",
-      search: { enabled: false },
-      formatter: (cell, row) => {
-        return `${cell} ${row.cells[5].data}`;
-      },
-    },
-    { id: "base_currency", name: "Base currency", hidden: true },
-    {
-      id: "category",
-      name: "Category",
-      formatter: createCategoryDropdown
-    },
-    { id: "date", name: "Date", search: { enabled: false } },
-    {
-      id: "place",
-      name: "Place",
-      sort: { enabled: false },
-      attributes: editableCellAttributes,
-    },
-    { id: "bank", name: "Bank" },
-    { id: "creation_date", name: "Creation date", search: { enabled: false } },
-    {
-      id: "actions",
-      name: "Actions",
-      search: { enabled: false },
-      sort: { enabled: false },
-      attributes: (cell, row) => {
-        if (row) {
-          return { "data-id": row.cells[0].data };
-        } else {
-          return {};
-        }
-      },
-      formatter: () => {
-        return [
-          h(
-            "button",
-            {
-              className: "button-table",
-              title: "Delete transaction",
-              onClick: async (event) => {
-                const transactionId = event.target
-                  .closest("td")
-                  .getAttribute("data-id");
-
-                await deleteTransaction(transactionId);
-                event.target.closest("tr").classList.add("hidden");
-
-                const undoDeletionButton =
-                  document.getElementById("undo_deletion");
-                undoDeletionButton.classList.remove("hidden");
-              },
-            },
-            h(
-              "span",
-              {
-                className: "material-symbols-rounded custom-small-icon",
-              },
-              "delete_forever"
-            )
-          ),
-          h(
-            "button",
-            {
-              className: "button-table",
-              onClick: () => alert(`Transaction 2nd operation`),
-            },
-            h(
-              "span",
-              {
-                className: "material-symbols-rounded custom-small-icon",
-              },
-              "sync"
-            )
-          ),
-        ];
-      },
-    },
-  ],
-  data: [],
-  width: "auto",
-  autoWidth: false,
-  search: {
-    enabled: true,
-  },
-  sort: {
-    enabled: true,
-    multiColumn: true,
-  },
-  fixedHeader: true,
-  height: "400px",
-  className: {
-    container: "custom-container",
-    table: "custom-table",
-    tbody: "custom-tbody",
-    thead: "custom-thead",
-    header: "custom-header",
-    td: "custom-td",
-    th: "custom-th",
-    loading: "custom-loading",
-  },
-}).render(document.getElementById("transactionTable"));
 
 const undoDeletionButton = document.getElementById("undo_deletion");
 undoDeletionButton.addEventListener("click", async () => {
@@ -331,25 +259,12 @@ tableBody.addEventListener("focusout", async (event) => {
     if (event.target.textContent != oldValue) {
       const transactionId = event.target.dataset.id;
       const columnName = event.target.dataset.columnId;
+      const columnValue = event.target.textContent;
 
-      await fetch(`/api/transactions/${transactionId}/modify`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
-        },
-        body: JSON.stringify({
-          [columnName]: event.target.textContent,
-        }),
-      }).then((response) => {
-        if (!response.ok)
-          throw new Error(`HTTP error! Status: ${response.status}`);
+      modifyTransaction({
+        id: event.target.dataset.id,
+        [columnName]: columnValue,
       });
-
-      const modifiedTransaction = transactions.find(
-        (transaction) => transaction.id == transactionId
-      );
-      modifiedTransaction[columnName] = event.target.textContent;
     }
   }
   oldValue = undefined;
@@ -366,3 +281,89 @@ tableBody.addEventListener("keydown", (event) => {
     }
   }
 });
+
+export const transactionsTable = new Grid({
+  columns: [
+    { id: "id", hidden: true, search: { enabled: true } },
+    {
+      id: "info",
+      name: "Name",
+      search: { enabled: true },
+      sort: { enabled: false },
+      attributes: editableCellAttributes,
+    },
+    {
+      id: "title",
+      name: "Title",
+      search: { enabled: true },
+      sort: { enabled: false },
+      attributes: editableCellAttributes,
+    },
+    {
+      id: "amount",
+      name: "Amount",
+      formatter: (cell) => {
+        return `${cell} CZK`;
+      },
+    },
+    {
+      id: "base_amount",
+      name: "Base amount",
+      search: { enabled: false },
+      formatter: (cell, row) => {
+        return `${cell} ${row.cells[5].data}`;
+      },
+    },
+    { id: "base_currency", name: "Base currency", hidden: true },
+    {
+      id: "category",
+      name: "Category",
+      formatter: createCategoryDropdown,
+    },
+    { id: "date", name: "Date", search: { enabled: false } },
+    {
+      id: "place",
+      name: "Place",
+      sort: { enabled: false },
+      attributes: editableCellAttributes,
+    },
+    { id: "bank", name: "Bank" },
+    { id: "creation_date", name: "Creation date", search: { enabled: false } },
+    {
+      id: "actions",
+      name: "Actions",
+      search: { enabled: false },
+      sort: { enabled: false },
+      attributes: (cell, row) => {
+        if (row) {
+          return { "data-id": row.cells[0].data };
+        } else {
+          return {};
+        }
+      },
+      formatter: createActionButtons,
+    },
+  ],
+  data: [],
+  width: "auto",
+  autoWidth: false,
+  search: {
+    enabled: true,
+  },
+  sort: {
+    enabled: true,
+    multiColumn: true,
+  },
+  fixedHeader: true,
+  height: "400px",
+  className: {
+    container: "custom-container",
+    table: "custom-table",
+    tbody: "custom-tbody",
+    thead: "custom-thead",
+    header: "custom-header",
+    td: "custom-td",
+    th: "custom-th",
+    loading: "custom-loading",
+  },
+}).render(document.getElementById("transactionTable"));
