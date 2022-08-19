@@ -4,14 +4,18 @@ from sqlalchemy import select
 from wallit import app, db, logger
 from wallit.forms import LoginForm, SignUpForm, ResetPasswordForm
 from wallit.models import Transaction, User, Bank, Category
-from wallit.schemas import TransactionFilterSchema, TransactionSchema
+from wallit.schemas import (
+    TransactionFilterSchema,
+    TransactionSchema,
+    MonthlySaldoSchema,
+)
 from wallit.imports import (
     import_equabank_statement,
     import_revolut_statement,
     validate_statement,
     convert_currency,
 )
-from wallit.queries import filter_transactions
+from wallit.helpers import filter_transactions, JSONType
 from wallit.exceptions import FileError
 
 from flask import redirect, url_for, render_template, flash, request, abort
@@ -19,7 +23,10 @@ from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.utils import secure_filename
 from werkzeug.wrappers import Response
 
+from sqlalchemy import select, func, between, and_, case
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from dateutil.rrule import rrule, MONTHLY
 from typing import Any, Callable, Tuple
 
 
@@ -125,7 +132,7 @@ def logout() -> Response:
 
 @app.route("/api/transactions/fetch", methods=["POST"])
 @login_required
-def post_transactions() -> Tuple[str, int]:
+def post_transactions() -> JSONType:
     """Receive filter parameters in JSON, query DB for filtered values
     and return Transactions serialized to JSON
 
@@ -167,7 +174,7 @@ def post_transactions() -> Tuple[str, int]:
 
 @app.route("/api/transactions/filters", methods=["GET"])
 @login_required
-def fetch_filters() -> str:
+def fetch_filters() -> JSONType:
     """Fetch dynamic filtering values for user
 
     Response JSON structure example:
@@ -223,7 +230,7 @@ def fetch_filters() -> str:
 
 @app.route("/api/transactions/upload", methods=["POST"])
 @login_required
-def upload_statements() -> Tuple[dict[str, Any], int]:
+def upload_statements() -> JSONType:
     """Parse and save transactions from uploaded files
 
     Response JSON structure example:
@@ -257,7 +264,7 @@ def upload_statements() -> Tuple[dict[str, Any], int]:
         "revolut": {
             "import_func": import_revolut_statement,
             "instance": Bank.query.filter_by(name="Revolut").one(),
-            "aaa": Bank.get_from_name('Revolut')
+            "aaa": Bank.get_from_name("Revolut"),
         },
         "equabank": {
             "import_func": import_equabank_statement,
@@ -342,10 +349,79 @@ def add_transaction() -> Tuple[dict[str, int], int]:
 @login_required
 def modify_transaction(id: int) -> Tuple[str, int]:
     "Modify 'info','title','place' column of the transaction"
-    
+
     transaction = Transaction.get_from_id(id, current_user)
-    schema = TransactionSchema(only=("info","title","place", "category"))
+    schema = TransactionSchema(only=("info", "title", "place", "category"))
     transaction = schema.load(request.json, instance=transaction)
     db.session.commit()
-    # Resource update successful
     return "", 204
+
+
+@app.route("/api/transactions/monthly", methods=["GET"])
+def monthly_statements() -> tuple[JSONType, int]:
+    """Return list of monthly saldos featuring incoming, outgoing and balance
+
+    Response JSON structure example:
+    [
+        {
+            balance: 32207.87
+            incoming: 79464.5
+            month: "2019-10"
+            outgoing: -47256.63
+        }, ...
+    ]
+
+    Returns:
+        tuple[JSONType, int]: (response, http_code)
+    """
+
+    # list containing monthly statements
+    saldo = []
+
+    oldest = (
+        Transaction.query.with_entities(func.min(Transaction.transaction_date))
+        .filter_by(user=current_user)
+        .scalar()
+    )
+    oldest = oldest - relativedelta(day=1, hour=0, minute=0, second=0)
+    newest = (
+        Transaction.query.with_entities(func.max(Transaction.transaction_date))
+        .filter_by(user=current_user)
+        .scalar()
+    )
+    newest = newest - relativedelta(months=+1, day=1, hour=0, minute=0, second=0)
+
+    # Main query for monthly saldos
+    incoming = func.sum(
+        case((Transaction.main_amount > 0, Transaction.main_amount), else_=0)
+    )
+    outgoing = func.sum(
+        case((Transaction.main_amount < 0, Transaction.main_amount), else_=0)
+    )
+    # Iterate over time period, querying for incoming/outgoing sums
+    for month in rrule(freq=MONTHLY, dtstart=oldest, until=newest):
+        query = select(incoming, outgoing).where(
+            and_(
+                between(
+                    Transaction.transaction_date,
+                    month,
+                    month + relativedelta(months=+1),
+                ),
+                Transaction.user == current_user,
+            )
+        )
+
+        results = db.session.execute(query).all()[0]
+        logger.debug(query.compile(compile_kwargs={"literal_binds": True}).string)
+
+        if results[0]:
+            saldo.append(
+                {
+                    "month": month,
+                    "outgoing": round(results[1], 2),
+                    "incoming": round(results[0], 2),
+                    "balance": round(results[0] + results[1], 2),
+                }
+            )
+
+    return MonthlySaldoSchema(many=True).dumps(saldo), 200

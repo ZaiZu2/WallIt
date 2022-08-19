@@ -67,7 +67,9 @@ class TransactionSchema(ma.SQLAlchemySchema):
     bank = fields.Pluck(BankSchema, "name", allow_none=True)
 
     @post_load
-    def _convert_to_transaction(self, data: dict, **kwargs: dict[str, Any]) -> Transaction:
+    def _convert_to_transaction(
+        self, data: dict, **kwargs: dict[str, Any]
+    ) -> Transaction:
         """Convert nested schema name to foreign key relationships and load into Transaction object"""
         # TODO: Pluck field results in a nested orderedDict (with the Plucked field's key:value) during deserialization.
         # No clue how to avoid this.
@@ -75,7 +77,9 @@ class TransactionSchema(ma.SQLAlchemySchema):
         # Modify transaction instance passed in load()
         if self.instance:
             for column_name, value in data.items():
-                if issubclass(type(value), dict): # temporary fix for issue described above
+                if issubclass(
+                    type(value), dict
+                ):  # temporary fix for issue described above
                     category = Category.get_from_name(value["name"], current_user)
                     setattr(self.instance, column_name, category)
                 else:
@@ -90,11 +94,15 @@ class TransactionSchema(ma.SQLAlchemySchema):
             transaction = Transaction(user=current_user, **data)
 
             if category_name:
-                category = Category.get_from_name(category_name["name"], current_user) # temporary fix for issue described above
+                category = Category.get_from_name(
+                    category_name["name"], current_user
+                )  # temporary fix for issue described above
                 transaction.category = category
 
             if bank_name:
-                bank = Bank.get_from_name(bank_name["name"]) # temporary fix for issue described above
+                bank = Bank.get_from_name(
+                    bank_name["name"]
+                )  # temporary fix for issue described above
                 transaction.bank = bank
 
             return transaction
@@ -147,3 +155,14 @@ class TransactionFilterSchema(ma.Schema):
                 and data[filter]["min"] > data[filter]["max"]
             ):
                 raise ValidationError("Lower end cannot be higher than higher end")
+
+
+MonthlySaldoSchema = ma.Schema.from_dict(
+    {
+        "month": fields.DateTime(format="%Y-%m"),
+        "incoming": fields.Number(),
+        "outgoing": fields.Number(),
+        "balance": fields.Number(),
+    },
+    name="MonthlySaldoSchema",
+)

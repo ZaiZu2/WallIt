@@ -5,17 +5,21 @@ from flask_login import current_user
 from flask_sqlalchemy import BaseQuery
 
 from sqlalchemy import select
+import typing as t
+
+JSONType = str | int | float | bool | None | t.Dict[str, t.Any] | t.List[t.Any]
+
 
 def filter_transactions(filters: dict) -> list[Transaction]:
     # Dictionary mapping queried values to the keys used for serialization and request processing
     # Request JSON filter names must remain the same as the keys used here
 
     FILTER_MAP = {
-        "amount" : Transaction.base_amount,
-        "date" : Transaction.transaction_date,
-        "base_currencies" : Transaction.base_currency,
-        "banks" : (Transaction.bank_id, Bank.id, Bank.name),
-        "categories" : (Transaction.category_id, Category.id, Category.name)
+        "amount": Transaction.base_amount,
+        "date": Transaction.transaction_date,
+        "base_currencies": Transaction.base_currency,
+        "banks": (Transaction.bank_id, Bank.id, Bank.name),
+        "categories": (Transaction.category_id, Category.id, Category.name),
     }
 
     query: BaseQuery = Transaction.query.filter_by(user=current_user)
@@ -33,13 +37,12 @@ def filter_transactions(filters: dict) -> list[Transaction]:
 
         if filter_name in ["categories", "banks"] and filter_values is not None:
             # Subquery to find 'filter'_ids for 'filter'_names
-            subquery = (
-                select(FILTER_MAP[filter_name][1])
-                .filter(FILTER_MAP[filter_name][2].in_(filter_values))
+            subquery = select(FILTER_MAP[filter_name][1]).filter(
+                FILTER_MAP[filter_name][2].in_(filter_values)
             )
             # Query to find transactions which are related to these 'filter'_ids
             query = query.filter(FILTER_MAP[filter_name][0].in_(subquery))
-    
+
     transactions: list[Transaction] = query.all()
     logger.debug(str(query))
     # logger.debug(query.compile(compile_kwargs={"literal_binds": True}).string)

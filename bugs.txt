@@ -1,3 +1,7 @@
 JS browser scripts:
 
-1. Thrown Exceptions never silence EventListeners - the code in the eventlistener is executed even after the error is thrown
+1. Thrown Exceptions never silence EventListeners
+ - the code in the eventlistener is executed even after the error is thrown
+ reason:
+ - errors in my code are thrown mostly by failed FetchAPI request ->
+   those are caught straight away and the function continues!
