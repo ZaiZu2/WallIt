@@ -97,8 +97,6 @@ input::placeholder {
 input:hover,
 input:focus,
 input:active {
-  /*border-width: var(--border-width-active);*/
-
   outline: none;
   border-color: var(--main-font-active-color);
 }
@@ -127,6 +125,24 @@ input[type="date"]::-webkit-datetime-edit-text {
   padding: 0 0.2rem;
 }
 
+select {
+  width: 100%;
+  background: none;
+  height: 2rem;
+  padding-left: 8px;
+  box-sizing: border-box;
+  border: var(--border-inactive);
+  border-radius: 0.5rem;
+  color: var(--main-font-active-color);
+  font-size: 1rem;
+  font-family: var(--main-font);
+}
+select:hover,
+select:focus,
+select:active {
+  outline: none;
+  border-color: var(--main-font-active-color);
+}
 /*********** CUSTOM-BUTTONS ***********/
 
 .button-std {
@@ -173,6 +189,10 @@ input[type="date"]::-webkit-datetime-edit-text {
 
   position: relative;
   transform: scale(0.95);
+}
+
+button.with-margin {
+  margin: 8px;
 }
 
 button.active {
@@ -285,11 +305,18 @@ button.active {
 }
 
 .subwindow-outline.filter,
-.subwindow-outline.import {
+.subwindow-outline.import,
+.subwindow-outline.create,
+.subwindow-outline.creation-window {
   padding-bottom: 0;
 }
 
+.subwindow-outline.creation-window {
+  height: auto;
+}
+
 .subwindow-header {
+  min-width: max-content;
   height: 2rem;
   padding-bottom: 8px;
   border-bottom: 1px solid rgba(110, 110, 110, 1);
@@ -309,14 +336,19 @@ button.active {
   gap: 8px;
 }
 
+.selection-button-list {
+  height: fit-content;
+  padding: 8px 0px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
 #filter_submit,
 #import_submit {
   text-align: center;
-}
-
-#filter_submit_button,
-#import_submit_button {
-  margin: 8px;
 }
 
 .collapsible-form {
@@ -361,6 +393,52 @@ button.active {
   width: 100%;
   white-space: nowrap;
   overflow: hidden;
+}
+
+.creation-form {
+  height: 100%;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.creation-form-inputs {
+  flex: 1;
+  padding: 8px 0px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.category-menu {
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.category-submenu {
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.submenu-header {
+  width: auto;
+  padding: 8px;
+
+  border-bottom: var(--border-inactive);
+  text-align: center;
+}
+
+.creation-form-footer {
+  border-top: var(--border-inactive);
+  text-align: center;
 }
 
 .hidden {

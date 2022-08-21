@@ -1,5 +1,10 @@
 import { Grid, h } from "https://unpkg.com/gridjs?module";
-import { categoryChart, reloadCategoryChart } from "./chartjs.js";
+import {
+  categoryChart,
+  reloadCategoryChart,
+  monthlyChart,
+  reloadMonthlyChart,
+} from "./chartjs.js";
 
 export function reloadTable(table) {
   table
@@ -154,18 +159,15 @@ async function deleteTransaction(id) {
       "Content-Type": "application/x-www-form-urlencoded",
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
     },
-  })
-    .then((response) => {
-      if (!response.ok)
-        throw new Error(`HTTP error! Status: ${response.status}`);
+  }).then((response) => {
+    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
-      // Pop the transactions element with specified id into a deletedTransactions array
-      for (let i = 0; i < transactions.length; i++) {
-        if (transactions[i].id == id)
-          deletedTransactions.push(transactions.splice(i, 1)[0]);
-      }
-    })
-    .catch((error) => console.error(error));
+    // Pop the transactions element with specified id into a deletedTransactions array
+    for (let i = 0; i < transactions.length; i++) {
+      if (transactions[i].id == id)
+        deletedTransactions.push(transactions.splice(i, 1)[0]);
+    }
+  });
 }
 
 async function addTransaction(transaction) {
@@ -186,8 +188,7 @@ async function addTransaction(transaction) {
     })
     .then((data) => {
       return data.id;
-    })
-    .catch((error) => console.error(error));
+    });
 
   return newTransactionId;
 }
@@ -200,12 +201,9 @@ async function modifyTransaction({ id, ...modifiedColumns }) {
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
     },
     body: JSON.stringify(modifiedColumns),
-  })
-    .then((response) => {
-      if (!response.ok)
-        throw new Error(`HTTP error! Status: ${response.status}`);
-    })
-    .catch((error) => console.error(error));
+  }).then((response) => {
+    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+  });
 
   const modifiedTransaction = transactions.find(
     (transaction) => transaction.id == id

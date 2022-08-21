@@ -133,7 +133,7 @@ th[data-column-id="category"].custom-th {
 td[data-column-id="info"].custom-td,
 td[data-column-id="title"].custom-td {
   min-width: 150px;
-  max-width: 350px;
+  max-width: 250px;
 
   text-align: left;
 }

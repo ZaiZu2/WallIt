@@ -1,5 +1,13 @@
 import { transactionsTable, reloadTable } from "./gridjs.js";
-import { categoryChart, reloadCategoryChart } from "./chartjs.js";
+import {
+  categoryChart,
+  reloadCategoryChart,
+  monthlyChart,
+  reloadMonthlyChart,
+} from "./chartjs.js";
+
+const logOutButton = document.getElementById("log-out");
+logOutButton.addEventListener("click", logOut);
 
 const modalButton = document.getElementById("modal-button");
 modalButton.addEventListener("click", () => {
@@ -140,8 +148,7 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
         throw new Error(`HTTP error! Status: ${response.status}`);
       return response.json();
     })
-    .then((data) => data.transactions)
-    .catch((error) => console.error(error));
+    .then((data) => data.transactions);
 
   reloadWindows();
 });
@@ -182,8 +189,7 @@ uploadSubmit.addEventListener("click", async function uploadStatements() {
       responseStatus = response.status;
       return response.json();
     })
-    .then((data) => data)
-    .catch((error) => console.error(error));
+    .then((data) => data);
 
   showUploadModal(responseStatus, uploadResults);
 });
@@ -197,13 +203,10 @@ async function updateFilters() {
     headers: {
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
     },
-  })
-    .then((response) => {
-      if (!response.ok)
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      return response.json();
-    })
-    .catch((error) => console.error(error));
+  }).then((response) => {
+    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+    return response.json();
+  });
 
   // Save categories into a global variable with additional 'empty' category
   categories = [...filters.category, null];
@@ -300,6 +303,12 @@ function showUploadModal(responseStatus, uploadResults) {
 function reloadWindows() {
   reloadTable(transactionsTable);
   reloadCategoryChart(categoryChart);
+  reloadMonthlyChart(monthlyChart);
+}
+
+function logOut() {
+  window.location.href = "/logout";
+  sessionStorage.clear();
 }
 
 window.addEventListener("load", () => {
@@ -307,9 +316,11 @@ window.addEventListener("load", () => {
   if (sessionStorage.getItem("transactions") != null)
     transactions = JSON.parse(sessionStorage.getItem("transactions"));
   if (sessionStorage.getItem("deletedTransactions") != null)
-    transactions = JSON.parse(sessionStorage.getItem("deletedTransactions"));
+    deletedTransactions = JSON.parse(
+      sessionStorage.getItem("deletedTransactions")
+    );
   if (sessionStorage.getItem("categories") != null)
-    transactions = JSON.parse(sessionStorage.getItem("categories"));
+    categories = JSON.parse(sessionStorage.getItem("categories"));
 
   updateFilters();
   reloadWindows();
@@ -322,5 +333,5 @@ window.addEventListener("beforeunload", () => {
     "deletedTransactions",
     JSON.stringify(deletedTransactions)
   );
-  sessionStorage.setItem("categories", JSON.stringify(deletedTransactions));
+  sessionStorage.setItem("categories", JSON.stringify(categories));
 });

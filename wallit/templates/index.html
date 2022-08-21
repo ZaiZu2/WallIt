@@ -73,7 +73,7 @@
                         </li>
                     </ol>
                 </div>
-                <a id="log-out" href="{{ url_for('logout') }}">
+                <a id="log-out">
                     <span class="material-symbols-rounded custom-medium-icon"
                           style="font-size: 48px;">logout</span>
                     <h3>Log out</h3>
@@ -119,7 +119,7 @@
                             </form>
                             <div id="filter_submit" class="collapsible-form filter">
                                 <button id="filter_submit_button"
-                                        class="button-no-outline filter"
+                                        class="button-no-outline with-margin"
                                         type="submit">
                                     Submit
                                 </button>
@@ -159,7 +159,7 @@
                             </form>
                             <div id="import_submit" class="collapsible-form import">
                                 <button id="import_submit_button"
-                                        class="button-no-outline import"
+                                        class="button-no-outline with-margin"
                                         type="submit"
                                         multiple>
                                     Submit
@@ -167,9 +167,25 @@
                             </div>
                         </div>
                     </div>
+                    <div class="subwindow-outline create">
+                        <div class="subwindow-header">
+                            <span class="material-symbols-rounded custom-small-icon">add_circle</span>
+                            <h6>
+                                Edit element
+                            </h6>
+                        </div>
+                        <div class="selection-button-list create">
+                            <button id="transaction_menu" class="button-no-outline create">
+                                Transaction
+                            </button>
+                            <button id="category_menu" class="button-no-outline create">
+                                Category
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="section">
-                    <div class="subwindow-outline transactions">
+                    <div class="subwindow-outline">
                         <div class="subwindow-header">
                             <span class="material-symbols-rounded custom-small-icon">
                                 view_list
@@ -177,13 +193,114 @@
                             <h6>
                                 Transactions
                             </h6>
-                            <button id="undo_deletion" class="button-no-outline hidden" title="Undo deletion">
+                            <button id="undo_deletion"
+                                    class="button-no-outline hidden"
+                                    title="Undo deletion">
                                 <span class="material-symbols-rounded custom-small-icon">
                                     undo
                                 </span>
                             </button>
                         </div>
                         <div id="transactionTable"></div>
+                    </div>
+                    <div class="subwindow-outline creation-window">
+                        <div class="subwindow-header">
+                            <span class="material-symbols-rounded custom-small-icon">
+                                add_circle
+                            </span>
+                            <h6>
+                                Create transaction
+                            </h6>
+                        </div>
+                        <form class="creation-form create-transaction">
+                            <div class="creation-form-inputs">
+                                <input id="info" name="info" placeholder="Name" type="text" value=""/>
+                                <input id="title" name="title" placeholder="Title" type="text" value=""/>
+                                <input id="base_amount" name="base_amount" placeholder="Amount*" required="" type="number" value=""/>
+                                <input id="base_currency" name="base_currency" placeholder="Currency*" required="" type="text" minlength="3" maxlength="3" value=""/>
+                                <input id="date" name="date" placeholder="Date*" required="" type="date" value=""/>
+                                <input id="place" name="place" placeholder="Place" type="text" value=""/>
+                                <select id="bank" name="bank">
+                                    <option value="volvo">Volvo</option>
+                                    <option value="saab">Saab</option>
+                                    <option value="fiat">Fiat</option>
+                                    <option value="audi">Audi</option>
+                                </select>
+                                <select id="category" name="category">
+                                    <option value="volvo">Volvo</option>
+                                    <option value="saab">Saab</option>
+                                    <option value="fiat">Fiat</option>
+                                    <option value="audi">Audi</option>
+                                </select>
+                            </div>
+                            <div class="creation-form-footer">
+                                <button id="transaction_creation_submit_button"
+                                class="button-no-outline with-margin"
+                                type="submit">
+                                    Submit
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="subwindow-outline creation-window">
+                        <div class="subwindow-header">
+                            <span class="material-symbols-rounded custom-small-icon">
+                                add_circle
+                            </span>
+                            <h6>
+                                Edit category
+                            </h6>
+                        </div>
+                        <div class="category-menu">
+                            <div class="category-submenu">
+                                <div class="submenu-header">Add category</div>
+                                <input id="category_name" name="category_name" placeholder="Name" type="text" value=""/>
+
+                            </div>
+                            <div class="category-submenu">
+                                <div class="submenu-header">Rename category</div>
+                                <select id="category" name="category">
+                                    <option value="volvo">Volvo</option>
+                                    <option value="saab">Saab</option>
+                                    <option value="fiat">Fiat</option>
+                                    <option value="audi">Audi</option>
+                                </select>
+                                <input id="category_name" name="category_name" placeholder="Name" type="text" value=""/>
+                            </div>
+                            <div class="category-submenu">
+                                <div class="submenu-header">Delete category</div>
+                                <form name="base_currency" class="collapsible-form filter">
+                                    <div class="form-set"></div>
+                                        <input type="checkbox" name="PLN" id="PLN"/>
+                                        <label for="PLN">PLN</label>
+                                        <input type="checkbox" name="PLN" id="PLN"/>
+                                        <label for="PLN">PLN</label>
+                                        <input type="checkbox" name="PLN" id="PLN"/>
+                                        <label for="PLN">PLN</label>
+                                        <input type="checkbox" name="PLN" id="PLN"/>
+                                        <label for="PLN">PLN</label>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="creation-form-footer">
+                            <button id="category_creation_submit_button"
+                            class="button-no-outline with-margin"
+                            type="submit">
+                                Submit
+                            </button>
+                        </div>
+                        <!-- <form class="creation-form create-category">
+                            <div class="creation-form-inputs">
+                                <input id="category_name" name="category_name" placeholder="Name" type="text" value=""/>
+                            </div>
+                            <div class="creation-form-footer">
+                                <button id="category_creation_submit_button"
+                                class="button-no-outline with-margin"
+                                type="submit">
+                                    Submit
+                                </button>
+                            </div>
+                        </form> -->
                     </div>
                 </div>
                 <div class="section">

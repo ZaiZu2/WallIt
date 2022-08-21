@@ -174,7 +174,7 @@ def post_transactions() -> JSONType:
 
 @app.route("/api/transactions/filters", methods=["GET"])
 @login_required
-def fetch_filters() -> JSONType:
+def fetch_filters() -> tuple[JSONType, int]:
     """Fetch dynamic filtering values for user
 
     Response JSON structure example:
@@ -375,29 +375,37 @@ def monthly_statements() -> tuple[JSONType, int]:
         tuple[JSONType, int]: (response, http_code)
     """
 
-    # list containing monthly statements
-    saldo = []
-
     oldest = (
         Transaction.query.with_entities(func.min(Transaction.transaction_date))
         .filter_by(user=current_user)
         .scalar()
     )
+    # No transactions related to the user
+    if not oldest:
+        return {}, 404
+
     oldest = oldest - relativedelta(day=1, hour=0, minute=0, second=0)
     newest = (
         Transaction.query.with_entities(func.max(Transaction.transaction_date))
         .filter_by(user=current_user)
         .scalar()
     )
-    newest = newest - relativedelta(months=+1, day=1, hour=0, minute=0, second=0)
 
-    # Main query for monthly saldos
+    # Only create monthly summary for months which has ended
+    # Do not query for the current month
+    if newest.year == datetime.now().year and newest.month == datetime.now().month:
+        newest = newest - relativedelta(months=+1, day=1, hour=0, minute=0, second=0)
+    else:
+        newest = newest - relativedelta(day=1, hour=0, minute=0, second=0)
+
     incoming = func.sum(
         case((Transaction.main_amount > 0, Transaction.main_amount), else_=0)
     )
     outgoing = func.sum(
         case((Transaction.main_amount < 0, Transaction.main_amount), else_=0)
     )
+    # list containing monthly statements
+    saldo = []
     # Iterate over time period, querying for incoming/outgoing sums
     for month in rrule(freq=MONTHLY, dtstart=oldest, until=newest):
         query = select(incoming, outgoing).where(
@@ -412,7 +420,9 @@ def monthly_statements() -> tuple[JSONType, int]:
         )
 
         results = db.session.execute(query).all()[0]
-        logger.debug(query.compile(compile_kwargs={"literal_binds": True}).string)
+        logger.log(
+            "DEBUG_HIGH", query.compile(compile_kwargs={"literal_binds": True}).string
+        )
 
         if results[0]:
             saldo.append(
