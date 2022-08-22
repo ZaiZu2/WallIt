@@ -313,6 +313,7 @@ button.active {
 
 .subwindow-outline.creation-window {
   height: auto;
+  width: 200px;
 }
 
 .subwindow-header {

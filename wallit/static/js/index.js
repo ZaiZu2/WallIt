@@ -17,6 +17,41 @@ modalButton.addEventListener("click", () => {
   backgroundDim.classList.add("inactive");
 });
 
+const selectionButtons = document.querySelectorAll(
+  ".selection-button-list button"
+);
+selectionButtons.forEach((button) => {
+  button.addEventListener("click", (event) => {
+    if (!event.target.classList.contains("active")) {
+      button.classList.add("active");
+      const buttonMenu = document.getElementById(
+        button.id.replace("_button", "")
+      );
+      buttonMenu.classList.remove("hidden");
+
+      const siblingButtons = button.parentNode.childNodes;
+      siblingButtons.forEach((siblingButton) => {
+        if (
+          siblingButton.nodeType != Node.TEXT_NODE &&
+          siblingButton != event.target
+        ) {
+          siblingButton.classList.remove("active");
+          const siblingMenu = document.getElementById(
+            siblingButton.id.replace("_button", "")
+          );
+          siblingMenu.classList.add("hidden");
+        }
+      });
+    } else {
+      button.classList.remove("active");
+      const selectionMenu = document.getElementById(
+        button.id.replace("_button", "")
+      );
+      selectionMenu.classList.add("hidden");
+    }
+  });
+});
+
 // Allows button to toggle menu windows ON/OFF with responsive button behavior
 const menuButtons = document.querySelectorAll(".menu button");
 menuButtons.forEach((button) => {

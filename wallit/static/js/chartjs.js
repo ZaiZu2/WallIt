@@ -169,7 +169,6 @@ export const monthlyChart = new Chart(monthlyChartCell, {
         ticks: {
           color: "white",
         },
-        // position: 'center',
       },
       y: {
         grid: {
@@ -179,11 +178,14 @@ export const monthlyChart = new Chart(monthlyChartCell, {
         ticks: {
           color: "white",
         },
-        // title: {
-        //   color: 'white',
-        //   display: true,
-        //   text: `Amount [${'CZK'}]`
-        // }
+      },
+    },
+    elements: {
+      point: {
+        borderWidth: 3,
+        hitRadius: 6,
+        hoverRadius: 4.5,
+        hoverBorderWidth: 9,
       },
     },
     plugins: {
