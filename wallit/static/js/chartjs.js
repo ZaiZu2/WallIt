@@ -1,12 +1,12 @@
 // Format transactions into used by Category Chart
 function calculateCategoryWeights() {
   // map array of categories into object
-  let categoryWeights = categories.reduce((obj, category) => {
+  let categoryWeights = user.categories.reduce((obj, category) => {
     obj[category] = 0;
     return obj;
   }, {});
 
-  for (let transaction of transactions) {
+  for (let transaction of user.transactions) {
     if (transaction.amount < 0 && transaction.category != null) {
       categoryWeights[transaction.category] += -1 * transaction.amount;
     }
@@ -114,11 +114,11 @@ export async function reloadMonthlyChart(chart) {
     balance: [],
   };
 
-  for (let monthlyData of data) {
-    chartLabels.push(monthlyData.month);
-    chartDatasets.outgoing.push(monthlyData.outgoing);
-    chartDatasets.incoming.push(monthlyData.incoming);
-    chartDatasets.balance.push(monthlyData.balance);
+  for (let monthly of data) {
+    chartLabels.push(monthly.month);
+    chartDatasets.outgoing.push(monthly.outgoing);
+    chartDatasets.incoming.push(monthly.incoming);
+    chartDatasets.balance.push(monthly.balance);
   }
 
   chart.data.labels = chartLabels;

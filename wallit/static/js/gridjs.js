@@ -25,7 +25,7 @@ export function reloadTable(table) {
           "creation_date",
         ];
 
-        let formattedTransactions = structuredClone(transactions);
+        let formattedTransactions = structuredClone(user.transactions);
 
         for (let transaction of formattedTransactions) {
           for (let key of Object.keys(transaction)) {
@@ -61,7 +61,7 @@ const createCategoryDropdown = (cell, row, column) => {
   options.push(currentCategory);
 
   // Delete duplicate corresponding to above option element from temporary category array
-  const tempCategories = [...categories];
+  const tempCategories = [...user.categories];
   const index = tempCategories.indexOf(row.cells[6].data);
   if (index > -1) tempCategories.splice(index, 1);
 
@@ -163,9 +163,9 @@ async function deleteTransaction(id) {
     if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
     // Pop the transactions element with specified id into a deletedTransactions array
-    for (let i = 0; i < transactions.length; i++) {
-      if (transactions[i].id == id)
-        deletedTransactions.push(transactions.splice(i, 1)[0]);
+    for (let i = 0; i < user.transactions.length; i++) {
+      if (user.transactions[i].id == id)
+        user.deletedTransactions.push(user.transactions.splice(i, 1)[0]);
     }
   });
 }
@@ -205,7 +205,7 @@ async function modifyTransaction({ id, ...modifiedColumns }) {
     if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
   });
 
-  const modifiedTransaction = transactions.find(
+  const modifiedTransaction = user.transactions.find(
     (transaction) => transaction.id == id
   );
 
@@ -215,8 +215,9 @@ async function modifyTransaction({ id, ...modifiedColumns }) {
 
 const undoDeletionButton = document.getElementById("undo_deletion");
 undoDeletionButton.addEventListener("click", async () => {
-  if (deletedTransactions.length > 0) {
-    const transaction = deletedTransactions[deletedTransactions.length - 1];
+  if (user.deletedTransactions.length > 0) {
+    const transaction =
+      user.deletedTransactions[user.deletedTransactions.length - 1];
 
     // Find table cells corresponding to the last deleted transaction
     const transactionDataCells = document.querySelectorAll(
@@ -228,8 +229,8 @@ undoDeletionButton.addEventListener("click", async () => {
     // Server responds with a new Id for transaction after successful insertion
     transaction.id = newTransactionId;
 
-    transactions.push(transaction);
-    deletedTransactions.pop();
+    user.transactions.push(transaction);
+    user.deletedTransactions.pop();
 
     // Change data-attributes to correct transactionId
     [...transactionDataCells].forEach((dataCell) => {
@@ -242,7 +243,7 @@ undoDeletionButton.addEventListener("click", async () => {
     reloadCategoryChart(categoryChart);
   }
 
-  if (deletedTransactions.length == 0)
+  if (user.deletedTransactions.length == 0)
     undoDeletionButton.classList.add("hidden");
 });
 

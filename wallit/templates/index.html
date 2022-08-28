@@ -10,12 +10,13 @@
         <meta name="csrf-token" content="{{ csrf_token() }}" />
         <!-- JS -->
         <script>
-            // Array holding loaded transactions during session
-            let transactions = [];
-            // Array holding deleted transactions during session
-            let deletedTransactions = [];
-            // Array holding user's categories
-            let categories = [];
+            let user = {
+                transactions: [],
+                deletedTransactions: [],
+                categories: [],
+                banks: [],
+                currencies: []
+            }
         </script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script type="module" src="../static/js/index.js" defer></script>
@@ -107,14 +108,15 @@
                                 </div>
                             </form>
                             <form name="base_currency" class="collapsible-form filter">
-                                <div class="form-set"></div>
+                                <div class="form-set currency-dynamic-checkboxes">
+                                </div>
                             </form>
                             <form name="category" class="collapsible-form filter">
-                                <div class="form-set">
+                                <div class="form-set category-dynamic-checkboxes">
                                 </div>
                             </form>
                             <form name="bank" class="collapsible-form filter">
-                                <div class="form-set">
+                                <div class="form-set bank-dynamic-checkboxes">
                                 </div>
                             </form>
                             <div id="filter_submit" class="collapsible-form filter">
@@ -203,7 +205,8 @@
                         </div>
                         <div id="transactionTable"></div>
                     </div>
-                    <div id="transaction_menu" class="subwindow-outline creation-window hidden">
+                    <div id="transaction_menu"
+                         class="subwindow-outline creation-window hidden">
                         <div class="subwindow-header">
                             <span class="material-symbols-rounded custom-small-icon">
                                 add_circle
@@ -212,31 +215,35 @@
                                 Create transaction
                             </h6>
                         </div>
-                        <form class="creation-form create-transaction">
-                            <div class="creation-form-inputs">
+                        <form name="create_transaction" class="creation-form create-transaction">
+                            <div class="submenu-body">
                                 <input id="info" name="info" placeholder="Name" type="text" value=""/>
                                 <input id="title" name="title" placeholder="Title" type="text" value=""/>
-                                <input id="base_amount" name="base_amount" placeholder="Amount*" required="" type="number" value=""/>
-                                <input id="base_currency" name="base_currency" placeholder="Currency*" required="" type="text" minlength="3" maxlength="3" value=""/>
-                                <input id="date" name="date" placeholder="Date*" required="" type="date" value=""/>
+                                <input id="base_amount"
+                                       name="base_amount"
+                                       placeholder="Amount*"
+                                       required=""
+                                       type="number"
+                                       value=""/>
+                                <input id="base_currency"
+                                       name="base_currency"
+                                       placeholder="Currency*"
+                                       required=""
+                                       type="text"
+                                       minlength="3"
+                                       maxlength="3"
+                                       value=""/>
+                                <input id="date" name="date" type="date" value="" required/>
                                 <input id="place" name="place" placeholder="Place" type="text" value=""/>
-                                <select id="bank" name="bank">
-                                    <option value="volvo">Volvo</option>
-                                    <option value="saab">Saab</option>
-                                    <option value="fiat">Fiat</option>
-                                    <option value="audi">Audi</option>
-                                </select>
-                                <select id="category" name="category">
-                                    <option value="volvo">Volvo</option>
-                                    <option value="saab">Saab</option>
-                                    <option value="fiat">Fiat</option>
-                                    <option value="audi">Audi</option>
-                                </select>
+                                <div class="bank-dynamic-dropdown">
+                                </div>
+                                <div class="category-dynamic-dropdown">
+                                </div>
                             </div>
                             <div class="creation-form-footer">
                                 <button id="transaction_creation_submit_button"
-                                class="button-no-outline with-margin"
-                                type="submit">
+                                        class="button-no-outline with-margin"
+                                        type="submit">
                                     Submit
                                 </button>
                             </div>
@@ -253,39 +260,45 @@
                         </div>
                         <div class="category-menu">
                             <div class="category-submenu">
-                                <div class="submenu-header">Add category</div>
-                                <input id="category_name" name="category_name" placeholder="Name" type="text" value=""/>
-
+                                <div class="submenu-header">
+                                    Add category
+                                </div>
+                                <form name="add_category" class="submenu-body">
+                                    <input id="category_name"
+                                           name="category_name"
+                                           placeholder="Name"
+                                           type="text"
+                                           value=""/>
+                                </form>
                             </div>
                             <div class="category-submenu">
-                                <div class="submenu-header">Rename category</div>
-                                <select id="category" name="category">
-                                    <option value="volvo">Volvo</option>
-                                    <option value="saab">Saab</option>
-                                    <option value="fiat">Fiat</option>
-                                    <option value="audi">Audi</option>
-                                </select>
-                                <input id="category_name" name="category_name" placeholder="Name" type="text" value=""/>
+                                <div class="submenu-header">
+                                    Rename category
+                                </div>
+                                <form name="rename_category" class="submenu-body">
+                                    <div class="category-dynamic-dropdown">
+                                    </div>
+                                    <input id="category_name"
+                                           name="category_name"
+                                           placeholder="Name"
+                                           type="text"
+                                           value=""/>
+                                </form>
                             </div>
                             <div class="category-submenu">
-                                <div class="submenu-header">Delete category</div>
-                                <form name="base_currency" class="collapsible-form filter">
-                                    <div class="form-set"></div>
-                                        <input type="checkbox" name="PLN" id="PLN"/>
-                                        <label for="PLN">PLN</label>
-                                        <input type="checkbox" name="PLN" id="PLN"/>
-                                        <label for="PLN">PLN</label>
-                                        <input type="checkbox" name="PLN" id="PLN"/>
-                                        <label for="PLN">PLN</label>
-                                        <input type="checkbox" name="PLN" id="PLN"/>
-                                        <label for="PLN">PLN</label>
+                                <div class="submenu-header">
+                                    Delete category
+                                </div>
+                                <form name="delete_category" class="submenu-body">
+                                    <div class="form-grid-2-rows category-dynamic-checkboxes">
+                                    </div>
                                 </form>
                             </div>
                         </div>
                         <div class="creation-form-footer">
                             <button id="category_creation_submit_button"
-                            class="button-no-outline with-margin"
-                            type="submit">
+                                    class="button-no-outline with-margin"
+                                    type="submit">
                                 Submit
                             </button>
                         </div>
@@ -294,9 +307,7 @@
                                 <input id="category_name" name="category_name" placeholder="Name" type="text" value=""/>
                             </div>
                             <div class="creation-form-footer">
-                                <button id="category_creation_submit_button"
-                                class="button-no-outline with-margin"
-                                type="submit">
+                                <button id="category_creation_submit_button" class="button-no-outline with-margin" type="submit">
                                     Submit
                                 </button>
                             </div>

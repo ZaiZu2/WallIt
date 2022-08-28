@@ -5,6 +5,7 @@ import {
   monthlyChart,
   reloadMonthlyChart,
 } from "./chartjs.js";
+import { renderDropdowns, renderCheckboxes } from "./utils.js";
 
 const logOutButton = document.getElementById("log-out");
 logOutButton.addEventListener("click", logOut);
@@ -170,7 +171,7 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
     form.requestSubmit();
   });
 
-  transactions = await fetch("/api/transactions/fetch", {
+  user.transactions = await fetch("/api/transactions/fetch", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -243,37 +244,10 @@ async function updateFilters() {
     return response.json();
   });
 
-  // Save categories into a global variable with additional 'empty' category
-  categories = [...filters.category, null];
-  // Find all filter forms with checkboxes
-  const checkboxFields = document.querySelectorAll(".filter > .form-set");
-  // Define filter categories which should display and in what order
-  const renderOrder = ["base_currency", "category", "bank"];
-
-  // Dynamically create checkboxes for all the found filter categories
-  for (let [i, filterCategory] of Object.entries(renderOrder)) {
-    let temporaryFields = [];
-
-    for (let parameter of filters[filterCategory]) {
-      const input = document.createElement("input");
-      input.setAttribute("type", "checkbox");
-      input.setAttribute("name", parameter);
-      input.setAttribute("id", parameter);
-
-      const label = document.createElement("label");
-      label.setAttribute("for", parameter);
-      label.textContent = parameter;
-
-      temporaryFields.push(input);
-      temporaryFields.push(label);
-    }
-    if (temporaryFields.length == false) {
-      const message = document.createElement("p");
-      message.textContent = "No filters available";
-      temporaryFields.push(message);
-    }
-    checkboxFields[i].append(...temporaryFields);
-  }
+  // Save filters into a global variable with additional 'empty' category
+  user.categories = [...filters.category, null];
+  user.banks = filters.bank;
+  user.currencies = filters.base_currency;
 }
 
 function showUploadModal(responseStatus, uploadResults) {
@@ -336,9 +310,21 @@ function showUploadModal(responseStatus, uploadResults) {
 }
 
 function reloadWindows() {
+  reloadForms();
   reloadTable(transactionsTable);
   reloadCategoryChart(categoryChart);
   reloadMonthlyChart(monthlyChart);
+}
+
+async function reloadForms() {
+  await updateFilters();
+
+  renderDropdowns(user.categories, "category", "category-dynamic-dropdown");
+  renderDropdowns(user.banks, "bank", "bank-dynamic-dropdown");
+
+  renderCheckboxes(user.categories, "category-dynamic-checkboxes");
+  renderCheckboxes(user.banks, "bank-dynamic-checkboxes");
+  renderCheckboxes(user.currencies, "currency-dynamic-checkboxes");
 }
 
 function logOut() {
@@ -346,27 +332,24 @@ function logOut() {
   sessionStorage.clear();
 }
 
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
   // Load storage into temporary arrays
   if (sessionStorage.getItem("transactions") != null)
-    transactions = JSON.parse(sessionStorage.getItem("transactions"));
+    user.transactions = JSON.parse(sessionStorage.getItem("transactions"));
   if (sessionStorage.getItem("deletedTransactions") != null)
-    deletedTransactions = JSON.parse(
+    user.deletedTransactions = JSON.parse(
       sessionStorage.getItem("deletedTransactions")
     );
-  if (sessionStorage.getItem("categories") != null)
-    categories = JSON.parse(sessionStorage.getItem("categories"));
 
-  updateFilters();
+  await updateFilters();
   reloadWindows();
 });
 
 window.addEventListener("beforeunload", () => {
   // Update session storage
-  sessionStorage.setItem("transactions", JSON.stringify(transactions));
+  sessionStorage.setItem("transactions", JSON.stringify(user.transactions));
   sessionStorage.setItem(
     "deletedTransactions",
-    JSON.stringify(deletedTransactions)
+    JSON.stringify(user.deletedTransactions)
   );
-  sessionStorage.setItem("categories", JSON.stringify(categories));
 });

@@ -129,7 +129,7 @@ select {
   width: 100%;
   background: none;
   height: 2rem;
-  padding-left: 8px;
+  padding-left: 5px;
   box-sizing: border-box;
   border: var(--border-inactive);
   border-radius: 0.5rem;
@@ -390,6 +390,16 @@ button.active {
   align-items: center;
 }
 
+.form-grid-2-rows {
+  display: grid;
+  grid-template-rows: 1.5em;
+  grid-template-columns: repeat(2, auto);
+
+  column-gap: 8px;
+  justify-items: left;
+  align-items: center;
+}
+
 .form-set label {
   width: 100%;
   white-space: nowrap;
@@ -401,6 +411,10 @@ button.active {
 
   display: flex;
   flex-direction: column;
+}
+
+.creation-form-footer {
+  text-align: center;
 }
 
 .creation-form-inputs {
@@ -423,10 +437,10 @@ button.active {
 
 .category-submenu {
   flex: 1;
+  width: 100%;
 
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
 .submenu-header {
@@ -437,9 +451,14 @@ button.active {
   text-align: center;
 }
 
-.creation-form-footer {
-  border-top: var(--border-inactive);
-  text-align: center;
+.submenu-body {
+  flex: 1;
+  padding: 8px 0px;
+  border-bottom: var(--border-inactive);
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .hidden {
