@@ -1,6 +1,3 @@
-#! python3
-
-from sqlalchemy import select
 from wallit import app, db, logger
 from wallit.forms import LoginForm, SignUpForm, ResetPasswordForm
 from wallit.models import Transaction, User, Bank, Category
@@ -22,7 +19,6 @@ from flask import redirect, url_for, render_template, flash, request, abort
 from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.utils import secure_filename
 from werkzeug.wrappers import Response
-
 from sqlalchemy import select, func, between, and_, case
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -33,7 +29,6 @@ from typing import Any, Callable, Tuple
 @app.route("/")
 @login_required
 def index() -> str:
-
     return render_template(
         "index.html", current_user=current_user._get_current_object()
     )
@@ -132,7 +127,7 @@ def logout() -> Response:
 
 @app.route("/api/transactions/fetch", methods=["POST"])
 @login_required
-def post_transactions() -> JSONType:
+def post_transactions() -> Tuple[JSONType, int]:
     """Receive filter parameters in JSON, query DB for filtered values
     and return Transactions serialized to JSON
 
@@ -230,7 +225,7 @@ def fetch_filters() -> tuple[JSONType, int]:
 
 @app.route("/api/transactions/upload", methods=["POST"])
 @login_required
-def upload_statements() -> JSONType:
+def upload_statements() -> tuple[JSONType, int]:
     """Parse and save transactions from uploaded files
 
     Response JSON structure example:
@@ -334,14 +329,14 @@ def delete_transaction(id: int) -> Tuple[str, int]:
 
 @app.route("/api/transactions/add", methods=["POST"])
 @login_required
-def add_transaction() -> Tuple[dict[str, int], int]:
+def add_transaction() -> Tuple[JSONType, int]:
     """Add transaction"""
 
-    transactionSchema = TransactionSchema()
-    transaction = transactionSchema.load(request.json)
+    transaction = TransactionSchema().load(request.json)
+    transaction = convert_currency([transaction], current_user.main_currency)[0]
     db.session.add(transaction)
     db.session.commit()
-    # Successful deletion, returning new ID of the transaction for client-side synchronization
+    # Successful creation, returning new ID of the transaction for client-side synchronization
     return {"id": transaction.id}, 200
 
 
@@ -358,8 +353,9 @@ def modify_transaction(id: int) -> Tuple[str, int]:
 
 
 @app.route("/api/transactions/monthly", methods=["GET"])
+@login_required
 def monthly_statements() -> tuple[JSONType, int]:
-    """Return list of monthly saldos featuring incoming, outgoing and balance
+    """Return list of monthly saldos featuring incoming, outgoing and balance value
 
     Response JSON structure example:
     [

@@ -97,6 +97,7 @@ class Transaction(db.Model):
         """
         return cls.query.filter_by(id=id, user=user).first()
 
+
 class Bank(db.Model):
     __tablename__ = "banks"
 

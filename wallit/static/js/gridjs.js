@@ -5,6 +5,11 @@ import {
   monthlyChart,
   reloadMonthlyChart,
 } from "./chartjs.js";
+import {
+  addTransaction,
+  deleteTransaction,
+  modifyTransaction,
+} from "./utils.js";
 
 export function reloadTable(table) {
   table
@@ -149,69 +154,6 @@ const createActionButtons = () => {
 
   return [deletionButton, secondButton];
 };
-
-async function deleteTransaction(id) {
-  await fetch(`/api/transactions/${id}/delete`, {
-    method: "DELETE",
-    mode: "cors", // no-cors, *cors, same-origin
-    credentials: "same-origin", // include, *same-origin, omit
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
-    },
-  }).then((response) => {
-    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-
-    // Pop the transactions element with specified id into a deletedTransactions array
-    for (let i = 0; i < user.transactions.length; i++) {
-      if (user.transactions[i].id == id)
-        user.deletedTransactions.push(user.transactions.splice(i, 1)[0]);
-    }
-  });
-}
-
-async function addTransaction(transaction) {
-  const newTransactionId = await fetch("/api/transactions/add", {
-    method: "POST",
-    mode: "cors", // no-cors, *cors, same-origin
-    credentials: "same-origin", // include, *same-origin, omit
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
-    },
-    body: JSON.stringify(transaction),
-  })
-    .then((response) => {
-      if (!response.ok)
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      return response.json();
-    })
-    .then((data) => {
-      return data.id;
-    });
-
-  return newTransactionId;
-}
-
-async function modifyTransaction({ id, ...modifiedColumns }) {
-  await fetch(`/api/transactions/${id}/modify`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
-    },
-    body: JSON.stringify(modifiedColumns),
-  }).then((response) => {
-    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-  });
-
-  const modifiedTransaction = user.transactions.find(
-    (transaction) => transaction.id == id
-  );
-
-  for (let [columnName, columnValue] of Object.entries(modifiedColumns))
-    modifiedTransaction[columnName] = columnValue;
-}
 
 const undoDeletionButton = document.getElementById("undo_deletion");
 undoDeletionButton.addEventListener("click", async () => {

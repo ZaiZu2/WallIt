@@ -14,6 +14,7 @@ import csv
 from datetime import datetime
 import xml.etree.ElementTree as ET
 import requests
+from requests.exceptions import RequestException
 
 
 def validate_statement(origin: str, filename: str, file: typing.IO[bytes]) -> bool:
@@ -263,9 +264,6 @@ def convert_currency(
     )
     date_template = "&date={date}"
 
-    date_cache: dict[str, dict] = {}
-    API_counter = 0
-
     if "CURRENCYSCOOP_API_KEY" in app.config:
         base_url = base_url.format(
             key=app.config["CURRENCYSCOOP_API_KEY"], user_currency=user_currency
@@ -273,6 +271,8 @@ def convert_currency(
     else:
         raise InvalidConfigError("CurrencyScoop API key is not accessible")
 
+    date_cache: dict[str, dict] = {}
+    API_counter = 0
     for transaction in transactions:
         # Check if conversion is necessary
         if transaction.base_currency == user_currency:
@@ -290,8 +290,12 @@ def convert_currency(
         # If not, consume API and populate the date_cache with it
         if date not in date_cache:
             date_param = date_template.format(date=date)
-            r = requests.get(base_url + date_param)
-            r.raise_for_status()
+
+            try:
+                r = requests.get(base_url + date_param)
+                r.raise_for_status()
+            except RequestException as error:
+                logger.error("Error during currency conversion: ", error)
 
             date_cache[date] = r.json()["response"]
             API_counter += 1
@@ -311,3 +315,24 @@ def convert_currency(
         f"API was consumed {API_counter} times for {len(transactions)} transactions"
     )
     return transactions
+
+
+def get_currencies() -> list[str]:
+
+    base_url = "https://api.currencyscoop.com/v1/currencies?api_key={key}&type=fiat"
+
+    if "CURRENCYSCOOP_API_KEY" in app.config:
+        base_url = base_url.format(key=app.config["CURRENCYSCOOP_API_KEY"])
+    else:
+        raise InvalidConfigError("CurrencyScoop API key is not accessible")
+
+    try:
+        r = requests.get(base_url)
+        r.raise_for_status()
+    except RequestException as error:
+        print("Error during currency load: ", error)
+
+    response = r.json()
+    currencies = list(response["response"]["fiats"].keys())
+
+    return currencies

@@ -1,8 +1,8 @@
-from typing import Any
-from flask_login import current_user
 from wallit.models import Bank, Category, Transaction, User
 from wallit import ma
 
+from typing import Any
+from flask_login import current_user
 from marshmallow import (
     fields,
     post_dump,
@@ -57,7 +57,8 @@ class TransactionSchema(ma.SQLAlchemySchema):
     id = ma.auto_field()
     info = ma.auto_field()
     title = ma.auto_field()
-    amount = ma.auto_field("main_amount")
+    # required=True by default for 'amount' set by flask-marshmallow. WHY???
+    amount = ma.auto_field("main_amount", required=False)
     base_amount = ma.auto_field(required=True)
     base_currency = ma.auto_field(required=True, validate=validate.Length(equal=3))
     date = ma.auto_field("transaction_date", required=True)
@@ -71,15 +72,14 @@ class TransactionSchema(ma.SQLAlchemySchema):
         self, data: dict, **kwargs: dict[str, Any]
     ) -> Transaction:
         """Convert nested schema name to foreign key relationships and load into Transaction object"""
-        # TODO: Pluck field results in a nested orderedDict (with the Plucked field's key:value) during deserialization.
+        # TODO: Pluck field results in a nested orderedDict (with the Plucked field's name:value) during deserialization.
         # No clue how to avoid this.
 
         # Modify transaction instance passed in load()
         if self.instance:
             for column_name, value in data.items():
-                if issubclass(
-                    type(value), dict
-                ):  # temporary fix for issue described above
+                # For modified Transactions only Category name can be nested
+                if issubclass(type(value), dict):
                     category = Category.get_from_name(value["name"], current_user)
                     setattr(self.instance, column_name, category)
                 else:
@@ -87,25 +87,14 @@ class TransactionSchema(ma.SQLAlchemySchema):
             return self.instance
         # Create a new transaction if no instance was passed
         else:
-            category_name = data.get("category")
-            del data["category"]
-            bank_name = data.get("bank")
-            del data["bank"]
-            transaction = Transaction(user=current_user, **data)
+            if data["category"]:
+                data["category"] = Category.get_from_name(
+                    data["category"]["name"], current_user
+                )
+            if data["bank"]:
+                data["bank"] = Bank.get_from_name(data["bank"]["name"])
 
-            if category_name:
-                category = Category.get_from_name(
-                    category_name["name"], current_user
-                )  # temporary fix for issue described above
-                transaction.category = category
-
-            if bank_name:
-                bank = Bank.get_from_name(
-                    bank_name["name"]
-                )  # temporary fix for issue described above
-                transaction.bank = bank
-
-            return transaction
+            return Transaction(user=current_user, **data)
 
     @post_dump(pass_many=True)
     def _create_envelope(self, data: dict, **kwargs: dict[str, Any]) -> dict[str, dict]:

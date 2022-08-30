@@ -5,7 +5,7 @@ import {
   monthlyChart,
   reloadMonthlyChart,
 } from "./chartjs.js";
-import { renderDropdowns, renderCheckboxes } from "./utils.js";
+import { renderDropdowns, renderCheckboxes, addTransaction } from "./utils.js";
 
 const logOutButton = document.getElementById("log-out");
 logOutButton.addEventListener("click", logOut);
@@ -201,8 +201,8 @@ uploadSubmit.addEventListener("click", async function uploadStatements() {
     form.addEventListener("submit", (e) => {
       e.preventDefault();
 
-      const importData = new FormData(form);
-      for (let [key, file] of importData) {
+      const formData = new FormData(form);
+      for (let [key, file] of formData) {
         allData.append(key, file);
       }
     });
@@ -228,6 +228,23 @@ uploadSubmit.addEventListener("click", async function uploadStatements() {
     .then((data) => data);
 
   showUploadModal(responseStatus, uploadResults);
+});
+
+const manualTransactionSubmit =
+  document.getElementsByName("create_transaction")[0];
+manualTransactionSubmit.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const formData = new FormData(event.target);
+  const transaction = {};
+  for (let [name, value] of formData.entries()) {
+    if (name === "date") {
+      const date = new Date(value);
+      date.setHours(12);
+      transaction[name] = date.toISOString();
+    } else transaction[name] = value;
+  }
+  addTransaction(transaction);
 });
 
 async function updateFilters() {
@@ -333,23 +350,8 @@ function logOut() {
 }
 
 window.addEventListener("load", async () => {
-  // Load storage into temporary arrays
-  if (sessionStorage.getItem("transactions") != null)
-    user.transactions = JSON.parse(sessionStorage.getItem("transactions"));
-  if (sessionStorage.getItem("deletedTransactions") != null)
-    user.deletedTransactions = JSON.parse(
-      sessionStorage.getItem("deletedTransactions")
-    );
-
   await updateFilters();
   reloadWindows();
 });
 
-window.addEventListener("beforeunload", () => {
-  // Update session storage
-  sessionStorage.setItem("transactions", JSON.stringify(user.transactions));
-  sessionStorage.setItem(
-    "deletedTransactions",
-    JSON.stringify(user.deletedTransactions)
-  );
-});
+window.addEventListener("beforeunload", () => {});
