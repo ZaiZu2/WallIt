@@ -147,9 +147,7 @@ select:active {
 
 .button-std {
   width: fit-content;
-  height: 2rem;
   padding: 0 8px;
-  margin: 8px;
   box-sizing: border-box;
 
   background: none;
@@ -157,9 +155,10 @@ select:active {
 
   text-align: center;
   color: var(--main-font-inactive-color);
-  outline: var(--border-inactive);
+  border: var(--border-inactive);
   /* outline: 1px solid var(--main-font-active-color); */
 }
+
 .button-std:hover {
   color: var(--main-font-active-color);
   border: var(--border-active);
@@ -184,7 +183,6 @@ select:active {
 .button-no-outline:active,
 .button-std:active {
   background-color: var(--main-font-active-color);
-  outline: none;
   color: black;
 
   position: relative;
@@ -195,9 +193,18 @@ button.with-margin {
   margin: 8px;
 }
 
+button.medium {
+  font-size: 1rem;
+  height: 2rem;
+}
+
+button.centered {
+  margin: 0px auto;
+}
+
 button.active {
   color: var(--main-font-active-color);
-  outline: var(--border-active);
+  border: var(--border-active);
 }
 
 /* ****************************** */
@@ -312,7 +319,6 @@ button.active {
 }
 
 .subwindow-outline.creation-window {
-  height: auto;
   width: 200px;
 }
 
@@ -413,10 +419,6 @@ button.active {
   flex-direction: column;
 }
 
-.creation-form-footer {
-  text-align: center;
-}
-
 .creation-form-inputs {
   flex: 1;
   padding: 8px 0px;
@@ -447,6 +449,7 @@ button.active {
   width: auto;
   padding: 8px;
 
+  border-top: var(--border-inactive);
   border-bottom: var(--border-inactive);
   text-align: center;
 }
@@ -454,7 +457,6 @@ button.active {
 .submenu-body {
   flex: 1;
   padding: 8px 0px;
-  border-bottom: var(--border-inactive);
 
   display: flex;
   flex-direction: column;

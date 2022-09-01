@@ -229,17 +229,15 @@
                                        type="number"
                                        value=""/>
                                 <div class="available-currencies-dynamic-dropdown"></div>
-                                <input id="date" name="date" type="date" value="" required/>
+                                <input id="date" name="date" type="date" value=""/>
                                 <input id="place" name="place" placeholder="Place" type="text" value=""/>
                                 <div class="bank-dynamic-dropdown">
                                 </div>
                                 <div class="category-dynamic-dropdown">
                                 </div>
-                            </div>
-                            <div class="creation-form-footer">
                                 <button id="transaction_creation_submit"
-                                        class="button-no-outline with-margin"
-                                        type="submit">
+                                class="button-no-outline centered with-margin"
+                                type="submit">
                                     Submit
                                 </button>
                             </div>
@@ -256,47 +254,61 @@
                         </div>
                         <div class="category-menu">
                             <div class="category-submenu">
-                                <div class="submenu-header">
+                                <div class="submenu-header" style="border-top: none;">
                                     Add category
                                 </div>
-                                <form name="add_category" class="submenu-body">
-                                    <input id="category_name"
-                                           name="category_name"
-                                           placeholder="Name"
-                                           type="text"
-                                           value=""/>
+                                <form name="add_category">
+                                    <div class="submenu-body">
+                                        <input id="category_name"
+                                        name="category_name"
+                                        placeholder="Name"
+                                        type="text"
+                                        value=""/>
+                                        <button id="category_creation_submit_button"
+                                        class="button-std medium centered"
+                                        type="submit">
+                                            Add
+                                        </button>
+                                    </div>
                                 </form>
                             </div>
                             <div class="category-submenu">
                                 <div class="submenu-header">
                                     Rename category
                                 </div>
-                                <form name="rename_category" class="submenu-body">
-                                    <div class="category-dynamic-dropdown">
+                                <form name="rename_category">
+                                    <div class="submenu-body">
+                                        <div class="category-dynamic-dropdown">
+                                        </div>
+                                        <input id="category_name"
+                                               name="category_name"
+                                               placeholder="Name"
+                                               type="text"
+                                               value=""/>
+                                        <button id="category_creation_submit_button"
+                                        class="button-std medium centered"
+                                        type="submit">
+                                            Rename
+                                        </button>
                                     </div>
-                                    <input id="category_name"
-                                           name="category_name"
-                                           placeholder="Name"
-                                           type="text"
-                                           value=""/>
                                 </form>
                             </div>
                             <div class="category-submenu">
                                 <div class="submenu-header">
                                     Delete category
                                 </div>
-                                <form name="delete_category" class="submenu-body">
-                                    <div class="form-grid-2-rows category-dynamic-checkboxes">
+                                <form name="delete_category">
+                                    <div class="submenu-body" style="border-bottom: none;">
+                                        <div class="form-grid-2-rows category-dynamic-checkboxes">
+                                        </div>
+                                        <button id="category_creation_submit_button"
+                                        class="button-std medium centered"
+                                        type="submit">
+                                            Delete
+                                        </button>
                                     </div>
                                 </form>
                             </div>
-                        </div>
-                        <div class="creation-form-footer">
-                            <button id="category_creation_submit_button"
-                                    class="button-no-outline with-margin"
-                                    type="submit">
-                                Submit
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -333,7 +345,7 @@
             </h6>
             <div class="modal-content">
             </div>
-            <button id="modal-button" class="button-std">
+            <button id="modal-button" class="button-std medium with-margin">
                 Close
             </button>
         </div>

@@ -1,6 +1,6 @@
-from zoneinfo import available_timezones
-from wallit.models import Bank, Category, Transaction, User
 from wallit import ma
+from wallit.models import Bank, Category, Transaction, User
+from wallit.imports import get_currencies
 
 from typing import Any
 from flask_login import current_user
@@ -61,7 +61,12 @@ class TransactionSchema(ma.SQLAlchemySchema):
     # required=True by default for 'amount' set by flask-marshmallow. WHY???
     amount = ma.auto_field("main_amount", required=False)
     base_amount = ma.auto_field(required=True)
-    base_currency = ma.auto_field(required=True, validate=validate.Length(equal=3))
+    base_currency = ma.auto_field(
+        required=True,
+        validate=validate.And(
+            validate.Length(equal=3), validate.OneOf(get_currencies())
+        ),
+    )
     date = ma.auto_field("transaction_date", required=True)
     creation_date = ma.auto_field()
     place = ma.auto_field()
