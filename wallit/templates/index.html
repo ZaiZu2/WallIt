@@ -17,6 +17,9 @@
                 banks: [],
                 currencies: []
             }
+            let session = {
+                currencies: []
+            }
         </script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script type="module" src="../static/js/index.js" defer></script>
@@ -225,14 +228,7 @@
                                        required=""
                                        type="number"
                                        value=""/>
-                                <input id="base_currency"
-                                       name="base_currency"
-                                       placeholder="Currency*"
-                                       required=""
-                                       type="text"
-                                       minlength="3"
-                                       maxlength="3"
-                                       value=""/>
+                                <div class="available-currencies-dynamic-dropdown"></div>
                                 <input id="date" name="date" type="date" value="" required/>
                                 <input id="place" name="place" placeholder="Place" type="text" value=""/>
                                 <div class="bank-dynamic-dropdown">

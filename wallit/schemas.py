@@ -1,3 +1,4 @@
+from zoneinfo import available_timezones
 from wallit.models import Bank, Category, Transaction, User
 from wallit import ma
 
@@ -113,12 +114,16 @@ class TransactionFilterSchema(ma.Schema):
     )
     banks = fields.List(fields.String(), allow_none=True, data_key="bank")
     base_currencies = fields.List(
-        fields.String(),
+        fields.String(validate=validate.Length(equal=3)),
         allow_none=True,
         data_key="base_currency",
-        validate=validate.Length(equal=3),
     )
     categories = fields.List(fields.String(), allow_none=True, data_key="category")
+    available_currencies = fields.List(
+        fields.String(validate=validate.Length(equal=3)),
+        dump_only=True,
+        data_key="available_currencies",
+    )
 
     @pre_load
     def _remove_blanks(self, data: dict, **kwargs: dict[str, Any]) -> dict:

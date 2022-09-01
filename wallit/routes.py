@@ -11,6 +11,7 @@ from wallit.imports import (
     import_revolut_statement,
     validate_statement,
     convert_currency,
+    get_currencies,
 )
 from wallit.helpers import filter_transactions, JSONType
 from wallit.exceptions import FileError
@@ -174,33 +175,19 @@ def fetch_filters() -> tuple[JSONType, int]:
 
     Response JSON structure example:
     {
-        "bank": [
-            "Equabank",
-            "mBank",
-            "Revolut"
-        ],
-        "base_currency": [
-            "EUR",
-            "CZK",
-            "USD"
-        ],
-        "category": [
-            "groceries",
-            "restaurant",
-            "salary"
-        ]
+        "bank": ["Equabank", "Revolut", ...],
+        "base_currency": ["EUR", "CZK", "USD", ...],
+        "category": ["groceries", "restaurant", "salary", ...],
+        "currency_codes": ["USD", "EUR", "CZK", ...]
     }
 
     Returns:
         dict: lists containing values for each filtering parameter
     """
 
-    # Dict with prespecified filtering categories, to be filled with queried values
-    filter_dict = {
-        "base_currencies": "",
-        "categories": "",
-        "banks": "",
-    }
+    filter_dict = {}
+
+    filter_dict["available_currencies"] = get_currencies()
 
     category_query = select(Category.name.distinct()).filter_by(user=current_user)
     filter_dict["categories"] = db.session.scalars(category_query).all()
@@ -219,7 +206,9 @@ def fetch_filters() -> tuple[JSONType, int]:
     filter_dict["base_currencies"] = db.session.scalars(currency_query).all()
 
     # Schema used only to map server-side 'json' names to general ones specified by schema
-    schema = TransactionFilterSchema(only=("banks", "base_currencies", "categories"))
+    schema = TransactionFilterSchema(
+        only=("banks", "base_currencies", "categories", "available_currencies")
+    )
     return schema.dumps(filter_dict)
 
 
@@ -343,7 +332,7 @@ def add_transaction() -> Tuple[JSONType, int]:
 @app.route("/api/transactions/<int:id>/modify", methods=["PATCH"])
 @login_required
 def modify_transaction(id: int) -> Tuple[str, int]:
-    "Modify 'info','title','place' column of the transaction"
+    "Modify 'info','title','place', 'category' column of the transaction"
 
     transaction = Transaction.get_from_id(id, current_user)
     schema = TransactionSchema(only=("info", "title", "place", "category"))

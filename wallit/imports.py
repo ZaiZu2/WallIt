@@ -1,7 +1,9 @@
 #!python3
 
+from email.mime import base
+from email.policy import default
 from re import I
-from wallit import app, db
+from wallit import app, db, cache
 from wallit.models import Transaction, User, Bank
 from wallit.exceptions import FileError, InvalidConfigError
 from wallit import logger
@@ -15,6 +17,7 @@ from datetime import datetime
 import xml.etree.ElementTree as ET
 import requests
 from requests.exceptions import RequestException
+from collections import defaultdict
 
 
 def validate_statement(origin: str, filename: str, file: typing.IO[bytes]) -> bool:
@@ -271,7 +274,17 @@ def convert_currency(
     else:
         raise InvalidConfigError("CurrencyScoop API key is not accessible")
 
-    date_cache: dict[str, dict] = {}
+    # date_cache = {
+    #   "EUR": {
+    #       "10-11-2021": {
+    #           "USD": 0.95,
+    #       },
+    #   },
+    # }
+    date_cache: dict[str, dict[str, list]] = cache.get(
+        "conversion_rates"
+    ) or defaultdict(dict)
+
     API_counter = 0
     for transaction in transactions:
         # Check if conversion is necessary
@@ -288,7 +301,7 @@ def convert_currency(
 
         # Check if currency exchange rates are already cached for this date
         # If not, consume API and populate the date_cache with it
-        if date not in date_cache:
+        if not date_cache or date not in date_cache[user_currency]:
             date_param = date_template.format(date=date)
 
             try:
@@ -297,13 +310,15 @@ def convert_currency(
             except RequestException as error:
                 logger.error("Error during currency conversion: ", error)
 
-            date_cache[date] = r.json()["response"]
+            json = r.json()["response"]
+            base_currency, rates = json["base"], json["rates"]
+            date_cache[base_currency][date] = rates
             API_counter += 1
 
         # Calculate the amount
         transaction.main_amount = round(
             transaction.base_amount
-            / date_cache[date]["rates"][transaction.base_currency],
+            / date_cache[user_currency][date][transaction.base_currency],
             2,
         )
         logger.log(
@@ -311,13 +326,23 @@ def convert_currency(
             f"{transaction.base_amount} {transaction.base_currency} -> {transaction.main_amount} {user_currency}",
         )
 
+    cache.set("conversion_rates", date_cache)
     logger.debug(
         f"API was consumed {API_counter} times for {len(transactions)} transactions"
     )
     return transactions
 
 
+@cache.cached(key_prefix="available_currencies")
 def get_currencies() -> list[str]:
+    """Consume CurrencyScoop API to get currency codes available for currency conversion
+
+    Raises:
+        InvalidConfigError: Invalid flask config for CurrencyScoop
+
+    Returns:
+        list[str]: list of available currency codes
+    """
 
     base_url = "https://api.currencyscoop.com/v1/currencies?api_key={key}&type=fiat"
 

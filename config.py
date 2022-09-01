@@ -21,6 +21,10 @@ class Config:
     # File upload configuration
     MAX_CONTENT_LENGTH = 1024 * 1024
 
+    # Cache config
+    CACHE_TYPE = "SimpleCache"
+    CACHE_DEFAULT_TIMEOUT = 3600
+
     # Currency conversion API
     CURRENCYSCOOP_API_KEY = (
         os.environ.get("CURRENCYSCOOP_API_KEY") or "39c83a7c50bb795501ee384a76c18cac"

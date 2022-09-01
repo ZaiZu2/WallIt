@@ -265,6 +265,8 @@ async function updateFilters() {
   user.categories = [...filters.category, null];
   user.banks = filters.bank;
   user.currencies = filters.base_currency;
+
+  session.currencies = filters.available_currencies;
 }
 
 function showUploadModal(responseStatus, uploadResults) {
@@ -338,6 +340,11 @@ async function reloadForms() {
 
   renderDropdowns(user.categories, "category", "category-dynamic-dropdown");
   renderDropdowns(user.banks, "bank", "bank-dynamic-dropdown");
+  renderDropdowns(
+    session.currencies,
+    "base_currency",
+    "available-currencies-dynamic-dropdown"
+  );
 
   renderCheckboxes(user.categories, "category-dynamic-checkboxes");
   renderCheckboxes(user.banks, "bank-dynamic-checkboxes");
