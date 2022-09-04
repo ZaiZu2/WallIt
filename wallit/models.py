@@ -5,7 +5,7 @@ from wallit import db, login
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin, current_user
 from flask import abort
-
+from sqlalchemy import UniqueConstraint
 from datetime import datetime
 from typing import Any, Optional
 
@@ -120,6 +120,7 @@ class Bank(db.Model):
 
 class Category(db.Model):
     __tablename__ = "categories"
+    __table_args__ = (UniqueConstraint("name", "user_id", name="unique_category"),)
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Text, index=True, nullable=False)
