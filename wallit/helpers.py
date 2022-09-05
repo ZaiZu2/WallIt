@@ -43,6 +43,8 @@ def filter_transactions(filters: dict) -> list[Transaction]:
             # Query to find transactions which are related to these 'filter'_ids
             query = query.filter(FILTER_MAP[filter_name][0].in_(subquery))
 
+    query = query.order_by(Transaction.transaction_date.desc())
+
     transactions: list[Transaction] = query.all()
     logger.debug(str(query))
     # logger.debug(query.compile(compile_kwargs={"literal_binds": True}).string)
