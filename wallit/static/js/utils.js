@@ -85,7 +85,7 @@ export async function deleteTransaction(id) {
 }
 
 export async function addTransaction(transaction) {
-  const newTransactionId = await fetch("/api/transactions/add", {
+  const transactionId = await fetch("/api/transactions/add", {
     method: "POST",
     mode: "cors", // no-cors, *cors, same-origin
     credentials: "same-origin", // include, *same-origin, omit
@@ -104,7 +104,7 @@ export async function addTransaction(transaction) {
       return data.id;
     });
 
-  return newTransactionId;
+  return transactionId;
 }
 
 export async function modifyTransaction({ id, ...modifiedColumns }) {
@@ -125,4 +125,58 @@ export async function modifyTransaction({ id, ...modifiedColumns }) {
 
   for (let [columnName, columnValue] of Object.entries(modifiedColumns))
     modifiedTransaction[columnName] = columnValue;
+}
+
+export async function addCategory(category) {
+  const newCategory = await fetch("/api/category/add", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
+    },
+    body: JSON.stringify(category),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((data) => data);
+
+  user.categories[newCategory.name] = newCategory;
+  renderDropdowns(
+    Object.keys(user.categories),
+    "category",
+    "category-dynamic-dropdown"
+  );
+  renderCheckboxes(Object.keys(user.categories), "category-dynamic-checkboxes");
+}
+
+export async function deleteCategories(categoryNames) {
+  const deletedCategories = await fetch(`/api/category/delete`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
+    },
+    body: JSON.stringify(categoryNames),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((data) => data);
+
+  for (let deletedCategory of deletedCategories)
+    delete user.categories[deletedCategory.name];
+
+  renderDropdowns(
+    Object.keys(user.categories),
+    "category",
+    "category-dynamic-dropdown"
+  );
+  renderCheckboxes(Object.keys(user.categories), "category-dynamic-checkboxes");
 }

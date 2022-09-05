@@ -68,6 +68,12 @@ input[type="checkbox"]:disabled + label:before {
   background: #ddd;
 }
 
+label {
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
 option {
   background-color: var(--subwindow-bg-color);
 }

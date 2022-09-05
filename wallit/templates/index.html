@@ -111,8 +111,7 @@
                                 </div>
                             </form>
                             <form name="base_currency" class="collapsible-form filter">
-                                <div class="form-set currency-dynamic-checkboxes">
-                                </div>
+                                <div class="form-set currency-dynamic-checkboxes"></div>
                             </form>
                             <form name="category" class="collapsible-form filter">
                                 <div class="form-set category-dynamic-checkboxes">
@@ -228,7 +227,8 @@
                                        required=""
                                        type="number"
                                        value=""/>
-                                <div class="available-currencies-dynamic-dropdown"></div>
+                                <div class="available-currencies-dynamic-dropdown">
+                                </div>
                                 <input id="date" name="date" type="date" value=""/>
                                 <input id="place" name="place" placeholder="Place" type="text" value=""/>
                                 <div class="bank-dynamic-dropdown">
@@ -236,8 +236,8 @@
                                 <div class="category-dynamic-dropdown">
                                 </div>
                                 <button id="transaction_creation_submit"
-                                class="button-no-outline centered with-margin"
-                                type="submit">
+                                        class="button-no-outline centered with-margin"
+                                        type="submit">
                                     Submit
                                 </button>
                             </div>
@@ -259,14 +259,8 @@
                                 </div>
                                 <form name="add_category">
                                     <div class="submenu-body">
-                                        <input id="category_name"
-                                        name="category_name"
-                                        placeholder="Name"
-                                        type="text"
-                                        value=""/>
-                                        <button id="category_creation_submit_button"
-                                        class="button-std medium centered"
-                                        type="submit">
+                                        <input name="name" placeholder="Name" type="text" value=""/>
+                                        <button class="button-std medium centered" type="submit">
                                             Add
                                         </button>
                                     </div>
@@ -286,8 +280,8 @@
                                                type="text"
                                                value=""/>
                                         <button id="category_creation_submit_button"
-                                        class="button-std medium centered"
-                                        type="submit">
+                                                class="button-std medium centered"
+                                                type="submit">
                                             Rename
                                         </button>
                                     </div>
@@ -302,8 +296,8 @@
                                         <div class="form-grid-2-rows category-dynamic-checkboxes">
                                         </div>
                                         <button id="category_creation_submit_button"
-                                        class="button-std medium centered"
-                                        type="submit">
+                                                class="button-std medium centered"
+                                                type="submit">
                                             Delete
                                         </button>
                                     </div>

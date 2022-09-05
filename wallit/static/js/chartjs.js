@@ -1,7 +1,7 @@
 // Format transactions into used by Category Chart
 function calculateCategoryWeights() {
   // map array of categories into object
-  let categoryWeights = user.categories.reduce((obj, category) => {
+  let categoryWeights = Object.keys(user.categories).reduce((obj, category) => {
     obj[category] = 0;
     return obj;
   }, {});

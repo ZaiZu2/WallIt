@@ -5,7 +5,13 @@ import {
   monthlyChart,
   reloadMonthlyChart,
 } from "./chartjs.js";
-import { renderDropdowns, renderCheckboxes, addTransaction } from "./utils.js";
+import {
+  renderDropdowns,
+  renderCheckboxes,
+  addTransaction,
+  addCategory,
+  deleteCategories,
+} from "./utils.js";
 
 const logOutButton = document.getElementById("log-out");
 logOutButton.addEventListener("click", logOut);
@@ -230,9 +236,9 @@ uploadSubmit.addEventListener("click", async function uploadStatements() {
   showUploadModal(responseStatus, uploadResults);
 });
 
-const manualTransactionSubmit =
+const manualTransactionForm =
   document.getElementsByName("create_transaction")[0];
-manualTransactionSubmit.addEventListener("submit", async (event) => {
+manualTransactionForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const formData = new FormData(event.target);
@@ -245,6 +251,30 @@ manualTransactionSubmit.addEventListener("submit", async (event) => {
     } else transaction[name] = value;
   }
   addTransaction(transaction);
+});
+
+const addCategoryForm = document.getElementsByName("add_category")[0];
+addCategoryForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const formData = new FormData(event.target);
+  const category = {};
+  for (const [name, value] of formData.entries()) {
+    category[name] = value;
+  }
+  addCategory(category);
+});
+
+const deleteCategoryForm = document.getElementsByName("delete_category")[0];
+deleteCategoryForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const formData = new FormData(event.target);
+  const categories = [];
+  for (let categoryName of formData.keys())
+    categories.push({ id: user.categories[categoryName].id });
+
+  deleteCategories(categories);
 });
 
 async function updateFilters() {
@@ -261,8 +291,8 @@ async function updateFilters() {
     return response.json();
   });
 
-  // Save filters into a global variable with additional 'empty' category
-  user.categories = [...filters.category, null];
+  // Save filters into a global variable
+  user.categories = filters.category;
   user.banks = filters.bank;
   user.currencies = filters.base_currency;
 
@@ -338,16 +368,20 @@ function reloadWindows() {
 async function reloadForms() {
   await updateFilters();
 
-  renderDropdowns(user.categories, "category", "category-dynamic-dropdown");
-  renderDropdowns(user.banks, "bank", "bank-dynamic-dropdown");
+  renderDropdowns(
+    Object.keys(user.categories),
+    "category",
+    "category-dynamic-dropdown"
+  );
+  renderDropdowns(Object.keys(user.banks), "bank", "bank-dynamic-dropdown");
   renderDropdowns(
     session.currencies,
     "base_currency",
     "available-currencies-dynamic-dropdown"
   );
 
-  renderCheckboxes(user.categories, "category-dynamic-checkboxes");
-  renderCheckboxes(user.banks, "bank-dynamic-checkboxes");
+  renderCheckboxes(Object.keys(user.categories), "category-dynamic-checkboxes");
+  renderCheckboxes(Object.keys(user.banks), "bank-dynamic-checkboxes");
   renderCheckboxes(user.currencies, "currency-dynamic-checkboxes");
 }
 

@@ -36,7 +36,7 @@ class CategorySchema(ma.SQLAlchemySchema):
 
     id = ma.auto_field()
     name = ma.auto_field()
-    user = ma.auto_field()
+    # user = ma.auto_field()
 
 
 class BankSchema(ma.SQLAlchemySchema):
@@ -46,8 +46,8 @@ class BankSchema(ma.SQLAlchemySchema):
 
     id = ma.auto_field()
     name = ma.auto_field()
-    statement_type = ma.auto_field()
-    transactions = ma.auto_field()
+    # statement_type = ma.auto_field()
+    # transactions = ma.auto_field()
 
 
 class TransactionSchema(ma.SQLAlchemySchema):
@@ -58,7 +58,6 @@ class TransactionSchema(ma.SQLAlchemySchema):
     id = ma.auto_field()
     info = ma.auto_field()
     title = ma.auto_field()
-    # required=True by default for 'amount' set by flask-marshmallow. WHY???
     amount = ma.auto_field("main_amount", required=False)
     base_amount = ma.auto_field(required=True)
     base_currency = ma.auto_field(
@@ -107,23 +106,36 @@ class TransactionSchema(ma.SQLAlchemySchema):
         return {"transactions": data}
 
 
-class TransactionFilterSchema(ma.Schema):
+class FilterSchema(ma.Schema):
     """Schema used for validation of user-input filtering values"""
 
     amount = fields.Dict(
-        keys=fields.String(allow_none=True), values=fields.Float(allow_none=True)
+        keys=fields.String(allow_none=True),
+        values=fields.Float(allow_none=True),
+        load_only=True,
     )
     date = fields.Dict(
         keys=fields.String(allow_none=True),
         values=fields.DateTime(format="%Y-%m-%d", allow_none=True),
+        load_only=True,
     )
-    banks = fields.List(fields.String(), allow_none=True, data_key="bank")
     base_currencies = fields.List(
         fields.String(validate=validate.Length(equal=3)),
         allow_none=True,
         data_key="base_currency",
     )
-    categories = fields.List(fields.String(), allow_none=True, data_key="category")
+    banks = fields.Dict(
+        keys=fields.String(),
+        values=fields.Nested(BankSchema(only=("id", "name"))),
+        allow_none=True,
+        data_key="bank",
+    )
+    categories = fields.Dict(
+        keys=fields.String(),
+        values=fields.Nested(CategorySchema(only=("id", "name"))),
+        allow_none=True,
+        data_key="category",
+    )
     available_currencies = fields.List(
         fields.String(validate=validate.Length(equal=3)),
         dump_only=True,

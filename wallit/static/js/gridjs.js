@@ -66,7 +66,7 @@ const createCategoryDropdown = (cell, row, column) => {
   options.push(currentCategory);
 
   // Delete duplicate corresponding to above option element from temporary category array
-  const tempCategories = [...user.categories];
+  const tempCategories = [...Object.keys(user.categories), null];
   const index = tempCategories.indexOf(row.cells[6].data);
   if (index > -1) tempCategories.splice(index, 1);
 

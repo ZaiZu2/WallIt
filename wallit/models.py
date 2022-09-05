@@ -138,3 +138,8 @@ class Category(db.Model):
     def get_from_name(cls, category_name: str, user: User) -> Optional[Category]:
         """Query for Category with a name"""
         return cls.query.filter_by(name=category_name, user=user).first()
+
+    @classmethod
+    def get_from_id(cls, category_id: str, user: User) -> Optional[Category]:
+        """Query for Category with a name"""
+        return cls.query.filter_by(id=category_id, user=user).first()

@@ -406,12 +406,6 @@ button.active {
   align-items: center;
 }
 
-.form-set label {
-  width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
 .creation-form {
   height: 100%;
 

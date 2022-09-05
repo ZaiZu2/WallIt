@@ -1,8 +1,10 @@
+from crypt import methods
 from wallit import app, db, logger
 from wallit.forms import LoginForm, SignUpForm, ResetPasswordForm
 from wallit.models import Transaction, User, Bank, Category
 from wallit.schemas import (
-    TransactionFilterSchema,
+    CategorySchema,
+    FilterSchema,
     TransactionSchema,
     MonthlySaldoSchema,
 )
@@ -25,6 +27,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, MONTHLY
 from typing import Any, Callable, Tuple
+from collections import defaultdict
 
 
 @app.route("/")
@@ -128,7 +131,7 @@ def logout() -> Response:
 
 @app.route("/api/transactions/fetch", methods=["POST"])
 @login_required
-def post_transactions() -> Tuple[JSONType, int]:
+def fetch_transactions() -> Tuple[JSONType, int]:
     """Receive filter parameters in JSON, query DB for filtered values
     and return Transactions serialized to JSON
 
@@ -163,7 +166,7 @@ def post_transactions() -> Tuple[JSONType, int]:
         dict: JSON with transaction data
     """
 
-    transaction_filters = TransactionFilterSchema().load(request.json)
+    transaction_filters = FilterSchema().load(request.json)
     transactions = filter_transactions(transaction_filters)
     return TransactionSchema(many=True).dumps(transactions), 201
 
@@ -185,20 +188,21 @@ def fetch_filters() -> tuple[JSONType, int]:
         dict: lists containing values for each filtering parameter
     """
 
-    filter_dict = {}
-
+    filter_dict: dict[str, list | dict] = defaultdict(dict)
     filter_dict["available_currencies"] = get_currencies()
 
-    category_query = select(Category.name.distinct()).filter_by(user=current_user)
-    filter_dict["categories"] = db.session.scalars(category_query).all()
+    for category in Category.query.filter_by(user=current_user).all():
+        filter_dict["categories"][category.name] = category
 
     bank_query = (
-        select(Bank.name.distinct())
+        select(Bank)
         .select_from(Transaction)
         .join(Bank)
         .filter(Transaction.user == current_user)
+        .distinct()
     )
-    filter_dict["banks"] = db.session.scalars(bank_query).all()
+    for bank in db.session.scalars(bank_query).all():
+        filter_dict["banks"][bank.name] = bank
 
     currency_query = select(Transaction.base_currency.distinct()).filter(
         Transaction.user == current_user
@@ -206,10 +210,7 @@ def fetch_filters() -> tuple[JSONType, int]:
     filter_dict["base_currencies"] = db.session.scalars(currency_query).all()
 
     # Schema used only to map server-side 'json' names to general ones specified by schema
-    schema = TransactionFilterSchema(
-        only=("banks", "base_currencies", "categories", "available_currencies")
-    )
-    return schema.dumps(filter_dict)
+    return FilterSchema().dumps(filter_dict)
 
 
 @app.route("/api/transactions/upload", methods=["POST"])
@@ -323,9 +324,8 @@ def add_transaction() -> Tuple[JSONType, int]:
 
     transaction = TransactionSchema().load(request.json)
     transaction = convert_currency([transaction], current_user.main_currency)[0]
-    db.session.add(transaction)
     db.session.commit()
-    # Successful creation, returning new ID of the transaction for client-side synchronization
+
     return {"id": transaction.id}, 200
 
 
@@ -420,3 +420,32 @@ def monthly_statements() -> tuple[JSONType, int]:
             )
 
     return MonthlySaldoSchema(many=True).dumps(saldo), 200
+
+
+@app.route("/api/category/add", methods=["POST"])
+def add_category() -> tuple[JSONType, int]:
+    """Add category"""
+
+    verified_data = CategorySchema().load(request.json)
+    category = Category(user=current_user, **verified_data)
+    db.session.commit()
+
+    return CategorySchema().dumps(category), 201
+
+
+@app.route("/api/category/delete", methods=["DELETE"])
+def delete_category() -> tuple[JSONType, int]:
+    """Delete category"""
+
+    verified_data = CategorySchema(many=True, only=("id",)).load(request.json)
+
+    deleted_categories: list[dict] = []
+    for category in verified_data:
+        if category := Category.get_from_id(category["id"], current_user):
+            deleted_categories.append(category)
+
+    for deleted_category in deleted_categories:
+        db.session.delete(deleted_category)
+    db.session.commit()
+
+    return CategorySchema(many=True).dumps(deleted_categories), 201
