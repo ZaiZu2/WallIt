@@ -155,13 +155,13 @@ select:active {
 
   text-align: center;
   color: var(--main-font-inactive-color);
-  border: var(--border-inactive);
+  outline: var(--border-inactive);
   /* outline: 1px solid var(--main-font-active-color); */
 }
 
 .button-std:hover {
   color: var(--main-font-active-color);
-  border: var(--border-active);
+  outline: var(--border-active);
 }
 
 .button-no-outline {
@@ -204,7 +204,7 @@ button.centered {
 
 button.active {
   color: var(--main-font-active-color);
-  border: var(--border-active);
+  outline: var(--border-active);
 }
 
 /* ****************************** */

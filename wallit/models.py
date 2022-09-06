@@ -5,7 +5,7 @@ from wallit import db, login
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin, current_user
 from flask import abort
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import UniqueConstraint, CheckConstraint
 from datetime import datetime
 from typing import Any, Optional
 
@@ -120,10 +120,21 @@ class Bank(db.Model):
 
 class Category(db.Model):
     __tablename__ = "categories"
-    __table_args__ = (UniqueConstraint("name", "user_id", name="unique_category"),)
+    __table_args__ = (
+        UniqueConstraint("name", "user_id", name="unique_user_category_key"),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.Text, index=True, nullable=False)
+    name = db.Column(
+        db.Text,
+        # Check if not empty string and a single chain of characters/digits (with foreign characters)
+        CheckConstraint(
+            "name <> '' AND name ~ '^[\u00BF-\u1FFF\u2C00-\uD7FF\w]+$'",
+            name="single_word_name_check",
+        ),
+        index=True,
+        nullable=False,
+    )
     user_id = db.Column(
         db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
