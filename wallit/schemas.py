@@ -22,11 +22,30 @@ class UserSchema(ma.SQLAlchemySchema):
         ordered = True
 
     id = ma.auto_field()
-    username = ma.auto_field()
+    username = ma.auto_field(
+        validate=validate.Regexp(
+            "^[A-Za-z0-9]+$",
+            error="Username must be a single word consisting of alpha-numeric characters",
+        )
+    )
     email = ma.auto_field(validate=validate.Email())
-    first_name = ma.auto_field()
-    last_name = ma.auto_field()
-    main_currency = ma.auto_field(validate=validate.Length(equal=3))
+    first_name = ma.auto_field(
+        validate=validate.Regexp(
+            "^[A-Za-z][a-z]*$",
+            error="Name must be a single word starting with a capital letter",
+        )
+    )
+    last_name = ma.auto_field(
+        validate=validate.Regexp(
+            "^[A-Za-z][a-z]*$",
+            error="Last name must be a single word starting with a capital letter",
+        )
+    )
+    main_currency = ma.auto_field(
+        validate=validate.OneOf(
+            get_currencies(), error="Only available currency can be accepted"
+        )
+    )
 
 
 class CategorySchema(ma.SQLAlchemySchema):
@@ -34,9 +53,15 @@ class CategorySchema(ma.SQLAlchemySchema):
         model = Category
         ordered = True
 
-    id = ma.auto_field()
-    name = ma.auto_field()
-    # user = ma.auto_field()
+    id = ma.auto_field(dump_only=True)
+    name = ma.auto_field(
+        validate=validate.Regexp(
+            # Single chain of characters/digits
+            # with no whitespaces (foreign characters included)
+            "^[\u00BF-\u1FFF\u2C00-\uD7FF\w]+$",
+            error="Category name must be a single word",
+        )
+    )
 
 
 class BankSchema(ma.SQLAlchemySchema):
@@ -44,9 +69,9 @@ class BankSchema(ma.SQLAlchemySchema):
         model = Bank
         ordered = True
 
-    id = ma.auto_field()
+    id = ma.auto_field(dump_only=True)
     name = ma.auto_field()
-    # statement_type = ma.auto_field()
+    statement_type = ma.auto_field(load_only=True)
     # transactions = ma.auto_field()
 
 
@@ -62,9 +87,7 @@ class TransactionSchema(ma.SQLAlchemySchema):
     base_amount = ma.auto_field(required=True)
     base_currency = ma.auto_field(
         required=True,
-        validate=validate.And(
-            validate.Length(equal=3), validate.OneOf(get_currencies())
-        ),
+        validate=validate.OneOf(get_currencies()),
     )
     date = ma.auto_field("transaction_date", required=True)
     creation_date = ma.auto_field()
@@ -120,7 +143,11 @@ class FilterSchema(ma.Schema):
         load_only=True,
     )
     base_currencies = fields.List(
-        fields.String(validate=validate.Length(equal=3)),
+        fields.String(
+            validate=validate.OneOf(
+                get_currencies(), error="Only available currency can be accepted"
+            )
+        ),
         allow_none=True,
         data_key="base_currency",
     )
@@ -177,3 +204,97 @@ MonthlySaldoSchema = ma.Schema.from_dict(
     },
     name="MonthlySaldoSchema",
 )
+
+# WIP New structure of filter schemas
+class FiltersSchema(ma.Schema):
+    """Schema used for validation of filtering values"""
+
+    amount = fields.Dict(
+        keys=fields.String(validate=validate.OneOf(["min", "max"])),
+        values=fields.Float(),
+    )
+    date = fields.Dict(
+        keys=fields.String(validate=validate.OneOf(["min", "max"])),
+        values=fields.DateTime(format="%Y-%m-%d"),
+    )
+    base_currencies = fields.List(
+        fields.String(
+            validate=validate.OneOf(
+                get_currencies(), error="Only available currency can be accepted"
+            )
+        ),
+        data_key="base_currency",
+    )
+    banks = fields.List(fields.Integer(), data_key="bank")
+    categories = fields.List(fields.Integer(), data_key="category")
+
+    @pre_load
+    def _remove_blanks(self, data: dict, **kwargs: dict[str, Any]) -> dict:
+        """Replace empty values (strings) with None"""
+
+        cleaned_data = deepcopy(data)
+        for key, value in data.items():
+            if isinstance(value, dict):
+                for nested_key, nested_value in data[key].items():
+                    if not nested_value:
+                        cleaned_data[key][nested_key] = None
+            elif not value:
+                cleaned_data[key] = None
+
+        return cleaned_data
+
+    @validates_schema
+    def _check_range_filters(self, data: dict, **kwargs: dict[str, Any]) -> None:
+        for filter in ["amount", "date"]:
+            if (
+                data[filter]["min"]
+                and data[filter]["max"]
+                and data[filter]["min"] > data[filter]["max"]
+            ):
+                raise ValidationError("Lower end cannot be higher than higher end")
+
+
+class UserEntitiesSchema(ma.Schema):
+    """Schema used for dumping entities assigned to user"""
+
+    base_currencies = fields.List(
+        fields.String(
+            validate=validate.OneOf(
+                get_currencies(), error="Only available currency can be accepted"
+            )
+        ),
+        dump_only=True,
+        data_key="base_currencies",
+    )
+    banks = fields.Dict(
+        keys=fields.String(),
+        values=fields.Nested(BankSchema()),
+        dump_only=True,
+        data_key="banks",
+    )
+    categories = fields.Dict(
+        keys=fields.String(),
+        values=fields.Nested(CategorySchema()),
+        dump_only=True,
+        data_key="categories",
+    )
+
+
+class SessionEntitiesSchema(ma.Schema):
+    """Schema used for dumping entities assigned to user"""
+
+    currencies = fields.List(
+        fields.String(
+            validate=validate.OneOf(
+                get_currencies(), error="Only available currency can be accepted"
+            )
+        ),
+        dump_only=True,
+        data_key="currencies",
+    )
+    banks = fields.Dict(
+        keys=fields.String(),
+        values=fields.Nested(BankSchema()),
+        dump_only=True,
+        data_key="banks",
+    )

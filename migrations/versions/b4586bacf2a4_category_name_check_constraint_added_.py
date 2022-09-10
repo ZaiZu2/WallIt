@@ -1,8 +1,8 @@
 """category name check constraint added, category unique constraint renamed
 
-Revision ID: 9676a8c4279e
+Revision ID: b4586bacf2a4
 Revises: a7dde7b63243
-Create Date: 2022-09-06 22:38:56.628536
+Create Date: 2022-09-07 20:43:13.964691
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = "9676a8c4279e"
+revision = "b4586bacf2a4"
 down_revision = "a7dde7b63243"
 branch_labels = None
 depends_on = None
@@ -29,7 +29,7 @@ def upgrade():
         """
         ALTER TABLE categories
             ADD CONSTRAINT single_word_name_check
-            CHECK (name <> '' AND name ~ '^[\u00BF-\u1FFF\u2C00-\uD7FF\w]+$')
+            CHECK (name ~ '^[\u00BF-\u1FFF\u2C00-\uD7FF\w]+$')
             NO INHERIT;
         """
     )

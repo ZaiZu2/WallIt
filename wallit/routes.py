@@ -5,7 +5,10 @@ from wallit.models import Transaction, User, Bank, Category
 from wallit.schemas import (
     CategorySchema,
     FilterSchema,
+    SessionEntitiesSchema,
     TransactionSchema,
+    UserEntitiesSchema,
+    FiltersSchema,
     MonthlySaldoSchema,
 )
 from wallit.imports import (
@@ -129,7 +132,7 @@ def logout() -> Response:
     return redirect(url_for("welcome"))
 
 
-@app.route("/api/transactions/fetch", methods=["POST"])
+@app.route("/api/transactions", methods=["POST"])
 @login_required
 def fetch_transactions() -> Tuple[JSONType, int]:
     """Receive filter parameters in JSON, query DB for filtered values
@@ -166,15 +169,26 @@ def fetch_transactions() -> Tuple[JSONType, int]:
         dict: JSON with transaction data
     """
 
-    transaction_filters = FilterSchema().load(request.json)
+    transaction_filters = FiltersSchema().load(request.json)
     transactions = filter_transactions(transaction_filters)
     return TransactionSchema(many=True).dumps(transactions), 201
 
 
-@app.route("/api/transactions/filters", methods=["GET"])
+@app.route("/api/entities", methods=["GET"])
 @login_required
-def fetch_filters() -> tuple[JSONType, int]:
-    """Fetch dynamic filtering values for user
+def fetch_session_entities() -> tuple[JSONType, int]:
+    response_body: dict[str, list | dict] = defaultdict(dict)
+    response_body["currencies"] = get_currencies()
+    for bank in Bank.query.all():
+        response_body["banks"][bank.name] = bank
+
+    return SessionEntitiesSchema().dumps(response_body), 201
+
+
+@app.route("/api/user/entities", methods=["GET"])
+@login_required
+def fetch_user_entities() -> tuple[JSONType, int]:
+    """Fetch entities assigned to user
 
     Response JSON structure example:
     {
@@ -188,29 +202,16 @@ def fetch_filters() -> tuple[JSONType, int]:
         dict: lists containing values for each filtering parameter
     """
 
-    filter_dict: dict[str, list | dict] = defaultdict(dict)
-    filter_dict["available_currencies"] = get_currencies()
+    response_body: dict[str, list | dict] = defaultdict(dict)
 
-    for category in Category.query.filter_by(user=current_user).all():
-        filter_dict["categories"][category.name] = category
-
-    bank_query = (
-        select(Bank)
-        .select_from(Transaction)
-        .join(Bank)
-        .filter(Transaction.user == current_user)
-        .distinct()
-    )
-    for bank in db.session.scalars(bank_query).all():
-        filter_dict["banks"][bank.name] = bank
-
-    currency_query = select(Transaction.base_currency.distinct()).filter(
-        Transaction.user == current_user
-    )
-    filter_dict["base_currencies"] = db.session.scalars(currency_query).all()
+    for category in current_user.select_categories():
+        response_body["categories"][category.name] = category
+    for bank in current_user.select_banks():
+        response_body["banks"][bank.name] = bank
+    response_body["base_currencies"] = current_user.select_base_currencies()
 
     # Schema used only to map server-side 'json' names to general ones specified by schema
-    return FilterSchema().dumps(filter_dict)
+    return UserEntitiesSchema().dumps(response_body)
 
 
 @app.route("/api/transactions/upload", methods=["POST"])
@@ -428,8 +429,8 @@ def add_category() -> tuple[JSONType, int]:
 
     verified_data = CategorySchema().load(request.json)
     category = Category(user=current_user, **verified_data)
+    db.session.add(category)
     db.session.commit()
-
     return CategorySchema().dumps(category), 201
 
 

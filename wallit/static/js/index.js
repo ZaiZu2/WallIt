@@ -177,7 +177,7 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
     form.requestSubmit();
   });
 
-  user.transactions = await fetch("/api/transactions/fetch", {
+  user.transactions = await fetch("/api/transactions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -277,12 +277,10 @@ deleteCategoryForm.addEventListener("submit", (event) => {
   deleteCategories(categories);
 });
 
-async function updateFilters() {
+async function updateSessionEntities() {
   // Fetch filter data based on user's transactions from server
-  const filters = await fetch("/api/transactions/filters", {
+  const entities = await fetch("/api/entities", {
     method: "GET", // *GET, POST, PUT, DELETE, etc.
-    mode: "cors", // no-cors, *cors, same-origin
-    credentials: "same-origin", // include, *same-origin, omit
     headers: {
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
     },
@@ -291,12 +289,27 @@ async function updateFilters() {
     return response.json();
   });
 
-  // Save filters into a global variable
-  user.categories = filters.category;
-  user.banks = filters.bank;
-  user.currencies = filters.base_currency;
+  // Save entities into a global variable
+  session.currencies = entities.currencies;
+  session.banks = entities.banks;
+}
 
-  session.currencies = filters.available_currencies;
+async function updateUserEntities() {
+  // Fetch filter data based on user's transactions from server
+  const entities = await fetch("/api/user/entities", {
+    method: "GET", // *GET, POST, PUT, DELETE, etc.
+    headers: {
+      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
+    },
+  }).then((response) => {
+    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+    return response.json();
+  });
+
+  // Save entities into a global variable
+  user.categories = entities.categories;
+  user.banks = entities.banks;
+  user.currencies = entities.base_currencies;
 }
 
 function showUploadModal(responseStatus, uploadResults) {
@@ -358,7 +371,10 @@ function showUploadModal(responseStatus, uploadResults) {
   }
 }
 
-function reloadWindows() {
+async function reloadWindows() {
+  await updateUserEntities();
+  await updateSessionEntities();
+
   reloadForms();
   reloadTable(transactionsTable);
   reloadCategoryChart(categoryChart);
@@ -366,23 +382,35 @@ function reloadWindows() {
 }
 
 async function reloadForms() {
-  await updateFilters();
-
   renderDropdowns(
     Object.keys(user.categories),
     "category",
     "category-dynamic-dropdown"
   );
-  renderDropdowns(Object.keys(user.banks), "bank", "bank-dynamic-dropdown");
+  renderDropdowns(
+    Object.keys(user.banks),
+    "bank",
+    "user-bank-dynamic-dropdown"
+  );
+  renderDropdowns(
+    Object.keys(session.banks),
+    "bank",
+    "session-bank-dynamic-dropdown"
+  );
   renderDropdowns(
     session.currencies,
     "base_currency",
-    "available-currencies-dynamic-dropdown"
+    "session-currency-dynamic-dropdown"
+  );
+  renderDropdowns(
+    user.currencies,
+    "base_currency",
+    "user-currency-dynamic-dropdown"
   );
 
   renderCheckboxes(Object.keys(user.categories), "category-dynamic-checkboxes");
-  renderCheckboxes(Object.keys(user.banks), "bank-dynamic-checkboxes");
-  renderCheckboxes(user.currencies, "currency-dynamic-checkboxes");
+  renderCheckboxes(Object.keys(user.banks), "user-bank-dynamic-checkboxes");
+  renderCheckboxes(user.currencies, "user-currency-dynamic-checkboxes");
 }
 
 function logOut() {
@@ -391,7 +419,7 @@ function logOut() {
 }
 
 window.addEventListener("load", async () => {
-  await updateFilters();
+  await updateUserEntities();
   reloadWindows();
 });
 

@@ -5,7 +5,8 @@ from wallit import db, login
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin, current_user
 from flask import abort
-from sqlalchemy import UniqueConstraint, CheckConstraint
+from sqlalchemy import UniqueConstraint, CheckConstraint, select
+from sqlalchemy.orm import with_parent
 from datetime import datetime
 from typing import Any, Optional
 
@@ -50,6 +51,25 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password: str) -> bool:
         return check_password_hash(self.password_hash, password)
+
+    def select_categories(self):
+        return Category.query.where(with_parent(self, User.categories)).all()
+
+    def select_banks(self):
+        return (
+            Bank.query.select_from(Transaction)
+            .join(Bank)
+            .filter(Transaction.user == self)
+            .distinct()
+            .all()
+        )
+
+    def select_base_currencies(self):
+        return db.session.scalars(
+            select(Transaction.base_currency)
+            .where(with_parent(self, User.transactions))
+            .distinct()
+        ).all()
 
 
 @login.user_loader
@@ -127,9 +147,10 @@ class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(
         db.Text,
-        # Check if not empty string and a single chain of characters/digits (with foreign characters)
         CheckConstraint(
-            "name <> '' AND name ~ '^[\u00BF-\u1FFF\u2C00-\uD7FF\w]+$'",
+            # Single chain of characters/digits
+            # with no whitespaces (foreign characters included)
+            "name ~ '^[\u00BF-\u1FFF\u2C00-\uD7FF\w]+$'",
             name="single_word_name_check",
         ),
         index=True,
