@@ -11,6 +11,12 @@ from datetime import datetime
 from typing import Any, Optional
 
 
+class UpdatableMixin:
+    def update(self, data) -> None:
+        for column, value in data.items():
+            setattr(self, column, value)
+
+
 class User(UserMixin, db.Model):
     __tablename__ = "users"
 
@@ -138,7 +144,7 @@ class Bank(db.Model):
         return cls.query.filter_by(name=bank_name).first()
 
 
-class Category(db.Model):
+class Category(db.Model, UpdatableMixin):
     __tablename__ = "categories"
     __table_args__ = (
         UniqueConstraint("name", "user_id", name="unique_user_category_key"),

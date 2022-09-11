@@ -4,15 +4,48 @@ import {
 } from "https://unpkg.com/htm/preact/standalone.module.js";
 import { Fragment } from "https://unpkg.com/preact?module";
 
-function DynamicDropdown(props) {
+function DynamicObjectDropdown(props) {
   return html`
-    <select id="${props.name}" name="${props.name}">
+    <select id=${props.name} name=${props.name}>
+      ${Object.values(props.items).map((item) => {
+        return html`<option
+          value=${item.id}
+          selected=${item.name === props.startingItem ? true : false}
+        >
+          ${item.name}
+        </option>`;
+      })}
+    </select>
+  `;
+}
+
+export function renderObjectDropdowns(
+  items,
+  dropdownName,
+  parentClass,
+  startingItem = ""
+) {
+  const parentNodes = document.getElementsByClassName(parentClass);
+  for (let parentNode of parentNodes)
+    render(
+      html`<${DynamicObjectDropdown}
+        name=${dropdownName}
+        items=${items}
+        startingItem=${startingItem}
+      />`,
+      parentNode
+    );
+}
+
+function DynamicListDropdown(props) {
+  return html`
+    <select id=${props.name} name=${props.name}>
       ${props.items.map((item) => html`<option value=${item}>${item}</option>`)}
     </select>
   `;
 }
 
-export function renderDropdowns(
+export function renderListDropdowns(
   items,
   dropdownName,
   parentClass,
@@ -32,12 +65,40 @@ export function renderDropdowns(
   const parentNodes = document.getElementsByClassName(parentClass);
   for (let parentNode of parentNodes)
     render(
-      html`<${DynamicDropdown} name=${dropdownName} items=${items} />`,
+      html`<${DynamicListDropdown} name=${dropdownName} items=${items} />`,
       parentNode
     );
 }
 
-function DynamicCheckboxes(props) {
+function DynamicObjectCheckboxes(props) {
+  return html`
+      <${Fragment}>
+        ${Object.values(props.items).map((item, id) => {
+          return html`
+            <input
+              type="checkbox"
+              name=${item.name}
+              value=${item.id}
+              id=${props.form + "_" + item.id}
+            />
+            <label for=${props.form + "_" + item.id}>${item.name}</label>
+          `;
+        })}
+      </${Fragment}>
+    `;
+}
+
+export function renderObjectCheckboxes(items, parentClass) {
+  const parentNodes = document.getElementsByClassName(parentClass);
+
+  for (let i = 0; i < parentNodes.length; i++)
+    render(
+      html`<${DynamicObjectCheckboxes} form=${`form_${i}`} items=${items} />`,
+      parentNodes[i]
+    );
+}
+
+function DynamicListCheckboxes(props) {
   return html`
       <${Fragment}>
         ${props.items.map((item, id) => {
@@ -45,6 +106,7 @@ function DynamicCheckboxes(props) {
             <input
               type="checkbox"
               name=${item}
+              value=${item}
               id=${props.form + "_" + item + "_" + id}
             />
             <label for=${props.form + "_" + item + "_" + id}>${item}</label>
@@ -54,12 +116,12 @@ function DynamicCheckboxes(props) {
     `;
 }
 
-export function renderCheckboxes(items, parentClass) {
+export function renderListCheckboxes(items, parentClass) {
   const parentNodes = document.getElementsByClassName(parentClass);
 
   for (let i = 0; i < parentNodes.length; i++)
     render(
-      html`<${DynamicCheckboxes} form=${`form_${i}`} items=${items} />`,
+      html`<${DynamicListCheckboxes} form=${`form_${i}`} items=${items} />`,
       parentNodes[i]
     );
 }
@@ -120,7 +182,7 @@ export async function modifyTransaction({ id, ...modifiedColumns }) {
   });
 
   const modifiedTransaction = user.transactions.find(
-    (transaction) => transaction.id == id
+    (transaction) => transaction.id === id
   );
 
   for (let [columnName, columnValue] of Object.entries(modifiedColumns))
@@ -145,12 +207,47 @@ export async function addCategory(category) {
     .then((data) => data);
 
   user.categories[newCategory.name] = newCategory;
-  renderDropdowns(
+  renderListDropdowns(
     Object.keys(user.categories),
     "category",
     "category-dynamic-dropdown"
   );
-  renderCheckboxes(Object.keys(user.categories), "category-dynamic-checkboxes");
+  renderListCheckboxes(
+    Object.keys(user.categories),
+    "category-dynamic-checkboxes"
+  );
+}
+
+export async function modifyCategory(id, ...modifiedColumns) {
+  const newCategory = await fetch(`/api/category/${id}/modify`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
+    },
+    body: JSON.stringify(modifiedColumns),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((data) => data);
+
+  modifiedCategory = user.categories.find((category) => category.id === id);
+  for (let [columnName, columnValue] of Object.entries(modifiedColumns))
+    modifiedCategory[columnName] = columnValue;
+
+  renderListDropdowns(
+    Object.keys(user.categories),
+    "category",
+    "category-dynamic-dropdown"
+  );
+  renderListCheckboxes(
+    Object.keys(user.categories),
+    "category-dynamic-checkboxes"
+  );
 }
 
 export async function deleteCategories(categoryNames) {
@@ -173,10 +270,13 @@ export async function deleteCategories(categoryNames) {
   for (let deletedCategory of deletedCategories)
     delete user.categories[deletedCategory.name];
 
-  renderDropdowns(
+  renderListDropdowns(
     Object.keys(user.categories),
     "category",
     "category-dynamic-dropdown"
   );
-  renderCheckboxes(Object.keys(user.categories), "category-dynamic-checkboxes");
+  renderListCheckboxes(
+    Object.keys(user.categories),
+    "category-dynamic-checkboxes"
+  );
 }

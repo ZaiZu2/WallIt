@@ -174,6 +174,81 @@ def fetch_transactions() -> Tuple[JSONType, int]:
     return TransactionSchema(many=True).dumps(transactions), 201
 
 
+@app.route("/api/transactions/<int:id>/delete", methods=["DELETE"])
+@login_required
+def delete_transaction(id: int) -> Tuple[str, int]:
+    """Delete transaction with given Id"""
+
+    transaction = Transaction.get_from_id(id, current_user)
+    db.session.delete(transaction)
+    db.session.commit()
+    return "", 200
+
+
+@app.route("/api/transactions/add", methods=["POST"])
+@login_required
+def add_transaction() -> Tuple[JSONType, int]:
+    """Add transaction"""
+
+    transaction = TransactionSchema().load(request.json)
+    transaction = convert_currency([transaction], current_user.main_currency)[0]
+    db.session.commit()
+
+    return {"id": transaction.id}, 200
+
+
+@app.route("/api/transactions/<int:id>/modify", methods=["PATCH"])
+@login_required
+def modify_transaction(id: int) -> Tuple[str, int]:
+    "Modify 'info','title','place', 'category' column of the transaction"
+
+    transaction = Transaction.get_from_id(id, current_user)
+    schema = TransactionSchema(only=("info", "title", "place", "category"))
+    transaction = schema.load(request.json, instance=transaction)
+    db.session.commit()
+    return "", 204
+
+
+@app.route("/api/category/add", methods=["POST"])
+def add_category() -> tuple[JSONType, int]:
+    """Add category"""
+
+    verified_data = CategorySchema().load(request.json)
+    category = Category(user=current_user, **verified_data)
+    db.session.add(category)
+    db.session.commit()
+    return CategorySchema().dumps(category), 201
+
+
+@app.route("/api/category/<int:id>/modify", methods=["PATCH"])
+def modify_category(id) -> tuple[JSONType, int]:
+    """Modify category"""
+
+    verified_data = CategorySchema().load(request.json)
+    category = Category.query.get_or_404(id)
+    category.update(verified_data)
+    db.session.commit()
+    return CategorySchema().dumps(category), 201
+
+
+@app.route("/api/category/delete", methods=["DELETE"])
+def delete_category() -> tuple[JSONType, int]:
+    """Delete category"""
+
+    verified_data = CategorySchema(many=True, only=("id",)).load(request.json)
+
+    deleted_categories = []
+    for category in verified_data:
+        if category := Category.get_from_id(category["id"], current_user):
+            deleted_categories.append(category)
+
+    for deleted_category in deleted_categories:
+        db.session.delete(deleted_category)
+    db.session.commit()
+
+    return CategorySchema(many=True).dumps(deleted_categories), 201
+
+
 @app.route("/api/entities", methods=["GET"])
 @login_required
 def fetch_session_entities() -> tuple[JSONType, int]:
@@ -307,41 +382,6 @@ def upload_statements() -> tuple[JSONType, int]:
         return upload_results, 201
 
 
-@app.route("/api/transactions/<int:id>/delete", methods=["DELETE"])
-@login_required
-def delete_transaction(id: int) -> Tuple[str, int]:
-    """Delete transaction with given Id"""
-
-    transaction = Transaction.get_from_id(id, current_user)
-    db.session.delete(transaction)
-    db.session.commit()
-    return "", 200
-
-
-@app.route("/api/transactions/add", methods=["POST"])
-@login_required
-def add_transaction() -> Tuple[JSONType, int]:
-    """Add transaction"""
-
-    transaction = TransactionSchema().load(request.json)
-    transaction = convert_currency([transaction], current_user.main_currency)[0]
-    db.session.commit()
-
-    return {"id": transaction.id}, 200
-
-
-@app.route("/api/transactions/<int:id>/modify", methods=["PATCH"])
-@login_required
-def modify_transaction(id: int) -> Tuple[str, int]:
-    "Modify 'info','title','place', 'category' column of the transaction"
-
-    transaction = Transaction.get_from_id(id, current_user)
-    schema = TransactionSchema(only=("info", "title", "place", "category"))
-    transaction = schema.load(request.json, instance=transaction)
-    db.session.commit()
-    return "", 204
-
-
 @app.route("/api/transactions/monthly", methods=["GET"])
 @login_required
 def monthly_statements() -> tuple[JSONType, int]:
@@ -421,32 +461,3 @@ def monthly_statements() -> tuple[JSONType, int]:
             )
 
     return MonthlySaldoSchema(many=True).dumps(saldo), 200
-
-
-@app.route("/api/category/add", methods=["POST"])
-def add_category() -> tuple[JSONType, int]:
-    """Add category"""
-
-    verified_data = CategorySchema().load(request.json)
-    category = Category(user=current_user, **verified_data)
-    db.session.add(category)
-    db.session.commit()
-    return CategorySchema().dumps(category), 201
-
-
-@app.route("/api/category/delete", methods=["DELETE"])
-def delete_category() -> tuple[JSONType, int]:
-    """Delete category"""
-
-    verified_data = CategorySchema(many=True, only=("id",)).load(request.json)
-
-    deleted_categories: list[dict] = []
-    for category in verified_data:
-        if category := Category.get_from_id(category["id"], current_user):
-            deleted_categories.append(category)
-
-    for deleted_category in deleted_categories:
-        db.session.delete(deleted_category)
-    db.session.commit()
-
-    return CategorySchema(many=True).dumps(deleted_categories), 201

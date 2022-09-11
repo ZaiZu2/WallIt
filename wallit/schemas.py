@@ -12,6 +12,7 @@ from marshmallow import (
     validate,
     validates_schema,
     ValidationError,
+    EXCLUDE,
 )
 from copy import deepcopy
 
@@ -211,11 +212,11 @@ class FiltersSchema(ma.Schema):
 
     amount = fields.Dict(
         keys=fields.String(validate=validate.OneOf(["min", "max"])),
-        values=fields.Float(),
+        values=fields.Float(allow_none=True),
     )
     date = fields.Dict(
         keys=fields.String(validate=validate.OneOf(["min", "max"])),
-        values=fields.DateTime(format="%Y-%m-%d"),
+        values=fields.DateTime(format="%Y-%m-%d", allow_none=True),
     )
     base_currencies = fields.List(
         fields.String(
@@ -223,14 +224,17 @@ class FiltersSchema(ma.Schema):
                 get_currencies(), error="Only available currency can be accepted"
             )
         ),
+        allow_none=True,
         data_key="base_currency",
     )
-    banks = fields.List(fields.Integer(), data_key="bank")
-    categories = fields.List(fields.Integer(), data_key="category")
+    banks = fields.List(fields.Integer(), allow_none=True, data_key="bank")
+    categories = fields.List(fields.Integer(), allow_none=True, data_key="category")
 
     @pre_load
     def _remove_blanks(self, data: dict, **kwargs: dict[str, Any]) -> dict:
         """Replace empty values (strings) with None"""
+        # TODO: Temporary fix for wrongly structured Request body
+        # Sends fields with empty string instead of omitting them in request body
 
         cleaned_data = deepcopy(data)
         for key, value in data.items():

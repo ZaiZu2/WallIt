@@ -6,10 +6,13 @@ import {
   reloadMonthlyChart,
 } from "./chartjs.js";
 import {
-  renderDropdowns,
-  renderCheckboxes,
+  renderListDropdowns,
+  renderObjectDropdowns,
+  renderListCheckboxes,
+  renderObjectCheckboxes,
   addTransaction,
   addCategory,
+  modifyCategory,
   deleteCategories,
 } from "./utils.js";
 
@@ -151,7 +154,7 @@ dateInputs.forEach((input) => {
 
 // Submit multiple forms and send request with JSONified input
 const filterSubmit = document.getElementById("filter_submit_button");
-filterSubmit.addEventListener("click", async function updateTransactions() {
+filterSubmit.addEventListener("click", async () => {
   // Object which will be filled with filter parameters and passed in the request
   const inputs = {};
 
@@ -192,7 +195,8 @@ filterSubmit.addEventListener("click", async function updateTransactions() {
     })
     .then((data) => data.transactions);
 
-  reloadWindows();
+  reloadTable(transactionsTable);
+  reloadCategoryChart(categoryChart);
 });
 
 // Submit multiple forms and send request with JSONified input
@@ -236,9 +240,8 @@ uploadSubmit.addEventListener("click", async function uploadStatements() {
   showUploadModal(responseStatus, uploadResults);
 });
 
-const manualTransactionForm =
-  document.getElementsByName("create_transaction")[0];
-manualTransactionForm.addEventListener("submit", async (event) => {
+const addTransactionForm = document.getElementsByName("create_transaction")[0];
+addTransactionForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const formData = new FormData(event.target);
@@ -263,6 +266,18 @@ addCategoryForm.addEventListener("submit", (event) => {
     category[name] = value;
   }
   addCategory(category);
+});
+
+const modifyCategoryForm = document.getElementsByName("modify_category")[0];
+modifyCategoryForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const formData = new FormData(event.target);
+  const modifiedColumns = {};
+  for (const [name, value] of formData.entries()) {
+    modifiedColumns[name] = value;
+  }
+  modifyCategory(modifiedColumns);
 });
 
 const deleteCategoryForm = document.getElementsByName("delete_category")[0];
@@ -372,9 +387,6 @@ function showUploadModal(responseStatus, uploadResults) {
 }
 
 async function reloadWindows() {
-  await updateUserEntities();
-  await updateSessionEntities();
-
   reloadForms();
   reloadTable(transactionsTable);
   reloadCategoryChart(categoryChart);
@@ -382,35 +394,27 @@ async function reloadWindows() {
 }
 
 async function reloadForms() {
-  renderDropdowns(
-    Object.keys(user.categories),
+  renderObjectDropdowns(
+    user.categories,
     "category",
     "category-dynamic-dropdown"
   );
-  renderDropdowns(
-    Object.keys(user.banks),
-    "bank",
-    "user-bank-dynamic-dropdown"
-  );
-  renderDropdowns(
-    Object.keys(session.banks),
-    "bank",
-    "session-bank-dynamic-dropdown"
-  );
-  renderDropdowns(
+  renderObjectDropdowns(user.banks, "bank", "user-bank-dynamic-dropdown");
+  renderObjectDropdowns(session.banks, "bank", "session-bank-dynamic-dropdown");
+  renderListDropdowns(
     session.currencies,
     "base_currency",
     "session-currency-dynamic-dropdown"
   );
-  renderDropdowns(
+  renderListDropdowns(
     user.currencies,
     "base_currency",
     "user-currency-dynamic-dropdown"
   );
 
-  renderCheckboxes(Object.keys(user.categories), "category-dynamic-checkboxes");
-  renderCheckboxes(Object.keys(user.banks), "user-bank-dynamic-checkboxes");
-  renderCheckboxes(user.currencies, "user-currency-dynamic-checkboxes");
+  renderObjectCheckboxes(user.categories, "category-dynamic-checkboxes");
+  renderObjectCheckboxes(user.banks, "user-bank-dynamic-checkboxes");
+  renderListCheckboxes(user.currencies, "user-currency-dynamic-checkboxes");
 }
 
 function logOut() {
@@ -420,6 +424,7 @@ function logOut() {
 
 window.addEventListener("load", async () => {
   await updateUserEntities();
+  await updateSessionEntities();
   reloadWindows();
 });
 
