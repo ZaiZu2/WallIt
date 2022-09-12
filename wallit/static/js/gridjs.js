@@ -1,5 +1,9 @@
 import { Grid, h } from "https://unpkg.com/gridjs?module";
 import {
+  html,
+  render,
+} from "https://unpkg.com/htm/preact/standalone.module.js";
+import {
   categoryChart,
   reloadCategoryChart,
   monthlyChart,
@@ -54,58 +58,34 @@ const editableCellAttributes = (cell, row, column) => {
   }
 };
 
-const createCategoryDropdown = (cell, row, column) => {
-  // Disgustingly ugly, but works.
-  let options = [];
-
-  let currentCategory = h(
-    "option",
-    { value: row.cells[6].data },
-    row.cells[6].data
-  );
-  options.push(currentCategory);
-
-  // Delete duplicate corresponding to above option element from temporary category array
-  const tempCategories = [...Object.keys(user.categories), null];
-  const index = tempCategories.indexOf(row.cells[6].data);
-  if (index > -1) tempCategories.splice(index, 1);
-
-  // Create the rest of possible categories
-  for (let category of tempCategories) {
-    let option = h("option", { value: category }, category);
-    options.push(option);
-  }
-
-  const select = h(
-    "select",
-    {
-      name: "category",
-      onchange: async (event) => {
-        const formData = new FormData(event.target.parentNode);
-        await modifyTransaction({
-          id: row.cells[0].data,
-          category:
-            formData.get("category") === "" ? null : formData.get("category"),
-        });
-        reloadCategoryChart(categoryChart);
-      },
-    },
-    options
-  );
-
-  const form = h(
-    "form",
-    {
-      name: "category_change",
-      onsubmit: () => {
-        preventDefault();
-      },
-    },
-    select
-  );
-
-  return form;
-};
+function TableCategoryDropdown(props) {
+  return html`
+    <form name="category_change" onsubmit=${() => preventDefault()}>
+      <select
+        id=${props.name}
+        name=${props.name}
+        onInput=${async (event) => {
+          const formData = new FormData(event.target.parentNode);
+          await modifyTransaction({
+            id: props.transactionId,
+            category:
+              formData.get("category") === "" ? null : formData.get("category"),
+          });
+          reloadCategoryChart(categoryChart);
+        }}
+      >
+        ${Object.values(props.items).map((item) => {
+          return html`<option
+            value=${item.id}
+            selected=${item.name === props.startingItem ? true : false}
+          >
+            ${item.name}
+          </option>`;
+        })}
+      </select>
+    </form>
+  `;
+}
 
 const createActionButtons = () => {
   const span = h(
@@ -200,12 +180,12 @@ tableBody.addEventListener("focusin", (event) => {
 tableBody.addEventListener("focusout", async (event) => {
   if (event.target.contentEditable == "true") {
     if (event.target.textContent != oldValue) {
-      const transactionId = event.target.dataset.id;
+      const transactionId = parseInt(event.target.dataset.id);
       const columnName = event.target.dataset.columnId;
       const columnValue = event.target.textContent;
 
       modifyTransaction({
-        id: event.target.dataset.id,
+        id: transactionId,
         [columnName]: columnValue,
       });
     }
@@ -262,7 +242,17 @@ export const transactionsTable = new Grid({
       id: "category",
       name: "Category",
       sort: { enabled: false },
-      formatter: createCategoryDropdown,
+      // formatter: createCategoryDropdown,
+      formatter: (cell, row) => {
+        const noCategory = { empty: { id: "", name: "" } };
+
+        return html`<${TableCategoryDropdown}
+          name="category"
+          items=${{ ...user.categories, ...noCategory }}
+          startingItem=${row.cells[6].data ? row.cells[6].data : ""}
+          transactionId=${row.cells[0].data}
+        />`;
+      },
     },
     { id: "date", name: "Date", search: { enabled: false } },
     {

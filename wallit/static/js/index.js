@@ -173,7 +173,7 @@ filterSubmit.addEventListener("click", async () => {
         // Create an array for checkbox values
       } else {
         const localInputs = [];
-        formData.forEach((value, key) => localInputs.push(key));
+        formData.forEach((value, key) => localInputs.push(value));
         inputs[form.name] = localInputs;
       }
     });
@@ -280,16 +280,16 @@ modifyCategoryForm.addEventListener("submit", (event) => {
   modifyCategory(modifiedColumns);
 });
 
-const deleteCategoryForm = document.getElementsByName("delete_category")[0];
-deleteCategoryForm.addEventListener("submit", (event) => {
+const deleteCategoriesForm = document.getElementsByName("delete_category")[0];
+deleteCategoriesForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
   const formData = new FormData(event.target);
-  const categories = [];
+  const categoryIds = [];
   for (let categoryName of formData.keys())
-    categories.push({ id: user.categories[categoryName].id });
+    categoryIds.push({ id: user.categories[categoryName].id });
 
-  deleteCategories(categories);
+  deleteCategories(categoryIds);
 });
 
 async function updateSessionEntities() {

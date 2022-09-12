@@ -190,7 +190,7 @@ export async function modifyTransaction({ id, ...modifiedColumns }) {
 }
 
 export async function addCategory(category) {
-  const newCategory = await fetch("/api/category/add", {
+  const newCategory = await fetch("/api/categories/add", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -219,7 +219,7 @@ export async function addCategory(category) {
 }
 
 export async function modifyCategory(id, ...modifiedColumns) {
-  const newCategory = await fetch(`/api/category/${id}/modify`, {
+  const newCategory = await fetch(`/api/categories/${id}/modify`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -250,14 +250,14 @@ export async function modifyCategory(id, ...modifiedColumns) {
   );
 }
 
-export async function deleteCategories(categoryNames) {
-  const deletedCategories = await fetch(`/api/category/delete`, {
+export async function deleteCategories(categoryIds) {
+  const deletedCategories = await fetch(`/api/categories/delete`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
     },
-    body: JSON.stringify(categoryNames),
+    body: JSON.stringify(categoryIds),
   })
     .then((response) => {
       if (!response.ok) {
@@ -270,13 +270,10 @@ export async function deleteCategories(categoryNames) {
   for (let deletedCategory of deletedCategories)
     delete user.categories[deletedCategory.name];
 
-  renderListDropdowns(
-    Object.keys(user.categories),
+  renderObjectDropdowns(
+    user.categories,
     "category",
     "category-dynamic-dropdown"
   );
-  renderListCheckboxes(
-    Object.keys(user.categories),
-    "category-dynamic-checkboxes"
-  );
+  renderObjectCheckboxes(user.categories, "category-dynamic-checkboxes");
 }

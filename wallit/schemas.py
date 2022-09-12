@@ -54,7 +54,7 @@ class CategorySchema(ma.SQLAlchemySchema):
         model = Category
         ordered = True
 
-    id = ma.auto_field(dump_only=True)
+    id = ma.auto_field()
     name = ma.auto_field(
         validate=validate.Regexp(
             # Single chain of characters/digits
@@ -93,23 +93,21 @@ class TransactionSchema(ma.SQLAlchemySchema):
     date = ma.auto_field("transaction_date", required=True)
     creation_date = ma.auto_field()
     place = ma.auto_field()
-    category = fields.Pluck(CategorySchema, "name", allow_none=True)
-    bank = fields.Pluck(BankSchema, "name", allow_none=True)
+    category = fields.Pluck(CategorySchema, "id", allow_none=True)
+    bank = fields.Pluck(BankSchema, "id", allow_none=True)
 
     @post_load
     def _convert_to_transaction(
         self, data: dict, **kwargs: dict[str, Any]
     ) -> Transaction:
         """Convert nested schema name to foreign key relationships and load into Transaction object"""
-        # TODO: Pluck field results in a nested orderedDict (with the Plucked field's name:value) during deserialization.
-        # No clue how to avoid this.
 
         # Modify transaction instance passed in load()
         if self.instance:
             for column_name, value in data.items():
-                # For modified Transactions only Category name can be nested
+                # For modified Transactions only Category name can be nested (for now)
                 if issubclass(type(value), dict):
-                    category = Category.get_from_name(value["name"], current_user)
+                    category = Category.get_from_id(value["id"], current_user)
                     setattr(self.instance, column_name, category)
                 else:
                     setattr(self.instance, column_name, value)
@@ -234,7 +232,7 @@ class FiltersSchema(ma.Schema):
     def _remove_blanks(self, data: dict, **kwargs: dict[str, Any]) -> dict:
         """Replace empty values (strings) with None"""
         # TODO: Temporary fix for wrongly structured Request body
-        # Sends fields with empty string instead of omitting them in request body
+        # Client sends fields with empty string instead of omitting them in request body
 
         cleaned_data = deepcopy(data)
         for key, value in data.items():

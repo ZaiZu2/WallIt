@@ -209,7 +209,7 @@ def modify_transaction(id: int) -> Tuple[str, int]:
     return "", 204
 
 
-@app.route("/api/category/add", methods=["POST"])
+@app.route("/api/categories/add", methods=["POST"])
 def add_category() -> tuple[JSONType, int]:
     """Add category"""
 
@@ -220,7 +220,7 @@ def add_category() -> tuple[JSONType, int]:
     return CategorySchema().dumps(category), 201
 
 
-@app.route("/api/category/<int:id>/modify", methods=["PATCH"])
+@app.route("/api/categories/<int:id>/modify", methods=["PATCH"])
 def modify_category(id) -> tuple[JSONType, int]:
     """Modify category"""
 
@@ -231,11 +231,11 @@ def modify_category(id) -> tuple[JSONType, int]:
     return CategorySchema().dumps(category), 201
 
 
-@app.route("/api/category/delete", methods=["DELETE"])
+@app.route("/api/categories/delete", methods=["DELETE"])
 def delete_category() -> tuple[JSONType, int]:
-    """Delete category"""
+    """Delete multiple categories"""
 
-    verified_data = CategorySchema(many=True, only=("id",)).load(request.json)
+    verified_data = CategorySchema(many=True).load(request.json, partial=True)
 
     deleted_categories = []
     for category in verified_data:
