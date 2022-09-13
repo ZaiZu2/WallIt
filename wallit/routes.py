@@ -4,9 +4,9 @@ from wallit.forms import LoginForm, SignUpForm, ResetPasswordForm
 from wallit.models import Transaction, User, Bank, Category
 from wallit.schemas import (
     CategorySchema,
-    FilterSchema,
     SessionEntitiesSchema,
     TransactionSchema,
+    ModifyTransactionSchema,
     UserEntitiesSchema,
     FiltersSchema,
     MonthlySaldoSchema,
@@ -203,13 +203,14 @@ def modify_transaction(id: int) -> Tuple[str, int]:
     "Modify 'info','title','place', 'category' column of the transaction"
 
     transaction = Transaction.get_from_id(id, current_user)
-    schema = TransactionSchema(only=("info", "title", "place", "category"))
-    transaction = schema.load(request.json, instance=transaction)
+    verified_data = ModifyTransactionSchema().load(request.json)
+    transaction.update(verified_data)
     db.session.commit()
     return "", 204
 
 
 @app.route("/api/categories/add", methods=["POST"])
+@login_required
 def add_category() -> tuple[JSONType, int]:
     """Add category"""
 
@@ -221,7 +222,8 @@ def add_category() -> tuple[JSONType, int]:
 
 
 @app.route("/api/categories/<int:id>/modify", methods=["PATCH"])
-def modify_category(id) -> tuple[JSONType, int]:
+@login_required
+def modify_category(id: int) -> tuple[JSONType, int]:
     """Modify category"""
 
     verified_data = CategorySchema().load(request.json)
@@ -232,6 +234,7 @@ def modify_category(id) -> tuple[JSONType, int]:
 
 
 @app.route("/api/categories/delete", methods=["DELETE"])
+@login_required
 def delete_category() -> tuple[JSONType, int]:
     """Delete multiple categories"""
 

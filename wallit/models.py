@@ -12,7 +12,7 @@ from typing import Any, Optional
 
 
 class UpdatableMixin:
-    def update(self, data) -> None:
+    def update(self, data: dict[str, Any]) -> None:
         for column, value in data.items():
             setattr(self, column, value)
 
@@ -83,7 +83,7 @@ def load_user(id: str) -> User:
     return User.query.get(int(id))
 
 
-class Transaction(db.Model):
+class Transaction(UpdatableMixin, db.Model):
     __tablename__ = "transactions"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -143,6 +143,11 @@ class Bank(db.Model):
         """Query for Bank with a name"""
         return cls.query.filter_by(name=bank_name).first()
 
+    @classmethod
+    def get_from_id(cls, bank_id: str, user: User) -> Optional[Category]:
+        """Query for Bank with an id"""
+        return cls.query.filter_by(id=bank_id, user=user).first()
+
 
 class Category(db.Model, UpdatableMixin):
     __tablename__ = "categories"
@@ -179,5 +184,5 @@ class Category(db.Model, UpdatableMixin):
 
     @classmethod
     def get_from_id(cls, category_id: str, user: User) -> Optional[Category]:
-        """Query for Category with a name"""
+        """Query for Category with an id"""
         return cls.query.filter_by(id=category_id, user=user).first()

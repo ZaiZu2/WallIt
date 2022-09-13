@@ -12,7 +12,6 @@ from marshmallow import (
     validate,
     validates_schema,
     ValidationError,
-    EXCLUDE,
 )
 from copy import deepcopy
 
@@ -128,70 +127,24 @@ class TransactionSchema(ma.SQLAlchemySchema):
         return {"transactions": data}
 
 
-class FilterSchema(ma.Schema):
-    """Schema used for validation of user-input filtering values"""
+class ModifyTransactionSchema(ma.Schema):
+    """Schema used for validation of modified transaction"""
 
-    amount = fields.Dict(
-        keys=fields.String(allow_none=True),
-        values=fields.Float(allow_none=True),
-        load_only=True,
-    )
-    date = fields.Dict(
-        keys=fields.String(allow_none=True),
-        values=fields.DateTime(format="%Y-%m-%d", allow_none=True),
-        load_only=True,
-    )
-    base_currencies = fields.List(
-        fields.String(
-            validate=validate.OneOf(
-                get_currencies(), error="Only available currency can be accepted"
+    info = fields.String(load_only=True)
+    title = fields.String(load_only=True)
+    place = fields.String(load_only=True)
+    category = fields.Pluck(CategorySchema, "id", allow_none=True, load_only=True)
+    bank = fields.Pluck(BankSchema, "id", allow_none=True, load_only=True)
+
+    @post_load
+    def _findModelObjects(self, data: dict[str, Any], **kwargs: dict[str, Any]):
+        if "category" in data:
+            data["category"] = Category.get_from_id(
+                data["category"]["id"], current_user
             )
-        ),
-        allow_none=True,
-        data_key="base_currency",
-    )
-    banks = fields.Dict(
-        keys=fields.String(),
-        values=fields.Nested(BankSchema(only=("id", "name"))),
-        allow_none=True,
-        data_key="bank",
-    )
-    categories = fields.Dict(
-        keys=fields.String(),
-        values=fields.Nested(CategorySchema(only=("id", "name"))),
-        allow_none=True,
-        data_key="category",
-    )
-    available_currencies = fields.List(
-        fields.String(validate=validate.Length(equal=3)),
-        dump_only=True,
-        data_key="available_currencies",
-    )
-
-    @pre_load
-    def _remove_blanks(self, data: dict, **kwargs: dict[str, Any]) -> dict:
-        """Replace empty values (strings) with None"""
-
-        cleaned_data = deepcopy(data)
-        for key, value in data.items():
-            if isinstance(value, dict):
-                for nested_key, nested_value in data[key].items():
-                    if not nested_value:
-                        cleaned_data[key][nested_key] = None
-            elif not value:
-                cleaned_data[key] = None
-
-        return cleaned_data
-
-    @validates_schema
-    def _check_range_filters(self, data: dict, **kwargs: dict[str, Any]) -> None:
-        for filter in ["amount", "date"]:
-            if (
-                data[filter]["min"]
-                and data[filter]["max"]
-                and data[filter]["min"] > data[filter]["max"]
-            ):
-                raise ValidationError("Lower end cannot be higher than higher end")
+        if "bank" in data:
+            data["bank"] = Bank.get_from_id(data["bank"]["id"], current_user)
+        return data
 
 
 MonthlySaldoSchema = ma.Schema.from_dict(
@@ -204,7 +157,7 @@ MonthlySaldoSchema = ma.Schema.from_dict(
     name="MonthlySaldoSchema",
 )
 
-# WIP New structure of filter schemas
+
 class FiltersSchema(ma.Schema):
     """Schema used for validation of filtering values"""
 
