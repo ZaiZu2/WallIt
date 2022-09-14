@@ -88,7 +88,7 @@ def reset_password() -> Response:
 
         flash("Account with given email does not exist", "reset_password_message")
 
-    # Reassign form.errors to flash as they will be inaccessible after after redirection
+    # Reassign form.errors to flash as they will be inaccessible after redirection
     for field in reset_password_form._fields.values():
         for error in field.errors:
             flash(error, "reset_password_message")

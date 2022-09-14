@@ -69,10 +69,8 @@ class BankSchema(ma.SQLAlchemySchema):
         model = Bank
         ordered = True
 
-    id = ma.auto_field(dump_only=True)
+    id = ma.auto_field()
     name = ma.auto_field()
-    statement_type = ma.auto_field(load_only=True)
-    # transactions = ma.auto_field()
 
 
 class TransactionSchema(ma.SQLAlchemySchema):
@@ -137,13 +135,21 @@ class ModifyTransactionSchema(ma.Schema):
     bank = fields.Pluck(BankSchema, "id", allow_none=True, load_only=True)
 
     @post_load
-    def _findModelObjects(self, data: dict[str, Any], **kwargs: dict[str, Any]):
+    def _findModelObjects(
+        self, data: dict[str, Any], **kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
         if "category" in data:
-            data["category"] = Category.get_from_id(
-                data["category"]["id"], current_user
-            )
+            if data["category"]:
+                data["category"] = Category.get_from_id(
+                    data["category"]["id"], current_user
+                )
+            else:
+                data["category"] = None
         if "bank" in data:
-            data["bank"] = Bank.get_from_id(data["bank"]["id"], current_user)
+            if data["bank"]:
+                data["bank"] = Bank.query.filter_by(id=data["bank"]["id"])
+            else:
+                data["bank"] = None
         return data
 
 

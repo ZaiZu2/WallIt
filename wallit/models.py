@@ -143,11 +143,6 @@ class Bank(db.Model):
         """Query for Bank with a name"""
         return cls.query.filter_by(name=bank_name).first()
 
-    @classmethod
-    def get_from_id(cls, bank_id: str, user: User) -> Optional[Category]:
-        """Query for Bank with an id"""
-        return cls.query.filter_by(id=bank_id, user=user).first()
-
 
 class Category(db.Model, UpdatableMixin):
     __tablename__ = "categories"

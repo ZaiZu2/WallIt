@@ -58,9 +58,9 @@ const editableCellAttributes = (cell, row, column) => {
   }
 };
 
-function TableCategoryDropdown(props) {
+function TableDropdown(props) {
   return html`
-    <form name="category_change" onsubmit=${() => preventDefault()}>
+    <form name="${props.name + "_change"}" onsubmit=${() => preventDefault()}>
       <select
         id=${props.name}
         name=${props.name}
@@ -68,8 +68,8 @@ function TableCategoryDropdown(props) {
           const formData = new FormData(event.target.parentNode);
           await modifyTransaction({
             id: props.transactionId,
-            category:
-              formData.get("category") === "" ? null : formData.get("category"),
+            [props.name]:
+              formData.get(props.name) === "" ? null : formData.get(props.name),
           });
           reloadCategoryChart(categoryChart);
         }}
@@ -246,7 +246,7 @@ export const transactionsTable = new Grid({
       formatter: (cell, row) => {
         const noCategory = { empty: { id: "", name: "" } };
 
-        return html`<${TableCategoryDropdown}
+        return html`<${TableDropdown}
           name="category"
           items=${{ ...user.categories, ...noCategory }}
           startingItem=${row.cells[6].data ? row.cells[6].data : ""}
@@ -261,7 +261,20 @@ export const transactionsTable = new Grid({
       sort: { enabled: false },
       attributes: editableCellAttributes,
     },
-    { id: "bank", name: "Bank" },
+    {
+      id: "bank",
+      name: "Bank",
+      formatter: (cell, row) => {
+        const noBank = { empty: { id: "", name: "" } };
+
+        return html`<${TableDropdown}
+          name="bank"
+          items=${{ ...session.banks, ...noBank }}
+          startingItem=${row.cells[9].data ? row.cells[9].data : ""}
+          transactionId=${row.cells[0].data}
+        />`;
+      },
+    },
     { id: "creation_date", name: "Creation date", search: { enabled: false } },
     {
       id: "actions",

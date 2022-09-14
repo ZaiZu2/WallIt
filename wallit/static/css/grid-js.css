@@ -129,6 +129,9 @@ th[data-column-id="actions"].custom-th {
 th[data-column-id="category"].custom-th {
   min-width: 95px;
 }
+th[data-column-id="bank"].custom-th {
+  min-width: 70px;
+}
 
 td[data-column-id="info"].custom-td,
 td[data-column-id="title"].custom-td {
@@ -145,21 +148,25 @@ td[data-column-id="base_amount"].custom-td {
 
 td[data-column-id="place"].custom-td {
   min-width: 50px;
-  max-width: 110px;
+  max-width: 85px;
 
   text-align: left;
 }
 
-td[data-column-id="category"].custom-td {
+td[data-column-id="category"].custom-td,
+td[data-column-id="bank"].custom-td {
   padding: 0px;
 }
-td[data-column-id="category"].custom-td > form {
+td[data-column-id="category"].custom-td > form,
+td[data-column-id="bank"].custom-td > form {
   height: 100%;
   width: 100%;
 }
-td[data-column-id="category"].custom-td select {
+td[data-column-id="category"].custom-td select,
+td[data-column-id="bank"].custom-td select {
   height: 100%;
-  width: 100%;
+  width: min-content;
+  max-width: 110px;
   border: none;
   background: none;
 
