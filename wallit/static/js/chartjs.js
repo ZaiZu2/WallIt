@@ -1,27 +1,33 @@
 // Format transactions into used by Category Chart
 function calculateCategoryWeights() {
   // map array of categories into object
-  let categoryWeights = Object.keys(user.categories).reduce((obj, category) => {
-    obj[category] = 0;
-    return obj;
-  }, {});
+  let categoryWeights = {};
+  for (let category of Object.values(user.categories)) {
+    categoryWeights[category.id] = { name: category.name, sum: 0 };
+  }
 
   for (let transaction of user.transactions) {
     if (transaction.amount < 0 && transaction.category != null) {
-      categoryWeights[transaction.category] += -1 * transaction.amount;
+      categoryWeights[transaction.category]["sum"] += -1 * transaction.amount;
     }
   }
   // Round up any floating point errors and delete blank categories
-  for (let [categoryName, categoryWeight] of Object.entries(categoryWeights)) {
-    categoryWeights[categoryName] = Math.round(categoryWeight * 100) / 100;
-    if (categoryWeight == false) delete categoryWeights[categoryName];
+  for (let id of Object.keys(categoryWeights)) {
+    categoryWeights[id]["sum"] =
+      Math.round(categoryWeights[id]["sum"] * 100) / 100;
+    if (categoryWeights[id]["sum"] == false) delete categoryWeights[id];
   }
 
-  return categoryWeights;
+  const simplified = {};
+  for (let categoryParams of Object.values(categoryWeights))
+    simplified[categoryParams.name] = categoryParams.sum;
+
+  return simplified;
 }
 
 export function reloadCategoryChart(chart) {
   const weights = calculateCategoryWeights();
+
   chart.data.labels = Object.keys(weights);
   chart.data.datasets[0].data = Object.values(weights);
   chart.update();

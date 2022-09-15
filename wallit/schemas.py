@@ -12,6 +12,7 @@ from marshmallow import (
     validate,
     validates_schema,
     ValidationError,
+    EXCLUDE,
 )
 from copy import deepcopy
 
@@ -77,15 +78,16 @@ class TransactionSchema(ma.SQLAlchemySchema):
     class Meta:
         model = Transaction
         ordered = True
+        unknown = EXCLUDE
 
-    id = ma.auto_field()
+    id = ma.auto_field(dump_only=True)
     info = ma.auto_field()
     title = ma.auto_field()
     amount = ma.auto_field("main_amount", required=False)
     base_amount = ma.auto_field(required=True)
     base_currency = ma.auto_field(
-        required=True,
         validate=validate.OneOf(get_currencies()),
+        required=True,
     )
     date = ma.auto_field("transaction_date", required=True)
     creation_date = ma.auto_field()
@@ -96,29 +98,22 @@ class TransactionSchema(ma.SQLAlchemySchema):
     @post_load
     def _convert_to_transaction(
         self, data: dict, **kwargs: dict[str, Any]
-    ) -> Transaction:
+    ) -> dict[str, Any]:
         """Convert nested schema name to foreign key relationships and load into Transaction object"""
 
-        # Modify transaction instance passed in load()
-        if self.instance:
-            for column_name, value in data.items():
-                # For modified Transactions only Category name can be nested (for now)
-                if issubclass(type(value), dict):
-                    category = Category.get_from_id(value["id"], current_user)
-                    setattr(self.instance, column_name, category)
-                else:
-                    setattr(self.instance, column_name, value)
-            return self.instance
-        # Create a new transaction if no instance was passed
-        else:
+        if "category" in data:
             if data["category"]:
-                data["category"] = Category.get_from_name(
-                    data["category"]["name"], current_user
+                data["category"] = Category.get_from_id(
+                    data["category"]["id"], current_user
                 )
+            else:
+                data["category"] = None
+        if "bank" in data:
             if data["bank"]:
-                data["bank"] = Bank.get_from_name(data["bank"]["name"])
-
-            return Transaction(user=current_user, **data)
+                data["bank"] = Bank.query.filter_by(id=data["bank"]["id"]).first()
+            else:
+                data["bank"] = None
+        return data
 
     @post_dump(pass_many=True)
     def _create_envelope(self, data: dict, **kwargs: dict[str, Any]) -> dict[str, dict]:
@@ -147,7 +142,7 @@ class ModifyTransactionSchema(ma.Schema):
                 data["category"] = None
         if "bank" in data:
             if data["bank"]:
-                data["bank"] = Bank.query.filter_by(id=data["bank"]["id"])
+                data["bank"] = Bank.query.filter_by(id=data["bank"]["id"]).first()
             else:
                 data["bank"] = None
         return data

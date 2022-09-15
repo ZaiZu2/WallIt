@@ -146,12 +146,7 @@ undoDeletionButton.addEventListener("click", async () => {
       `td[data-id="${transaction.id}"]`
     );
 
-    // Send request to insert transaction
     const newTransactionId = await addTransaction(transaction);
-    // Server responds with a new Id for transaction after successful insertion
-    transaction.id = newTransactionId;
-
-    user.transactions.push(transaction);
     user.deletedTransactions.pop();
 
     // Change data-attributes to correct transactionId
@@ -170,7 +165,6 @@ undoDeletionButton.addEventListener("click", async () => {
 });
 
 let oldValue;
-
 const tableBody = document.getElementById("transactionTable");
 tableBody.addEventListener("focusin", (event) => {
   if (event.target.contentEditable == "true")

@@ -127,30 +127,30 @@ export function renderListCheckboxes(items, parentClass) {
 }
 
 export async function deleteTransaction(id) {
-  await fetch(`/api/transactions/${id}/delete`, {
+  const deletedTransaction = await fetch(`/api/transactions/${id}/delete`, {
     method: "DELETE",
-    mode: "cors", // no-cors, *cors, same-origin
-    credentials: "same-origin", // include, *same-origin, omit
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
     },
-  }).then((response) => {
-    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+  })
+    .then((response) => {
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      return response.json();
+    })
+    .then((data) => data);
 
-    // Pop the transactions element with specified id into a deletedTransactions array
-    for (let i = 0; i < user.transactions.length; i++) {
-      if (user.transactions[i].id == id)
-        user.deletedTransactions.push(user.transactions.splice(i, 1)[0]);
-    }
-  });
+  // Pop the transactions element with specified id into a deletedTransactions array
+  const deletedId = user.transactions.findIndex(
+    (transaction) => transaction.id == id
+  );
+  user.deletedTransactions.push(user.transactions.splice(deletedId, 1)[0]);
 }
 
 export async function addTransaction(transaction) {
-  const transactionId = await fetch("/api/transactions/add", {
+  const newTransaction = await fetch("/api/transactions/add", {
     method: "POST",
-    mode: "cors", // no-cors, *cors, same-origin
-    credentials: "same-origin", // include, *same-origin, omit
     headers: {
       "Content-Type": "application/json",
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
@@ -162,31 +162,32 @@ export async function addTransaction(transaction) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       return response.json();
     })
-    .then((data) => {
-      return data.id;
-    });
+    .then((data) => data.transactions);
 
-  return transactionId;
+  user.transactions.unshift(newTransaction);
+  return newTransaction.id;
 }
 
 export async function modifyTransaction({ id, ...modifiedColumns }) {
-  await fetch(`/api/transactions/${id}/modify`, {
+  const modifiedTransaction = await fetch(`/api/transactions/${id}/modify`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
     },
     body: JSON.stringify(modifiedColumns),
-  }).then((response) => {
-    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-  });
+  })
+    .then((response) => {
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      return response.json();
+    })
+    .then((data) => data.transactions);
 
-  const modifiedTransaction = user.transactions.find(
+  const oldId = user.transactions.findIndex(
     (transaction) => transaction.id === id
   );
-
-  for (let [columnName, columnValue] of Object.entries(modifiedColumns))
-    modifiedTransaction[columnName] = columnValue;
+  if (oldId != -1) user.transactions[oldId] = modifiedTransaction;
 }
 
 export async function addCategory(category) {
@@ -235,9 +236,7 @@ export async function modifyCategory(id, ...modifiedColumns) {
     })
     .then((data) => data);
 
-  modifiedCategory = user.categories.find((category) => category.id === id);
-  for (let [columnName, columnValue] of Object.entries(modifiedColumns))
-    modifiedCategory[columnName] = columnValue;
+  user.categories[newCategory.name] = newCategory;
 
   renderListDropdowns(
     Object.keys(user.categories),

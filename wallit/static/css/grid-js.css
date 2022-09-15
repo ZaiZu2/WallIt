@@ -167,6 +167,8 @@ td[data-column-id="bank"].custom-td select {
   height: 100%;
   width: min-content;
   max-width: 110px;
+  float: right;
+
   border: none;
   background: none;
 

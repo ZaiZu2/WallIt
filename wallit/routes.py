@@ -182,7 +182,7 @@ def delete_transaction(id: int) -> Tuple[str, int]:
     transaction = Transaction.get_from_id(id, current_user)
     db.session.delete(transaction)
     db.session.commit()
-    return "", 200
+    return {}, 200
 
 
 @app.route("/api/transactions/add", methods=["POST"])
@@ -190,11 +190,13 @@ def delete_transaction(id: int) -> Tuple[str, int]:
 def add_transaction() -> Tuple[JSONType, int]:
     """Add transaction"""
 
-    transaction = TransactionSchema().load(request.json)
+    verified_data = TransactionSchema().load(request.json)
+    transaction = Transaction(user=current_user, **verified_data)
     transaction = convert_currency([transaction], current_user.main_currency)[0]
+    db.session.add(transaction)
     db.session.commit()
 
-    return {"id": transaction.id}, 200
+    return TransactionSchema().dumps(transaction), 201
 
 
 @app.route("/api/transactions/<int:id>/modify", methods=["PATCH"])
@@ -206,7 +208,7 @@ def modify_transaction(id: int) -> Tuple[str, int]:
     verified_data = ModifyTransactionSchema().load(request.json)
     transaction.update(verified_data)
     db.session.commit()
-    return "", 204
+    return TransactionSchema().dumps(transaction), 200
 
 
 @app.route("/api/categories/add", methods=["POST"])
