@@ -4,6 +4,34 @@ import {
 } from "https://unpkg.com/htm/preact/standalone.module.js";
 import { Fragment } from "https://unpkg.com/preact?module";
 
+export function renderCategoryForms() {
+  renderObjectDropdowns(
+    user.categories,
+    "category",
+    "category-dynamic-dropdown"
+  );
+  renderObjectDropdowns(
+    user.categories,
+    "category",
+    "category-dynamic-dropdown-with-blank",
+    undefined,
+    true
+  );
+  renderObjectCheckboxes(user.categories, "category-dynamic-checkboxes");
+}
+
+export function renderBankForms() {
+  renderObjectDropdowns(user.banks, "bank", "user-bank-dynamic-dropdown");
+  renderObjectDropdowns(
+    session.banks,
+    "bank",
+    "session-bank-dynamic-dropdown-with-blank",
+    undefined,
+    true
+  );
+  renderObjectCheckboxes(user.banks, "user-bank-dynamic-checkboxes");
+}
+
 function DynamicObjectDropdown(props) {
   return html`
     <select id=${props.name} name=${props.name}>
@@ -23,8 +51,11 @@ export function renderObjectDropdowns(
   items,
   dropdownName,
   parentClass,
-  startingItem = ""
+  startingItem = false,
+  blankItem = false
 ) {
+  if (blankItem) items = { ...items, ...{ "": { id: "", name: "" } } };
+
   const parentNodes = document.getElementsByClassName(parentClass);
   for (let parentNode of parentNodes)
     render(
@@ -49,11 +80,11 @@ export function renderListDropdowns(
   items,
   dropdownName,
   parentClass,
-  startingItem = ""
+  startingItem = false
 ) {
   // If starting item was given, rearrange the array so the array
   // (and so the generated dropdown) starts with it
-  if (startingItem != "" && items.includes(startingItem)) {
+  if (startingItem != false && items.includes(startingItem)) {
     const startIndex = items.indexOf(startingItem);
     const itemsCopy = [...items];
     for (let i = 0; i < itemsCopy.length; i++) {
@@ -88,7 +119,8 @@ function DynamicObjectCheckboxes(props) {
     `;
 }
 
-export function renderObjectCheckboxes(items, parentClass) {
+export function renderObjectCheckboxes(items, parentClass, blankItem = false) {
+  if (blankItem) items = { ...items, ...{ "": { id: "", name: "" } } };
   const parentNodes = document.getElementsByClassName(parentClass);
 
   for (let i = 0; i < parentNodes.length; i++)
@@ -168,7 +200,7 @@ export async function addTransaction(transaction) {
   return newTransaction.id;
 }
 
-export async function modifyTransaction({ id, ...modifiedColumns }) {
+export async function modifyTransaction(id, modifiedColumns) {
   const modifiedTransaction = await fetch(`/api/transactions/${id}/modify`, {
     method: "PATCH",
     headers: {
@@ -208,19 +240,10 @@ export async function addCategory(category) {
     .then((data) => data);
 
   user.categories[newCategory.name] = newCategory;
-  renderListDropdowns(
-    Object.keys(user.categories),
-    "category",
-    "category-dynamic-dropdown"
-  );
-  renderListCheckboxes(
-    Object.keys(user.categories),
-    "category-dynamic-checkboxes"
-  );
 }
 
-export async function modifyCategory(id, ...modifiedColumns) {
-  const newCategory = await fetch(`/api/categories/${id}/modify`, {
+export async function modifyCategory(id, modifiedColumns) {
+  const modifiedCategory = await fetch(`/api/categories/${id}/modify`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -236,17 +259,10 @@ export async function modifyCategory(id, ...modifiedColumns) {
     })
     .then((data) => data);
 
-  user.categories[newCategory.name] = newCategory;
-
-  renderListDropdowns(
-    Object.keys(user.categories),
-    "category",
-    "category-dynamic-dropdown"
-  );
-  renderListCheckboxes(
-    Object.keys(user.categories),
-    "category-dynamic-checkboxes"
-  );
+  for (let [categoryName, categoryParams] of Object.entries(user.categories)) {
+    if (categoryParams.id == id) delete user.categories[categoryName];
+  }
+  user.categories[modifiedCategory.name] = modifiedCategory;
 }
 
 export async function deleteCategories(categoryIds) {
@@ -268,11 +284,4 @@ export async function deleteCategories(categoryIds) {
 
   for (let deletedCategory of deletedCategories)
     delete user.categories[deletedCategory.name];
-
-  renderObjectDropdowns(
-    user.categories,
-    "category",
-    "category-dynamic-dropdown"
-  );
-  renderObjectCheckboxes(user.categories, "category-dynamic-checkboxes");
 }

@@ -1,13 +1,11 @@
 #!python3
 
-from email.mime import base
-from email.policy import default
-from re import I
 from wallit import app, db, cache
 from wallit.models import Transaction, User, Bank
 from wallit.exceptions import FileError, InvalidConfigError
 from wallit import logger
 
+from flask import current_app
 from pathlib import Path
 from typing import Dict
 import typing

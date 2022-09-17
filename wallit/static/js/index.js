@@ -7,9 +7,9 @@ import {
 } from "./chartjs.js";
 import {
   renderListDropdowns,
-  renderObjectDropdowns,
   renderListCheckboxes,
-  renderObjectCheckboxes,
+  renderBankForms,
+  renderCategoryForms,
   addTransaction,
   addCategory,
   modifyCategory,
@@ -253,11 +253,12 @@ addTransactionForm.addEventListener("submit", async (event) => {
       transaction[name] = date.toISOString();
     } else transaction[name] = value;
   }
-  addTransaction(transaction);
+  await addTransaction(transaction);
+  reloadTable(transactionsTable);
 });
 
 const addCategoryForm = document.getElementsByName("add_category")[0];
-addCategoryForm.addEventListener("submit", (event) => {
+addCategoryForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const formData = new FormData(event.target);
@@ -265,11 +266,14 @@ addCategoryForm.addEventListener("submit", (event) => {
   for (const [name, value] of formData.entries()) {
     category[name] = value;
   }
-  addCategory(category);
+  await addCategory(category);
+  renderCategoryForms();
+  reloadTable(transactionsTable);
+  reloadCategoryChart(categoryChart);
 });
 
 const modifyCategoryForm = document.getElementsByName("modify_category")[0];
-modifyCategoryForm.addEventListener("submit", (event) => {
+modifyCategoryForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const formData = new FormData(event.target);
@@ -277,19 +281,34 @@ modifyCategoryForm.addEventListener("submit", (event) => {
   for (const [name, value] of formData.entries()) {
     modifiedColumns[name] = value;
   }
-  modifyCategory(modifiedColumns);
+  await modifyCategory(formData.get("category"), {
+    name: formData.get("category_name"),
+  });
+  renderCategoryForms();
+  reloadTable(transactionsTable);
+  reloadCategoryChart(categoryChart);
 });
 
 const deleteCategoriesForm = document.getElementsByName("delete_category")[0];
-deleteCategoriesForm.addEventListener("submit", (event) => {
+deleteCategoriesForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const formData = new FormData(event.target);
   const categoryIds = [];
-  for (let categoryName of formData.keys())
-    categoryIds.push({ id: user.categories[categoryName].id });
+  for (let categoryId of formData.keys())
+    categoryIds.push({ id: user.categories[categoryId].id });
 
-  deleteCategories(categoryIds);
+  await deleteCategories(categoryIds);
+  // Remove deleted categories from loaded transactions
+  for (let transaction of user.transactions) {
+    for (let category of categoryIds) {
+      if (transaction.category == category.id) transaction.category = null;
+    }
+  }
+
+  renderCategoryForms();
+  reloadTable(transactionsTable);
+  reloadCategoryChart(categoryChart);
 });
 
 async function updateSessionEntities() {
@@ -394,13 +413,9 @@ async function reloadWindows() {
 }
 
 async function reloadForms() {
-  renderObjectDropdowns(
-    user.categories,
-    "category",
-    "category-dynamic-dropdown"
-  );
-  renderObjectDropdowns(user.banks, "bank", "user-bank-dynamic-dropdown");
-  renderObjectDropdowns(session.banks, "bank", "session-bank-dynamic-dropdown");
+  renderBankForms();
+  renderCategoryForms();
+
   renderListDropdowns(
     session.currencies,
     "base_currency",
@@ -411,9 +426,6 @@ async function reloadForms() {
     "base_currency",
     "user-currency-dynamic-dropdown"
   );
-
-  renderObjectCheckboxes(user.categories, "category-dynamic-checkboxes");
-  renderObjectCheckboxes(user.banks, "user-bank-dynamic-checkboxes");
   renderListCheckboxes(user.currencies, "user-currency-dynamic-checkboxes");
 }
 

@@ -1,14 +1,6 @@
 import { Grid, h } from "https://unpkg.com/gridjs?module";
-import {
-  html,
-  render,
-} from "https://unpkg.com/htm/preact/standalone.module.js";
-import {
-  categoryChart,
-  reloadCategoryChart,
-  monthlyChart,
-  reloadMonthlyChart,
-} from "./chartjs.js";
+import { html } from "https://unpkg.com/htm/preact/standalone.module.js";
+import { categoryChart, reloadCategoryChart } from "./chartjs.js";
 import {
   addTransaction,
   deleteTransaction,
@@ -66,8 +58,7 @@ function TableDropdown(props) {
         name=${props.name}
         onInput=${async (event) => {
           const formData = new FormData(event.target.parentNode);
-          await modifyTransaction({
-            id: props.transactionId,
+          await modifyTransaction(props.transactionId, {
             [props.name]:
               formData.get(props.name) === "" ? null : formData.get(props.name),
           });
@@ -77,7 +68,7 @@ function TableDropdown(props) {
         ${Object.values(props.items).map((item) => {
           return html`<option
             value=${item.id}
-            selected=${item.name === props.startingItem ? true : false}
+            selected=${item.id === props.startingItem ? true : false}
           >
             ${item.name}
           </option>`;
@@ -178,10 +169,7 @@ tableBody.addEventListener("focusout", async (event) => {
       const columnName = event.target.dataset.columnId;
       const columnValue = event.target.textContent;
 
-      modifyTransaction({
-        id: transactionId,
-        [columnName]: columnValue,
-      });
+      modifyTransaction(transactionId, { [columnName]: columnValue });
     }
   }
   oldValue = undefined;
@@ -227,6 +215,7 @@ export const transactionsTable = new Grid({
       id: "base_amount",
       name: "Base amount",
       search: { enabled: false },
+      sort: { enabled: false },
       formatter: (cell, row) => {
         return `${cell} ${row.cells[5].data}`;
       },
@@ -238,7 +227,7 @@ export const transactionsTable = new Grid({
       sort: { enabled: false },
       // formatter: createCategoryDropdown,
       formatter: (cell, row) => {
-        const noCategory = { empty: { id: "", name: "" } };
+        const noCategory = { "": { id: "", name: "" } };
 
         return html`<${TableDropdown}
           name="category"
@@ -258,6 +247,7 @@ export const transactionsTable = new Grid({
     {
       id: "bank",
       name: "Bank",
+      sort: { enabled: false },
       formatter: (cell, row) => {
         const noBank = { empty: { id: "", name: "" } };
 
