@@ -15,10 +15,27 @@ class LoginForm(FlaskForm):
     submit = SubmitField("Sign in")
 
 
-class ResetPasswordForm(FlaskForm):
+class RequestPasswordForm(FlaskForm):
     email = EmailField(
         "Email",
         validators=[InputRequired(), Email(message="Wrongly formatted email address")],
+    )
+
+
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField(
+        "Password",
+        validators=[
+            InputRequired(message="Password is required"),
+            Length(min=5, message="Password should be minimum 5 characters long"),
+            EqualTo("repeat_password", message="Passwords do not match"),
+        ],
+    )
+    repeat_password = PasswordField(
+        "Repeat password",
+        validators=[
+            InputRequired(message="Password has to be repeated"),
+        ],
     )
 
 

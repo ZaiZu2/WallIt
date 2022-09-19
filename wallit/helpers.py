@@ -1,8 +1,11 @@
 from wallit import db, logger
-from wallit.models import Bank, Category, Transaction
+from wallit.models import Bank, Category, Transaction, User
+from wallit import mail
 
+from flask import render_template, current_app
 from flask_login import current_user
 from flask_sqlalchemy import BaseQuery
+from flask_mail import Message
 
 import typing as t
 
@@ -44,3 +47,16 @@ def filter_transactions(filters: dict) -> list[Transaction]:
     # logger.debug(query.compile(compile_kwargs={"literal_binds": True}).string)
 
     return transactions
+
+
+def send_password_reset_email(user: User) -> None:
+
+    token = user.get_reset_password_token()
+    message = Message(
+        subject="WallIt - password reset request",
+        recipients=[user.email],
+        body=render_template("email/reset_password.txt", token=token),
+        html=render_template("email/reset_password.html", token=token),
+        sender=current_app.config["ADMINS"][0],
+    )
+    mail.send(message)

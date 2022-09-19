@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 from wallit import db, login
+import config
 
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin, current_user
-from flask import abort
+from flask import current_app, abort
 from sqlalchemy import UniqueConstraint, CheckConstraint, select
 from sqlalchemy.orm import with_parent
 from datetime import datetime
 from typing import Any, Optional
+import jwt
+from time import time
 
 
 class UpdatableMixin:
@@ -58,10 +61,30 @@ class User(UserMixin, db.Model):
     def check_password(self, password: str) -> bool:
         return check_password_hash(self.password_hash, password)
 
-    def select_categories(self):
+    def get_reset_password_token(self) -> str:
+        return jwt.encode(
+            {
+                "email": self.email,
+                "exp": time() + current_app.config["RESET_TOKEN_MINUTES"] * 60,
+            },
+            current_app.config["SECRET_KEY"],
+            "HS256",
+        )
+
+    @staticmethod
+    def verify_reset_password_token(token: str) -> User | None:
+        try:
+            email = jwt.decode(token, current_app.config["SECRET_KEY"], ["HS256"])[
+                "email"
+            ]
+        except:
+            return None
+        return User.query.filter_by(email=email).first()
+
+    def select_categories(self) -> list[Category]:
         return Category.query.where(with_parent(self, User.categories)).all()
 
-    def select_banks(self):
+    def select_banks(self) -> list[Bank]:
         return (
             Bank.query.select_from(Transaction)
             .join(Bank)
@@ -70,7 +93,7 @@ class User(UserMixin, db.Model):
             .all()
         )
 
-    def select_base_currencies(self):
+    def select_base_currencies(self) -> list[str]:
         return db.session.scalars(
             select(Transaction.base_currency)
             .where(with_parent(self, User.transactions))

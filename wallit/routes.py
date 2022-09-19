@@ -1,6 +1,6 @@
-from crypt import methods
+from cgitb import reset
 from wallit import app, db, logger
-from wallit.forms import LoginForm, SignUpForm, ResetPasswordForm
+from wallit.forms import LoginForm, RequestPasswordForm, SignUpForm, ResetPasswordForm
 from wallit.models import Transaction, User, Bank, Category
 from wallit.schemas import (
     CategorySchema,
@@ -18,7 +18,7 @@ from wallit.imports import (
     convert_currency,
     get_currencies,
 )
-from wallit.helpers import filter_transactions, JSONType
+from wallit.helpers import filter_transactions, send_password_reset_email, JSONType
 from wallit.exceptions import FileError
 
 from flask import redirect, url_for, render_template, flash, request, abort
@@ -33,11 +33,12 @@ from typing import Any, Callable, Tuple
 from collections import defaultdict
 
 
+@app.route("/index")
 @app.route("/")
 @login_required
 def index() -> str:
     return render_template(
-        "index.html", current_user=current_user._get_current_object()
+        "menus.html", current_user=current_user._get_current_object()
     )
 
 
@@ -48,18 +49,20 @@ def welcome() -> str | Response:
 
     login_form = LoginForm()
     sign_up_form = SignUpForm()
-    reset_password_form = ResetPasswordForm()
+    request_password_form = RequestPasswordForm()
 
     return render_template(
-        "welcome.html",
+        "menus.html",
         login_form=login_form,
         sign_up_form=sign_up_form,
-        reset_password_form=reset_password_form,
+        request_password_form=request_password_form,
     )
 
 
 @app.route("/login", methods=["POST"])
 def login() -> Response:
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
     login_form = LoginForm()
     if login_form.validate_on_submit():
         user = User.query.filter_by(username=login_form.username.data).one()
@@ -77,26 +80,46 @@ def login() -> Response:
     return redirect(url_for("welcome"))
 
 
-@app.route("/account/reset", methods=["POST"])
-def reset_password() -> Response:
-    reset_password_form = ResetPasswordForm()
-    if reset_password_form.validate_on_submit():
-        if User.query.filter_by(email=reset_password_form.email.data).one():
-            # send email with password reset form
-            flash("Email with password reset form was sent", "reset_password_message")
-            return redirect(url_for("welcome"))
-
-        flash("Account with given email does not exist", "reset_password_message")
+@app.route("/reset_password", methods=["POST"])
+def request_reset_password() -> Response:
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+    request_password_form = RequestPasswordForm()
+    if request_password_form.validate_on_submit():
+        if user := User.query.filter_by(email=request_password_form.email.data).first():
+            send_password_reset_email(user)
+        flash("Email with password reset form was sent", "reset_password_message")
+        return redirect(url_for("welcome"))
 
     # Reassign form.errors to flash as they will be inaccessible after redirection
-    for field in reset_password_form._fields.values():
+    for field in request_password_form._fields.values():
         for error in field.errors:
             flash(error, "reset_password_message")
     return redirect(url_for("welcome"))
 
 
-@app.route("/account/new", methods=["POST"])
+@app.route("/reset_password/<string:token>", methods=["GET", "POST"])
+def reset_password(token: str) -> str | Response:
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+    user = User.verify_reset_password_token(token)
+    if user is None:
+        return redirect(url_for("welcome"))
+    reset_password_form = ResetPasswordForm()
+    if reset_password_form.validate_on_submit():
+        user.set_password(reset_password_form.password.data)
+        db.session.commit()
+        flash("Password has been successfully reset", "login_message")
+        return redirect(url_for("welcome"))
+    return render_template(
+        "reset_password.html", reset_password_form=reset_password_form
+    )
+
+
+@app.route("/users/new", methods=["POST"])
 def sign_up() -> Response:
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
     sign_up_form = SignUpForm()
     if sign_up_form.validate_on_submit():
         if User.query.filter_by(username=sign_up_form.username.data).first():

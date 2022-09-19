@@ -1,121 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <!-- Required meta tags -->
-        <meta charset="utf-8"/>
-        <meta name="viewport" content="width=device-width, initial-scale=1"/>
-        <meta name="author" content="Jakub Kawecki"/>
-        <meta name="description"
-              content="An easy way to have an eye on your change."/>
-        <script src="../static/js/login.js" defer></script>
-        <!-- CSS -->
-        <link rel="stylesheet" href="../static/css/css_reset.css"/>
-        <link rel="stylesheet" href="../static/css/login-style.css"/>
-        <title>WallIt</title>
-    </head>
-    <body>
-        <div class="header"></div>
-        <div class="window">
-            <div class="logo">WallIt</div>
-            <div class="menu">
-                <div id="login" class="sub-menu">
-                    <div class="feedback-field">
-                        <div class="feedback">
-                            {% with messages = get_flashed_messages(category_filter=['login_message']) %}
-                                {% if messages %}
-                                    {% for message in messages %}<p>{{ message }}</p>{% endfor %}
-                                {% endif %}
-                            {% endwith %}
-                        </div>
-                    </div>
-                    <form class="form"
-                          name="loginForm"
-                          action="{{ url_for('login') }}"
-                          method="post">
-                        {{ login_form.hidden_tag() }}
-                        {{ login_form.username(placeholder='Username') }}
-                        {{ login_form.password(placeholder='Password') }}
-                        {{ login_form.remember_me() }}
-                        {{ login_form.remember_me.label }}
-                        <div class="button-list">
-                            <button type="submit">Sign in</button>
-                        </div>
-                    </form>
-                    <a id="reset-password-button" role="button">Forgot password?</a>
-                    <a id="sign-up-button" role="button">New here? Sign up.</a>
-                </div>
-                <div id="reset-password" class="sub-menu hidden">
-                    <div class="feedback-field">
-                        <div class="feedback">
-                            {% with messages = get_flashed_messages(category_filter=['reset_password_message']) %}
-                                {% if messages %}
-                                    {% for message in messages %}<p>{{ message }}</p>{% endfor %}
-                                {% endif %}
-                            {% endwith %}
-                        </div>
-                    </div>
-                    <form class="form"
-                          name="resetPasswordForm"
-                          action="{{ url_for('reset_password') }}"
-                          method="post">
-                        {{ reset_password_form.hidden_tag() }}
-                        {{ reset_password_form.email(placeholder='E-mail') }}
-                        <div class="button-list">
-                            <button type="submit" data-label="Reset password">Reset password</button>
-                            <button class="back-button" type="button">Back</button>
-                        </div>
-                    </form>
-                </div>
-                <div id="sign-up" class="sub-menu hidden">
-                    <div class="feedback-field">
-                        <div class="feedback">
-                            {% with messages = get_flashed_messages(category_filter=['sign_up_message']) %}
-                                {% if messages %}
-                                    {% for message in messages %}<p>{{ message }}</p>{% endfor %}
-                                {% endif %}
-                            {% endwith %}
-                        </div>
-                    </div>
-                    <form class="form"
-                          name="signUpForm"
-                          action="{{ url_for('sign_up') }}"
-                          method="post">
-                        {{ sign_up_form.hidden_tag() }}
-                        {{ sign_up_form.email(placeholder='E-mail') }}
-                        {{ sign_up_form.username(placeholder='Username') }}
-                        {{ sign_up_form.first_name(placeholder='First name') }}
-                        {{ sign_up_form.last_name(placeholder='Last name') }}
-                        {{ sign_up_form.password(placeholder='Password') }}
-                        {{ sign_up_form.repeat_password(placeholder='Repeat password') }}
-                        <div class="button-list">
-                            <button type="submit" data-label="Sign up">Sign up</button>
-                            <button class="back-button" type="button">Back</button>
-                        </div>
-                    </form>
-                </div>
-                <div class="author-references">
-                    <a href="https://github.com/ZaiZu2/FinanceApp">
-                        <img src="../static/img/icons8-github.svg"
-                             height="auto"
-                             width="auto"
-                             alt="author-github"/>
-                    </a>
-                    <a href="https://www.linkedin.com/in/jakub-kawecki">
-                        <img src="../static/img/icons8-linkedin.svg"
-                             height="auto"
-                             width="auto"
-                             alt="author-linkedIn"/>
-                    </a>
-                </div>
-            </div>
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="author" content="Jakub Kawecki" />
+    <meta name="description"
+          content="An easy way to have an eye on your change."/>
+    <script src="../static/js/login.js" defer></script>
+    <!-- CSS -->
+    <link rel="stylesheet" href="../static/css/css_reset.css" />
+    <link rel="stylesheet" href="../static/css/login-style.css" />
+    <title>WallIt</title>
+  </head>
+  <body>
+    <div class="header"></div>
+    <div class="window">
+      <div class="logo">WallIt</div>
+      <div class="menu">
+        {% block menus %}
+        {% endblock menus %}
+        {% block reset_password %}
+        {% endblock reset_password %}
+        <div class="author-references">
+          <a href="https://github.com/ZaiZu2/FinanceApp">
+            <img src="../static/img/icons8-github.svg"
+                 height="auto"
+                 width="auto"
+                 alt="author-github"/>
+          </a>
+          <a href="https://www.linkedin.com/in/jakub-kawecki">
+            <img src="../static/img/icons8-linkedin.svg"
+                 height="auto"
+                 width="auto"
+                 alt="author-linkedIn"/>
+          </a>
         </div>
-        <footer>
-            <p>
-                Photo by <a href="https://unsplash.com/@fiveamstories">Alex Shutin</a> on <a href="https://unsplash.com/photos/kKvQJ6rK6S4">Unsplash</a>
-            </p>
-            <p>
-                Icons by <a target="_blank" href="https://icons8.com">Icons8</a>
-            </p>
-        </footer>
-    </body>
+      </div>
+    </div>
+    <footer>
+      <p>
+        Photo by
+        <a href="https://unsplash.com/@fiveamstories">Alex Shutin</a> on
+        <a href="https://unsplash.com/photos/kKvQJ6rK6S4">Unsplash</a>
+      </p>
+      <p>
+        Icons by <a target="_blank" href="https://icons8.com">Icons8</a>
+      </p>
+    </footer>
+  </body>
 </html>

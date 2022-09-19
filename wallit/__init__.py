@@ -9,6 +9,7 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_wtf import CSRFProtect
 from flask_caching import Cache
+from flask_mail import Mail
 
 import sys
 from loguru import logger
@@ -30,9 +31,10 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 ma = Marshmallow(app)
 
-cache = Cache(app)
 csrf = CSRFProtect(app)
+cache = Cache(app)
 login = LoginManager(app)
 login.login_view = "welcome"
+mail = Mail(app)
 
 from wallit import routes, models
