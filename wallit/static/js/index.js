@@ -1,3 +1,8 @@
+import {
+  html,
+  render,
+} from "https://unpkg.com/htm/preact/standalone.module.js";
+
 import { transactionsTable, reloadTable } from "./gridjs.js";
 import {
   categoryChart,
@@ -65,15 +70,19 @@ selectionButtons.forEach((button) => {
 // Allows button to toggle menu windows ON/OFF with responsive button behavior
 const menuButtons = document.querySelectorAll(".menu button");
 menuButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    // Toggle button ON/OFF
-    button.classList.toggle("active");
-    // Toggle icon ON/OFF
-    button.childNodes[1].classList.toggle("active");
-    // Show/hide windows corresponding to a given button
-    const menuWindow = document.getElementsByClassName(button.id);
-    menuWindow[0].classList.toggle("hidden");
-  });
+  if (button.id !== "settings_button") {
+    button.addEventListener("click", () => {
+      // Toggle button ON/OFF
+      button.classList.toggle("active");
+      // Toggle icon ON/OFF
+      button.childNodes[1].classList.toggle("active");
+      // Show/hide windows corresponding to a given button
+      const menuWindow = document.getElementsByClassName(
+        button.id.split("_")[0]
+      );
+      if (menuWindow) menuWindow[0].classList.toggle("hidden");
+    });
+  }
 });
 
 // Allows filtering buttons to extend FILTER menu to make it responsive
@@ -269,7 +278,6 @@ addCategoryForm.addEventListener("submit", async (event) => {
   await addCategory(category);
   renderCategoryForms();
   reloadTable(transactionsTable);
-  reloadCategoryChart(categoryChart);
 });
 
 const modifyCategoryForm = document.getElementsByName("modify_category")[0];
@@ -330,7 +338,7 @@ async function updateSessionEntities() {
 
 async function updateUserEntities() {
   // Fetch filter data based on user's transactions from server
-  const entities = await fetch("/api/user/entities", {
+  user = await fetch("/api/user/entities", {
     method: "GET", // *GET, POST, PUT, DELETE, etc.
     headers: {
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
@@ -339,11 +347,6 @@ async function updateUserEntities() {
     if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
     return response.json();
   });
-
-  // Save entities into a global variable
-  user.categories = entities.categories;
-  user.banks = entities.banks;
-  user.currencies = entities.base_currencies;
 }
 
 function showUploadModal(responseStatus, uploadResults) {
@@ -426,7 +429,10 @@ async function reloadForms() {
     "base_currency",
     "user-currency-dynamic-dropdown"
   );
-  renderListCheckboxes(user.currencies, "user-currency-dynamic-checkboxes");
+  renderListCheckboxes(
+    user.base_currencies,
+    "user-currency-dynamic-checkboxes"
+  );
 }
 
 function logOut() {
@@ -437,7 +443,8 @@ function logOut() {
 window.addEventListener("load", async () => {
   await updateUserEntities();
   await updateSessionEntities();
-  reloadWindows();
+  reloadMonthlyChart(monthlyChart);
+  reloadForms();
 });
 
 window.addEventListener("beforeunload", () => {});

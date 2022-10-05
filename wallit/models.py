@@ -62,6 +62,11 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
     def get_reset_password_token(self) -> str:
+        """Generate token used for authentication password reset form
+
+        Returns:
+            str: generated token
+        """
         return jwt.encode(
             {
                 "email": self.email,
@@ -73,6 +78,14 @@ class User(UserMixin, db.Model):
 
     @staticmethod
     def verify_reset_password_token(token: str) -> User | None:
+        """Verify token used for authentication password reset form
+
+        Args:
+            token (str): Token to be verified
+
+        Returns:
+            User | None: User model object if token was authenticated successfully
+        """
         try:
             email = jwt.decode(token, current_app.config["SECRET_KEY"], ["HS256"])[
                 "email"

@@ -7,6 +7,7 @@ from flask_login import current_user
 from marshmallow import (
     fields,
     post_dump,
+    pre_dump,
     pre_load,
     post_load,
     validate,
@@ -213,6 +214,8 @@ class FiltersSchema(ma.Schema):
 class UserEntitiesSchema(ma.Schema):
     """Schema used for dumping entities assigned to user"""
 
+    user_details = fields.Nested(UserSchema, exclude=("main_currency",), dump_only=True)
+    main_currency = fields.String(dump_only=True)
     base_currencies = fields.List(
         fields.String(
             validate=validate.OneOf(
@@ -234,6 +237,13 @@ class UserEntitiesSchema(ma.Schema):
         dump_only=True,
         data_key="categories",
     )
+
+    @pre_dump
+    def _split_user_object(self, data: dict, **kwargs: dict[str, Any]) -> dict:
+        """Move main_currency from nested dict to main one"""
+
+        data["main_currency"] = data["user_details"].main_currency
+        return data
 
 
 class SessionEntitiesSchema(ma.Schema):

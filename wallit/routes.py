@@ -38,7 +38,7 @@ from collections import defaultdict
 @login_required
 def index() -> str:
     return render_template(
-        "menus.html", current_user=current_user._get_current_object()
+        "index.html", current_user=current_user._get_current_object()
     )
 
 
@@ -280,12 +280,27 @@ def delete_category() -> tuple[JSONType, int]:
 @app.route("/api/entities", methods=["GET"])
 @login_required
 def fetch_session_entities() -> tuple[JSONType, int]:
+    """Get basic session data required for front-end function
+
+    Response JSON structure example:
+    {
+        "currencies": ["USD", "EUR", ...],
+        "banks": {
+            "Revolut": {"id":1,"name":"Revolut"},
+            "Equabank":{"id":2,"name":"Equabank"},
+            ...
+        }
+    }
+
+    Returns:
+        tuple[JSONType, int]: _description_
+    """
     response_body: dict[str, list | dict] = defaultdict(dict)
     response_body["currencies"] = get_currencies()
     for bank in Bank.query.all():
         response_body["banks"][bank.name] = bank
 
-    return SessionEntitiesSchema().dumps(response_body), 201
+    return SessionEntitiesSchema().dumps(response_body), 200
 
 
 @app.route("/api/user/entities", methods=["GET"])
@@ -307,14 +322,15 @@ def fetch_user_entities() -> tuple[JSONType, int]:
 
     response_body: dict[str, list | dict] = defaultdict(dict)
 
+    response_body["user_details"] = current_user
+    response_body["base_currencies"] = current_user.select_base_currencies()
     for category in current_user.select_categories():
         response_body["categories"][category.name] = category
     for bank in current_user.select_banks():
         response_body["banks"][bank.name] = bank
-    response_body["base_currencies"] = current_user.select_base_currencies()
 
     # Schema used only to map server-side 'json' names to general ones specified by schema
-    return UserEntitiesSchema().dumps(response_body)
+    return UserEntitiesSchema().dumps(response_body), 200
 
 
 @app.route("/api/transactions/upload", methods=["POST"])

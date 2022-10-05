@@ -40,37 +40,37 @@
                 <div class="menu">
                     <ol>
                         <li>
-                            <button id="transactions">
+                            <button id="transactions_button">
                                 <span class="material-symbols-rounded custom-medium-icon">view_list</span>
                                 <h4>Transactions</h4>
                             </button>
                         </li>
                         <li>
-                            <button id="monthly">
+                            <button id="monthly_button">
                                 <span class="material-symbols-rounded custom-medium-icon">data_exploration</span>
                                 <h4>Monthly</h4>
                             </button>
                         </li>
                         <li>
-                            <button id="statistics">
+                            <button id="statistics_button">
                                 <span class="material-symbols-rounded custom-medium-icon">analytics</span>
                                 <h4>Statistics</h4>
                             </button>
                         </li>
                         <li>
-                            <button id="filter">
+                            <button id="filter_button">
                                 <span class="material-symbols-rounded custom-medium-icon">filter_alt</span>
                                 <h4>Filter</h4>
                             </button>
                         </li>
                         <li>
-                            <button id="import">
+                            <button id="import_button">
                                 <span class="material-symbols-rounded custom-medium-icon">upload_file</span>
                                 <h4>Statements</h4>
                             </button>
                         </li>
                         <li>
-                            <button id="settings">
+                            <button id="settings_button">
                                 <span class="material-symbols-rounded custom-medium-icon">settings</span>
                                 <h4>Settings</h4>
                             </button>
@@ -88,7 +88,7 @@
                     <div class="subwindow-outline filter">
                         <div class="subwindow-header">
                             <span class="material-symbols-rounded custom-small-icon">filter_alt</span>
-                            <h6>Filtering</h6>
+                            <h5>Filtering</h5>
                         </div>
                         <div class="button-list filter">
                             <button id="amount" class="button-no-outline filter">Amount</button>
@@ -133,9 +133,9 @@
                     <div class="subwindow-outline import">
                         <div class="subwindow-header">
                             <span class="material-symbols-rounded custom-small-icon">upload_file</span>
-                            <h6>
+                            <h5>
                                 Load statement
-                            </h6>
+                            </h5>
                         </div>
                         <div class="button-list import">
                             <button id="revolut" class="button-no-outline import">
@@ -174,9 +174,9 @@
                     <div class="subwindow-outline create">
                         <div class="subwindow-header">
                             <span class="material-symbols-rounded custom-small-icon">add_circle</span>
-                            <h6>
+                            <h5>
                                 Edit element
-                            </h6>
+                            </h5>
                         </div>
                         <div class="selection-button-list create">
                             <button id="transaction_menu_button" class="button-no-outline create">
@@ -194,9 +194,9 @@
                             <span class="material-symbols-rounded custom-small-icon">
                                 view_list
                             </span>
-                            <h6>
+                            <h5>
                                 Transactions
-                            </h6>
+                            </h5>
                             <button id="undo_deletion"
                                     class="button-no-outline hidden"
                                     title="Undo deletion">
@@ -213,9 +213,9 @@
                             <span class="material-symbols-rounded custom-small-icon">
                                 add_circle
                             </span>
-                            <h6>
+                            <h5>
                                 Create transaction
-                            </h6>
+                            </h5>
                         </div>
                         <form name="create_transaction" class="creation-form create-transaction">
                             <div class="submenu-body">
@@ -248,9 +248,9 @@
                             <span class="material-symbols-rounded custom-small-icon">
                                 add_circle
                             </span>
-                            <h6>
+                            <h5>
                                 Edit category
-                            </h6>
+                            </h5>
                         </div>
                         <div class="category-menu">
                             <div class="category-submenu">
@@ -312,9 +312,9 @@
                             <span class="material-symbols-rounded custom-small-icon">
                                 analytics
                             </span>
-                            <h6>
+                            <h5>
                                 Spendings by category
-                            </h6>
+                            </h5>
                         </div>
                         <canvas id="categoryChart" width="500px" height="400px"></canvas>
                     </div>
@@ -323,9 +323,9 @@
                             <span class="material-symbols-rounded custom-small-icon">
                                 analytics
                             </span>
-                            <h6>
+                            <h5>
                                 Monthly summary
-                            </h6>
+                            </h5>
                         </div>
                         <canvas id="monthlyChart" width="800px" height="400px"></canvas>
                     </div>
@@ -334,9 +334,10 @@
         </div>
         <div class="dim-background inactive">
         </div>
+        <div id="settings"></div>
         <div class="modal inactive">
-            <h6 class="modal-header">
-            </h6>
+            <h5 class="modal-header">
+            </h5>
             <div class="modal-content">
             </div>
             <button id="modal-button" class="button-std medium with-margin">

@@ -1,9 +1,189 @@
 import {
   html,
   render,
+  useState,
 } from "https://unpkg.com/htm/preact/standalone.module.js";
 import { Fragment } from "https://unpkg.com/preact?module";
 
+const accountSettingsButton = document.getElementById("settings_button");
+accountSettingsButton.addEventListener("click", (event) => {
+  render(
+    html`<${SettingsModal} user=${user} />`,
+    document.getElementById("settings")
+  );
+});
+
+function SettingsModal(props) {
+  const [accountConfirmation, setAccountConfirmation] = useState(false);
+  const confirmAccount = () => setAccountConfirmation((prev) => !prev);
+
+  const [passwordConfirmation, setPasswordConfirmation] = useState(false);
+  const confirmPassword = () => setPasswordConfirmation((prev) => !prev);
+
+  const [actionConfirmation, setActionConfirmation] = useState(false);
+  const confirmAction = () => setActionConfirmation((prev) => !prev);
+
+  return html`
+    <div class="dim-background">
+      <div class="modal">
+        <div class="modal-header">
+          <h5>Settings</h5>
+          <span
+            class="material-symbols-rounded custom-small-icon"
+            onclick=${() => {
+              render(null, document.getElementById("settings"));
+            }}
+            >close</span
+          >
+        </div>
+        <div class="settings">
+          <div class="settings-paragraph">
+            <div class="settings-subheader">
+              <h6>Account details</h6>
+            </div>
+            <form name="modify_user">
+              <div class="settings-subcontent">
+                <input
+                  id="email"
+                  name="email"
+                  placeholder=${props.user.user_details.email}
+                  type="email"
+                  value=""
+                  disabled
+                />
+                <input
+                  id="first_name"
+                  name="first_name"
+                  placeholder=${props.user.user_details.first_name}
+                  type="text"
+                  value=""
+                />
+                <input
+                  id="surname"
+                  name="surname"
+                  placeholder=${props.user.user_details.last_name}
+                  type="text"
+                  value=""
+                />
+                <${DynamicListDropdown}
+                  name=${"main_currency"}
+                  items=${session.currencies}
+                  startingItem=${props.user.main_currency}
+                />
+                <div class="button-list-centered">
+                  ${!accountConfirmation
+                    ? html`<button
+                        id="modal-button"
+                        type="button"
+                        class="button-std medium"
+                        onclick=${confirmAccount}
+                      >
+                        Apply
+                      </button>`
+                    : null}
+                  ${accountConfirmation
+                    ? html`<${ConfirmationDialog}
+                        toggleConfirmation=${confirmAccount}
+                      /> `
+                    : null}
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="settings-paragraph">
+            <div class="settings-subheader">
+              <h6>Password reset</h6>
+            </div>
+            <form name="modify_user">
+              <div class="settings-subcontent">
+                <input
+                  id="old_password"
+                  name="old_password"
+                  placeholder="Old password"
+                  type="text"
+                  value=""
+                />
+                <input
+                  id="new_password"
+                  name="new_password"
+                  placeholder="New password"
+                  type="text"
+                  value=""
+                />
+                <input
+                  id="repeat_password"
+                  name="repeat_password"
+                  placeholder="Repeat password"
+                  type="text"
+                  value=""
+                />
+                <div class="button-list-centered">
+                  ${!passwordConfirmation
+                    ? html`<button
+                        id="modal-button"
+                        type="button"
+                        class="button-std medium"
+                        onclick=${confirmPassword}
+                      >
+                        Apply
+                      </button>`
+                    : null}
+                  ${passwordConfirmation
+                    ? html`<${ConfirmationDialog}
+                        toggleConfirmation=${confirmPassword}
+                      /> `
+                    : null}
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="settings-paragraph">
+            <div class="settings-subheader">
+              <h6>Actions</h6>
+            </div>
+            <div class="settings-subcontent">
+              <div class="button-list-centered">
+                <button
+                  id="modal-button"
+                  class="button-std medium"
+                  onclick=${confirmAction}
+                >
+                  Delete all transactions
+                </button>
+                <button
+                  id="modal-button"
+                  class="button-std medium"
+                  onclick=${confirmAction}
+                >
+                  Delete account
+                </button>
+              </div>
+              <div class="button-list-centered">
+                ${actionConfirmation
+                  ? html`<${ConfirmationDialog}
+                      toggleConfirmation=${confirmAction}
+                    /> `
+                  : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function ConfirmationDialog(props) {
+  return html` <p>Are you sure?</p>
+    <button id="modal-button" class="button-std medium">Yes</button>
+    <button
+      id="modal-button"
+      class="button-std medium"
+      onclick=${props.toggleConfirmation}
+    >
+      No
+    </button>`;
+}
 export function renderCategoryForms() {
   renderObjectDropdowns(
     user.categories,
@@ -71,7 +251,14 @@ export function renderObjectDropdowns(
 function DynamicListDropdown(props) {
   return html`
     <select id=${props.name} name=${props.name}>
-      ${props.items.map((item) => html`<option value=${item}>${item}</option>`)}
+      ${props.items.map(
+        (item) => html` <option
+          value=${item}
+          selected=${item === props.startingItem ? true : false}
+        >
+          ${item}
+        </option>`
+      )}
     </select>
   `;
 }

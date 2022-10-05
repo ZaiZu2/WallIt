@@ -51,7 +51,7 @@ h4 {
 }
 
 /* Used in sub-window headers */
-h6 {
+h5 {
   flex: 1;
 
   font-size: 1.3rem;
@@ -525,6 +525,38 @@ button.active {
 
   background-color: rgba(0, 0, 0, 0.9);
   transition: 0.3s ease-in-out;
+}
+
+h6 {
+  font-size: 1.2rem;
+}
+
+.settings {
+  padding: 0px 8px;
+}
+
+.settings-subheader {
+  width: max-content;
+  padding: 8px 0px;
+  text-align: left;
+}
+
+.settings-subcontent {
+  padding: 8px 0px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  border-top: var(--border-inactive);
+}
+
+.button-list-centered {
+  height: fit-content;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
 }
 
 /* ********************************** */

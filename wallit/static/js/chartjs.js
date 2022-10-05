@@ -26,11 +26,13 @@ function calculateCategoryWeights() {
 }
 
 export function reloadCategoryChart(chart) {
-  const weights = calculateCategoryWeights();
+  if (user.transactions && user.transactions.length != 0) {
+    const weights = calculateCategoryWeights();
 
-  chart.data.labels = Object.keys(weights);
-  chart.data.datasets[0].data = Object.values(weights);
-  chart.update();
+    chart.data.labels = Object.keys(weights);
+    chart.data.datasets[0].data = Object.values(weights);
+    chart.update();
+  }
 }
 
 // Category spendings chart
