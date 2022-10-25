@@ -15,13 +15,22 @@ accountSettingsButton.addEventListener("click", (event) => {
 
 function SettingsModal(props) {
   const [accountConfirmation, setAccountConfirmation] = useState(false);
-  const confirmAccount = () => setAccountConfirmation((prev) => !prev);
+  const toggleAccount = () => setAccountConfirmation((prev) => !prev);
 
   const [passwordConfirmation, setPasswordConfirmation] = useState(false);
-  const confirmPassword = () => setPasswordConfirmation((prev) => !prev);
+  const togglePassword = () => setPasswordConfirmation((prev) => !prev);
 
+  const [currentAction, setCurrentAction] = useState(null);
   const [actionConfirmation, setActionConfirmation] = useState(false);
-  const confirmAction = () => setActionConfirmation((prev) => !prev);
+  const toggleAction = () => {
+    setActionConfirmation((prev) => !prev);
+  };
+
+  const toggleOffDialogs = () => {
+    setAccountConfirmation(false);
+    setPasswordConfirmation(false);
+    setActionConfirmation(false);
+  };
 
   return html`
     <div class="dim-background">
@@ -73,17 +82,21 @@ function SettingsModal(props) {
                 <div class="button-list-centered">
                   ${!accountConfirmation
                     ? html`<button
-                        id="modal-button"
                         type="button"
                         class="button-std medium"
-                        onclick=${confirmAccount}
+                        onclick=${() => {
+                          toggleOffDialogs();
+                          toggleAccount();
+                          setCurrentAction(() => modifyUser);
+                        }}
                       >
                         Apply
                       </button>`
                     : null}
                   ${accountConfirmation
                     ? html`<${ConfirmationDialog}
-                        toggleConfirmation=${confirmAccount}
+                        toggleConfirmation=${toggleAccount}
+                        currentAction=${currentAction}
                       /> `
                     : null}
                 </div>
@@ -120,17 +133,21 @@ function SettingsModal(props) {
                 <div class="button-list-centered">
                   ${!passwordConfirmation
                     ? html`<button
-                        id="modal-button"
                         type="button"
                         class="button-std medium"
-                        onclick=${confirmPassword}
+                        onclick=${() => {
+                          toggleOffDialogs();
+                          togglePassword();
+                          setCurrentAction(() => modifyUser);
+                        }}
                       >
                         Apply
                       </button>`
                     : null}
                   ${passwordConfirmation
                     ? html`<${ConfirmationDialog}
-                        toggleConfirmation=${confirmPassword}
+                        toggleConfirmation=${togglePassword}
+                        currentAction=${currentAction}
                       /> `
                     : null}
                 </div>
@@ -143,25 +160,36 @@ function SettingsModal(props) {
             </div>
             <div class="settings-subcontent">
               <div class="button-list-centered">
-                <button
-                  id="modal-button"
-                  class="button-std medium"
-                  onclick=${confirmAction}
-                >
-                  Delete all transactions
-                </button>
-                <button
-                  id="modal-button"
-                  class="button-std medium"
-                  onclick=${confirmAction}
-                >
-                  Delete account
-                </button>
-              </div>
-              <div class="button-list-centered">
+                ${!actionConfirmation
+                  ? html`
+                      <button
+                        id="delete_transactions"
+                        class="button-std medium"
+                        onclick=${() => {
+                          toggleOffDialogs();
+                          toggleAction();
+                          setCurrentAction(() => deleteTransactions);
+                        }}
+                      >
+                        Delete all transactions
+                      </button>
+                      <button
+                        id="delete_account"
+                        class="button-std medium"
+                        onclick=${() => {
+                          toggleOffDialogs();
+                          toggleAction();
+                          setCurrentAction(() => deleteUser);
+                        }}
+                      >
+                        Delete account
+                      </button>
+                    `
+                  : null}
                 ${actionConfirmation
                   ? html`<${ConfirmationDialog}
-                      toggleConfirmation=${confirmAction}
+                      toggleConfirmation=${toggleAction}
+                      currentAction=${currentAction}
                     /> `
                   : null}
               </div>
@@ -175,9 +203,18 @@ function SettingsModal(props) {
 
 function ConfirmationDialog(props) {
   return html` <p>Are you sure?</p>
-    <button id="modal-button" class="button-std medium">Yes</button>
     <button
-      id="modal-button"
+      type="button"
+      class="button-std medium"
+      onclick=${() => {
+        props.currentAction();
+        props.toggleConfirmation();
+      }}
+    >
+      Yes
+    </button>
+    <button
+      type="button"
       class="button-std medium"
       onclick=${props.toggleConfirmation}
     >
@@ -471,4 +508,16 @@ export async function deleteCategories(categoryIds) {
 
   for (let deletedCategory of deletedCategories)
     delete user.categories[deletedCategory.name];
+}
+
+async function modifyUser(id, modifiedColumns) {
+  console.log("modify user");
+}
+
+async function deleteTransactions(userId) {
+  console.log("delete transactions");
+}
+
+async function deleteUser(id) {
+  console.log("delete user");
 }
