@@ -14,31 +14,13 @@ accountSettingsButton.addEventListener("click", (event) => {
 });
 
 function SettingsModal(props) {
-  const [accountConfirmation, setAccountConfirmation] = useState(false);
-  const toggleAccount = () => setAccountConfirmation((prev) => !prev);
-
-  const [passwordConfirmation, setPasswordConfirmation] = useState(false);
-  const togglePassword = () => setPasswordConfirmation((prev) => !prev);
-
-  const [currentAction, setCurrentAction] = useState(null);
-  const [actionConfirmation, setActionConfirmation] = useState(false);
-  const toggleAction = () => {
-    setActionConfirmation((prev) => !prev);
-  };
-
-  const toggleOffDialogs = () => {
-    setAccountConfirmation(false);
-    setPasswordConfirmation(false);
-    setActionConfirmation(false);
-  };
-
   return html`
     <div class="dim-background">
       <div class="modal">
         <div class="modal-header">
           <h5>Settings</h5>
           <span
-            class="material-symbols-rounded custom-small-icon"
+            class="material-symbols-rounded custom-small-icon close-icon"
             onclick=${() => {
               render(null, document.getElementById("settings"));
             }}
@@ -50,150 +32,19 @@ function SettingsModal(props) {
             <div class="settings-subheader">
               <h6>Account details</h6>
             </div>
-            <form name="modify_user">
-              <div class="settings-subcontent">
-                <input
-                  id="email"
-                  name="email"
-                  placeholder=${props.user.user_details.email}
-                  type="email"
-                  value=""
-                  disabled
-                />
-                <input
-                  id="first_name"
-                  name="first_name"
-                  placeholder=${props.user.user_details.first_name}
-                  type="text"
-                  value=""
-                />
-                <input
-                  id="surname"
-                  name="surname"
-                  placeholder=${props.user.user_details.last_name}
-                  type="text"
-                  value=""
-                />
-                <${DynamicListDropdown}
-                  name=${"main_currency"}
-                  items=${session.currencies}
-                  startingItem=${props.user.main_currency}
-                />
-                <div class="button-list-centered">
-                  ${!accountConfirmation
-                    ? html`<button
-                        type="button"
-                        class="button-std medium"
-                        onclick=${() => {
-                          toggleOffDialogs();
-                          toggleAccount();
-                          setCurrentAction(() => modifyUser);
-                        }}
-                      >
-                        Apply
-                      </button>`
-                    : null}
-                  ${accountConfirmation
-                    ? html`<${ConfirmationDialog}
-                        toggleConfirmation=${toggleAccount}
-                        currentAction=${currentAction}
-                      /> `
-                    : null}
-                </div>
-              </div>
-            </form>
+            <${ModifyAccountForm} userDetails=${user.user_details} />
           </div>
           <div class="settings-paragraph">
             <div class="settings-subheader">
               <h6>Password reset</h6>
             </div>
-            <form name="modify_user">
-              <div class="settings-subcontent">
-                <input
-                  id="old_password"
-                  name="old_password"
-                  placeholder="Old password"
-                  type="text"
-                  value=""
-                />
-                <input
-                  id="new_password"
-                  name="new_password"
-                  placeholder="New password"
-                  type="text"
-                  value=""
-                />
-                <input
-                  id="repeat_password"
-                  name="repeat_password"
-                  placeholder="Repeat password"
-                  type="text"
-                  value=""
-                />
-                <div class="button-list-centered">
-                  ${!passwordConfirmation
-                    ? html`<button
-                        type="button"
-                        class="button-std medium"
-                        onclick=${() => {
-                          toggleOffDialogs();
-                          togglePassword();
-                          setCurrentAction(() => modifyUser);
-                        }}
-                      >
-                        Apply
-                      </button>`
-                    : null}
-                  ${passwordConfirmation
-                    ? html`<${ConfirmationDialog}
-                        toggleConfirmation=${togglePassword}
-                        currentAction=${currentAction}
-                      /> `
-                    : null}
-                </div>
-              </div>
-            </form>
+            <${ModifyPasswordForm} />
           </div>
           <div class="settings-paragraph">
             <div class="settings-subheader">
               <h6>Actions</h6>
             </div>
-            <div class="settings-subcontent">
-              <div class="button-list-centered">
-                ${!actionConfirmation
-                  ? html`
-                      <button
-                        id="delete_transactions"
-                        class="button-std medium"
-                        onclick=${() => {
-                          toggleOffDialogs();
-                          toggleAction();
-                          setCurrentAction(() => deleteTransactions);
-                        }}
-                      >
-                        Delete all transactions
-                      </button>
-                      <button
-                        id="delete_account"
-                        class="button-std medium"
-                        onclick=${() => {
-                          toggleOffDialogs();
-                          toggleAction();
-                          setCurrentAction(() => deleteUser);
-                        }}
-                      >
-                        Delete account
-                      </button>
-                    `
-                  : null}
-                ${actionConfirmation
-                  ? html`<${ConfirmationDialog}
-                      toggleConfirmation=${toggleAction}
-                      currentAction=${currentAction}
-                    /> `
-                  : null}
-              </div>
-            </div>
+            <${ActionButtons} />
           </div>
         </div>
       </div>
@@ -201,26 +52,233 @@ function SettingsModal(props) {
   `;
 }
 
-function ConfirmationDialog(props) {
-  return html` <p>Are you sure?</p>
-    <button
-      type="button"
-      class="button-std medium"
-      onclick=${() => {
-        props.currentAction();
-        props.toggleConfirmation();
-      }}
-    >
-      Yes
-    </button>
-    <button
-      type="button"
-      class="button-std medium"
-      onclick=${props.toggleConfirmation}
-    >
-      No
-    </button>`;
+function ModifyAccountForm(props) {
+  const [accountForm, updateAccountForm] = useState({
+    username: "",
+    first_name: "",
+    last_name: "",
+    main_currency: "",
+  });
+  const [dialogState, setDialogState] = useState(false);
+
+  const handleAccountChange = (event) => {
+    const { name, value } = event.target;
+    updateAccountForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+  const toggleDialog = () => setDialogState((prev) => !prev);
+
+  const handleAccountSubmit = (event) => {
+    event.preventDefault();
+    toggleDialog();
+
+    const formData = new FormData(event.target);
+    const modifiedColumns = {};
+    for (let [name, value] of formData.entries()) {
+      modifiedColumns[name] = value;
+      console.log(`${name} - ${value}`);
+    }
+  };
+
+  return html`<form onsubmit="${handleAccountSubmit}">
+    <div class="settings-subcontent">
+      <input
+        name="email"
+        placeholder=${props.userDetails.email}
+        type="email"
+        disabled
+      />
+      <input
+        name="username"
+        placeholder=${props.userDetails.username}
+        type="text"
+        value=${accountForm.username}
+        onchange="${handleAccountChange}"
+      />
+      <input
+        name="first_name"
+        placeholder=${props.userDetails.first_name}
+        type="text"
+        value=${accountForm.first_name}
+        onchange="${handleAccountChange}"
+      />
+      <input
+        name="last_name"
+        placeholder=${props.userDetails.last_name}
+        type="text"
+        value=${accountForm.last_name}
+        onchange="${handleAccountChange}"
+      />
+      <${DynamicListDropdown}
+        name=${"main_currency"}
+        items=${session.currencies}
+        startingItem=${props.userDetails.main_currency}
+      />
+      <div class="button-list-centered">
+        ${!dialogState
+          ? html`<button
+              type="button"
+              class="button-std medium"
+              onclick=${(event) => {
+                event.preventDefault(); // Why is this button submiting form???
+                toggleDialog();
+              }}
+            >
+              Apply
+            </button>`
+          : html` <p>Are you sure?</p>
+              <button type="submit" class="button-std medium">Yes</button>
+              <button
+                type="button"
+                class="button-std medium"
+                onclick=${toggleDialog}
+              >
+                No
+              </button>`}
+      </div>
+    </div>
+  </form>`;
 }
+
+function ModifyPasswordForm() {
+  const [passwordForm, updatePasswordForm] = useState({
+    old_password: "",
+    new_password: "",
+    repeat_password: "",
+  });
+  const handlePasswordChange = (event) => {
+    const { name, value } = event.target;
+    updatePasswordForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const [dialogState, setDialogState] = useState(false);
+  const toggleDialog = () => setDialogState((prev) => !prev);
+
+  const handlePasswordSubmit = (event) => {
+    event.preventDefault();
+    toggleDialog();
+
+    const formData = new FormData(event.target);
+    const modifiedColumns = {};
+    for (let [name, value] of formData.entries()) {
+      modifiedColumns[name] = value;
+      console.log(`${name} - ${value}`);
+    }
+  };
+
+  return html`<form onsubmit="${handlePasswordSubmit}">
+    <div class="settings-subcontent">
+      <input
+        name="old_password"
+        placeholder="Old password"
+        type="text"
+        value=${passwordForm.old_password}
+        onchange=${handlePasswordChange}
+      />
+      <input
+        name="new_password"
+        placeholder="New password"
+        type="text"
+        value=${passwordForm.new_password}
+        onchange=${handlePasswordChange}
+      />
+      <input
+        name="repeat_password"
+        placeholder="Repeat password"
+        type="text"
+        value=${passwordForm.repeat_password}
+        onchange=${handlePasswordChange}
+      />
+      <div class="button-list-centered">
+        ${!dialogState
+          ? html`<button
+              type="button"
+              class="button-std medium"
+              onclick=${(event) => {
+                event.preventDefault(); // Why is this button submiting form???
+                toggleDialog();
+              }}
+            >
+              Apply
+            </button>`
+          : html` <p>Are you sure?</p>
+              <button type="submit" class="button-std medium">Yes</button>
+              <button
+                type="button"
+                class="button-std medium"
+                onclick=${toggleDialog}
+              >
+                No
+              </button>`}
+      </div>
+    </div>
+  </form>`;
+}
+
+function ActionButtons() {
+  const [dialogState, setDialogState] = useState(false);
+  const [currentAction, setCurrentAction] = useState(null);
+
+  const toggleDialog = () => setDialogState((prev) => !prev);
+
+  const handleDeleteTransactions = () => {
+    toggleDialog();
+    setCurrentAction(() => deleteTransactions);
+  };
+
+  const handleDeleteUser = () => {
+    toggleDialog();
+    setCurrentAction(() => deleteUser);
+  };
+
+  const handleConfirmation = () => {
+    currentAction();
+    toggleDialog();
+  };
+
+  return html`<div class="settings-subcontent">
+    <div class="button-list-centered">
+      ${!dialogState
+        ? html`
+            <button
+              id="delete_transactions"
+              class="button-std medium"
+              onclick=${handleDeleteTransactions}
+            >
+              Delete all transactions
+            </button>
+            <button
+              id="delete_account"
+              class="button-std medium"
+              onclick=${handleDeleteUser}
+            >
+              Delete account
+            </button>
+          `
+        : html` <p>Are you sure?</p>
+            <button
+              type="button"
+              class="button-std medium"
+              onclick=${handleConfirmation}
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              class="button-std medium"
+              onclick=${toggleDialog}
+            >
+              No
+            </button>`}
+    </div>
+  </div>`;
+}
+
 export function renderCategoryForms() {
   renderObjectDropdowns(
     user.categories,

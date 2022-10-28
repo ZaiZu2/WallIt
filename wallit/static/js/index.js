@@ -332,13 +332,12 @@ async function updateSessionEntities() {
   });
 
   // Save entities into a global variable
-  session.currencies = entities.currencies;
-  session.banks = entities.banks;
+  Object.assign(session, entities);
 }
 
 async function updateUserEntities() {
   // Fetch filter data based on user's transactions from server
-  user = await fetch("/api/user/entities", {
+  const entities = await fetch("/api/user/entities", {
     method: "GET", // *GET, POST, PUT, DELETE, etc.
     headers: {
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
@@ -347,6 +346,8 @@ async function updateUserEntities() {
     if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
     return response.json();
   });
+
+  Object.assign(user, entities);
 }
 
 function showUploadModal(responseStatus, uploadResults) {
