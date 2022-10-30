@@ -9,3 +9,5 @@ JS browser scripts:
 2. If no transactions for user are present, multiple endpoints fail to account for it
  - fetch endpoint still sends json with no transactions
  - monthly saldo endpoint crashes
+
+3. Adding/Modifying category with a duplicated name results in DB constraint violation. Add schema validation.

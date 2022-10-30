@@ -209,7 +209,7 @@ export const transactionsTable = new Grid({
       id: "amount",
       name: "Amount",
       formatter: (cell) => {
-        return `${cell} CZK`;
+        return `${cell} ${user.main_currency}`;
       },
     },
     {

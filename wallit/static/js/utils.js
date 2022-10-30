@@ -59,7 +59,16 @@ function ModifyAccountForm(props) {
     last_name: "",
     main_currency: "",
   });
+  const [userFeedback, updateUserFeedback] = useState([]);
   const [dialogState, setDialogState] = useState(false);
+  const [feedback, setFeedback] = useState("");
+
+  const toggleDialog = () => setDialogState((prev) => !prev);
+
+  const isFormEmpty = () => {
+    for (let value of Object.values(accountForm)) if (value) return false;
+    return true;
+  };
 
   const handleAccountChange = (event) => {
     const { name, value } = event.target;
@@ -68,54 +77,68 @@ function ModifyAccountForm(props) {
       [name]: value,
     }));
   };
-  const toggleDialog = () => setDialogState((prev) => !prev);
 
   const handleAccountSubmit = (event) => {
     event.preventDefault();
     toggleDialog();
+    updateUserFeedback([]);
 
-    const formData = new FormData(event.target);
-    const modifiedColumns = {};
-    for (let [name, value] of formData.entries()) {
-      modifiedColumns[name] = value;
-      console.log(`${name} - ${value}`);
+    let modifiedColumns = {};
+    for (let [name, value] of Object.entries(accountForm)) {
+      if (value != false) modifiedColumns[name] = value;
     }
+
+    if (Object.keys(modifiedColumns).length !== 0)
+      modifyUser(props.userDetails.id, modifiedColumns);
   };
 
-  return html`<form onsubmit="${handleAccountSubmit}">
+  const printFeedback = () => {
+    return html`${userFeedback.map((message) => html`<p>${message}</p>`)}`;
+  };
+
+  return html` <form onsubmit="${handleAccountSubmit}">
     <div class="settings-subcontent">
-      <input
-        name="email"
-        placeholder=${props.userDetails.email}
-        type="email"
-        disabled
-      />
-      <input
-        name="username"
-        placeholder=${props.userDetails.username}
-        type="text"
-        value=${accountForm.username}
-        onchange="${handleAccountChange}"
-      />
-      <input
-        name="first_name"
-        placeholder=${props.userDetails.first_name}
-        type="text"
-        value=${accountForm.first_name}
-        onchange="${handleAccountChange}"
-      />
-      <input
-        name="last_name"
-        placeholder=${props.userDetails.last_name}
-        type="text"
-        value=${accountForm.last_name}
-        onchange="${handleAccountChange}"
-      />
-      <${DynamicListDropdown}
-        name=${"main_currency"}
-        items=${session.currencies}
-        startingItem=${props.userDetails.main_currency}
-      />
+      <div class="settings-grid">
+        <label for="email">E-mail</label>
+        <input
+          id="email"
+          name="email"
+          placeholder=${props.userDetails.email}
+          type="email"
+          readonly
+        />
+        <label for="username">Username</label>
+        <input
+          name="username"
+          placeholder=${props.userDetails.username}
+          type="text"
+          value=${accountForm.username}
+          oninput="${handleAccountChange}"
+        />
+        <label for="first_name">First name</label>
+        <input
+          name="first_name"
+          placeholder=${props.userDetails.first_name}
+          type="text"
+          value=${accountForm.first_name}
+          oninput="${handleAccountChange}"
+        />
+        <label for="last_name">Last name</label>
+        <input
+          name="last_name"
+          placeholder=${props.userDetails.last_name}
+          type="text"
+          value=${accountForm.last_name}
+          oninput="${handleAccountChange}"
+        />
+        <label for="main_currency">Currency</label>
+        <${DynamicListDropdown}
+          name=${"main_currency"}
+          items=${session.currencies}
+          startingItem=${user.main_currency}
+          handleChange=${handleAccountChange}
+        />
+      </div>
       <div class="button-list-centered">
         ${!dialogState
           ? html`<button
@@ -125,6 +148,7 @@ function ModifyAccountForm(props) {
                 event.preventDefault(); // Why is this button submiting form???
                 toggleDialog();
               }}
+              disabled=${isFormEmpty() ? true : false}
             >
               Apply
             </button>`
@@ -139,6 +163,7 @@ function ModifyAccountForm(props) {
               </button>`}
       </div>
     </div>
+    ${feedback ? html`<p class="feedback">${feedback}</p>` : null}
   </form>`;
 }
 
@@ -148,6 +173,16 @@ function ModifyPasswordForm() {
     new_password: "",
     repeat_password: "",
   });
+  const [dialogState, setDialogState] = useState(false);
+  const [feedback, setFeedback] = useState("");
+
+  const toggleDialog = () => setDialogState((prev) => !prev);
+
+  const isFormFilled = () => {
+    for (let value of Object.values(passwordForm)) if (!value) return false;
+    return true;
+  };
+
   const handlePasswordChange = (event) => {
     const { name, value } = event.target;
     updatePasswordForm((prev) => ({
@@ -156,44 +191,45 @@ function ModifyPasswordForm() {
     }));
   };
 
-  const [dialogState, setDialogState] = useState(false);
-  const toggleDialog = () => setDialogState((prev) => !prev);
-
   const handlePasswordSubmit = (event) => {
     event.preventDefault();
     toggleDialog();
 
-    const formData = new FormData(event.target);
-    const modifiedColumns = {};
-    for (let [name, value] of formData.entries()) {
-      modifiedColumns[name] = value;
-      console.log(`${name} - ${value}`);
-    }
+    if (Object.keys(passwordForm).length !== 0)
+      changePassword(user.user_details.id, passwordForm);
   };
 
   return html`<form onsubmit="${handlePasswordSubmit}">
     <div class="settings-subcontent">
-      <input
-        name="old_password"
-        placeholder="Old password"
-        type="text"
-        value=${passwordForm.old_password}
-        onchange=${handlePasswordChange}
-      />
-      <input
-        name="new_password"
-        placeholder="New password"
-        type="text"
-        value=${passwordForm.new_password}
-        onchange=${handlePasswordChange}
-      />
-      <input
-        name="repeat_password"
-        placeholder="Repeat password"
-        type="text"
-        value=${passwordForm.repeat_password}
-        onchange=${handlePasswordChange}
-      />
+      <div class="settings-grid">
+        <label for="old_password">Old password</label>
+        <input
+          name="old_password"
+          placeholder="*"
+          type="password"
+          value=${passwordForm.old_password}
+          oninput=${handlePasswordChange}
+          required
+        />
+        <label for="new_password">New password</label>
+        <input
+          name="new_password"
+          placeholder="*"
+          type="password"
+          value=${passwordForm.new_password}
+          oninput=${handlePasswordChange}
+          required
+        />
+        <label for="repeat_password">Repeat password</label>
+        <input
+          name="repeat_password"
+          placeholder="*"
+          type="password"
+          value=${passwordForm.repeat_password}
+          oninput=${handlePasswordChange}
+          required
+        />
+      </div>
       <div class="button-list-centered">
         ${!dialogState
           ? html`<button
@@ -203,6 +239,7 @@ function ModifyPasswordForm() {
                 event.preventDefault(); // Why is this button submiting form???
                 toggleDialog();
               }}
+              disabled=${isFormFilled() ? false : true}
             >
               Apply
             </button>`
@@ -217,66 +254,69 @@ function ModifyPasswordForm() {
               </button>`}
       </div>
     </div>
+    ${feedback ? html`<p class="feedback">${feedback}</p>` : null}
   </form>`;
 }
 
 function ActionButtons() {
   const [dialogState, setDialogState] = useState(false);
   const [currentAction, setCurrentAction] = useState(null);
+  const [feedback, setFeedback] = useState("");
 
   const toggleDialog = () => setDialogState((prev) => !prev);
 
   const handleDeleteTransactions = () => {
     toggleDialog();
-    setCurrentAction(() => deleteTransactions);
+    setCurrentAction(() => deleteTransactions.bind(this, user.user_details.id));
   };
 
   const handleDeleteUser = () => {
     toggleDialog();
-    setCurrentAction(() => deleteUser);
+    setCurrentAction(() => deleteUser.bind(this, user.user_details.id));
   };
 
-  const handleConfirmation = () => {
-    currentAction();
+  const handleConfirmation = async () => {
+    setFeedback(await currentAction());
     toggleDialog();
   };
 
-  return html`<div class="settings-subcontent">
-    <div class="button-list-centered">
-      ${!dialogState
-        ? html`
-            <button
-              id="delete_transactions"
-              class="button-std medium"
-              onclick=${handleDeleteTransactions}
-            >
-              Delete all transactions
-            </button>
-            <button
-              id="delete_account"
-              class="button-std medium"
-              onclick=${handleDeleteUser}
-            >
-              Delete account
-            </button>
-          `
-        : html` <p>Are you sure?</p>
-            <button
-              type="button"
-              class="button-std medium"
-              onclick=${handleConfirmation}
-            >
-              Yes
-            </button>
-            <button
-              type="button"
-              class="button-std medium"
-              onclick=${toggleDialog}
-            >
-              No
-            </button>`}
+  return html` <div class="settings-subcontent">
+      <div class="button-list-centered">
+        ${!dialogState
+          ? html`
+              <button
+                id="delete_transactions"
+                class="button-std medium"
+                onclick=${handleDeleteTransactions}
+              >
+                Delete all transactions
+              </button>
+              <button
+                id="delete_account"
+                class="button-std medium"
+                onclick=${handleDeleteUser}
+              >
+                Delete account
+              </button>
+            `
+          : html` <p>Are you sure?</p>
+              <button
+                type="button"
+                class="button-std medium"
+                onclick=${handleConfirmation}
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                class="button-std medium"
+                onclick=${toggleDialog}
+              >
+                No
+              </button>`}
+      </div>
     </div>
-  </div>`;
+    ${feedback ? html`<p class="feedback">${feedback}</p>` : null}`;
 }
 
 export function renderCategoryForms() {
@@ -345,7 +385,11 @@ export function renderObjectDropdowns(
 
 function DynamicListDropdown(props) {
   return html`
-    <select id=${props.name} name=${props.name}>
+    <select
+      id=${props.name}
+      name=${props.name}
+      onchange=${props.handleChange ? props.handleChange : false}
+    >
       ${props.items.map(
         (item) => html` <option
           value=${item}
@@ -569,13 +613,74 @@ export async function deleteCategories(categoryIds) {
 }
 
 async function modifyUser(id, modifiedColumns) {
-  console.log("modify user");
+  const modifiedUser = await fetch(`/api/users/${id}/modify`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
+    },
+    body: JSON.stringify(modifiedColumns),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((data) => data);
+
+  delete modifiedUser[main_currency];
+  user.user_details = modifiedUser;
 }
 
-async function deleteTransactions(userId) {
-  console.log("delete transactions");
+async function changePassword(id, passwordColumns) {
+  await fetch(`/api/users/${id}/change_password`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
+    },
+    body: JSON.stringify(passwordColumns),
+  }).then((response) => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return response.json();
+  });
+}
+
+async function deleteTransactions(id) {
+  return await fetch(`/api/users/${id}/delete_transactions`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
+    },
+  })
+    .then((response) => {
+      if (!response.ok) {
+        return "Error occured";
+      }
+      return response.json();
+    })
+    .then((data) => `Deleted ${data.number_of_deleted} transactions`);
 }
 
 async function deleteUser(id) {
-  console.log("delete user");
+  const responseOk = await fetch(`/api/users/${id}/delete`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
+    },
+  }).then((response) => {
+    return response.ok;
+  });
+
+  if (responseOk) {
+    setTimeout(() => {
+      window.location.href = "/welcome";
+    }, 5000);
+    return "Account deleted successfully. You will be logged out in 5 seconds";
+  } else return "Account deletion unsuccessful";
 }

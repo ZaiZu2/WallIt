@@ -164,6 +164,11 @@ select:active {
   outline: var(--border-active);
 }
 
+.button-std:disabled {
+  color: var(--main-font-inactive-color);
+  outline: var(--border-inactive);
+}
+
 .button-no-outline {
   width: fit-content;
   height: 2rem;
@@ -180,8 +185,8 @@ select:active {
   color: var(--main-font-active-color);
 }
 
-.button-no-outline:active,
-.button-std:active {
+.button-no-outline:enabled:active,
+.button-std:enabled:active {
   background-color: var(--main-font-active-color);
   color: black;
 
@@ -480,7 +485,7 @@ button.active {
   justify-content: center;
   align-items: center;
 
-  transition: 1s ease-in-out;
+  transition: 0.5s ease-in-out;
 }
 
 .inactive {
@@ -543,7 +548,7 @@ h6 {
 }
 
 .settings-subcontent {
-  padding: 8px 0px;
+  padding-top: 8px;
 
   display: flex;
   flex-direction: column;
@@ -552,12 +557,32 @@ h6 {
   border-top: var(--border-inactive);
 }
 
+.settings-grid {
+  display: grid;
+  grid-template-columns: min-content auto;
+  gap: 6px;
+
+  align-items: center;
+  justify-content: center;
+}
+
 .button-list-centered {
   height: fit-content;
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 8px;
+}
+
+.label-horizontal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feedback {
+  padding-top: 8px;
+  text-align: center;
 }
 
 /* ********************************** */
