@@ -1,5 +1,5 @@
 from wallit import app, db, login
-from wallit.models import User, Transaction, Bank
+from wallit.models import User, Transaction, Bank, Category
 
 from typing import Any
 
@@ -12,6 +12,7 @@ def make_shell_context() -> dict[str, Any]:
         "User": User,
         "Transaction": Transaction,
         "Bank": Bank,
+        "Category": Category,
     }
 
 

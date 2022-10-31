@@ -20,7 +20,7 @@ class UpdatableMixin:
             setattr(self, column, value)
 
 
-class User(UserMixin, db.Model):
+class User(UserMixin, UpdatableMixin, db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -93,6 +93,9 @@ class User(UserMixin, db.Model):
         except:
             return None
         return User.query.filter_by(email=email).first()
+
+    def select_transactions(self) -> list[Transaction]:
+        return Transaction.query.where(with_parent(self, User.transactions)).all()
 
     def select_categories(self) -> list[Category]:
         return Category.query.where(with_parent(self, User.categories)).all()

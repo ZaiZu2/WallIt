@@ -1,14 +1,17 @@
-from cgitb import reset
+from marshmallow import ValidationError
 from wallit import app, db, logger
 from wallit.forms import LoginForm, RequestPasswordForm, SignUpForm, ResetPasswordForm
 from wallit.models import Transaction, User, Bank, Category
 from wallit.schemas import (
     CategorySchema,
+    ChangePasswordSchema,
+    ModifyUserSchema,
     SessionEntitiesSchema,
     TransactionSchema,
     ModifyTransactionSchema,
     UserEntitiesSchema,
     FiltersSchema,
+    UserSchema,
     MonthlySaldoSchema,
 )
 from wallit.imports import (
@@ -80,6 +83,13 @@ def login() -> Response:
     return redirect(url_for("welcome"))
 
 
+@app.route("/logout", methods=["GET"])
+@login_required
+def logout() -> Response:
+    logout_user()
+    return redirect(url_for("welcome"))
+
+
 @app.route("/reset_password", methods=["POST"])
 def request_reset_password() -> Response:
     if current_user.is_authenticated:
@@ -148,11 +158,72 @@ def sign_up() -> Response:
     return redirect(url_for("welcome"))
 
 
-@app.route("/logout", methods=["GET"])
+@app.route("/api/users/<int:id>/modify", methods=["PATCH"])
 @login_required
-def logout() -> Response:
-    logout_user()
-    return redirect(url_for("welcome"))
+def modify_user(id: int) -> Tuple[JSONType, int]:
+    user: User = User.query.get(id)
+    if user != current_user:
+        abort(404)
+
+    try:
+        verified_data = ModifyUserSchema().load(request.json)
+    except ValidationError as error:
+        return error.messages, 400
+
+    if (
+        "main_currency" in verified_data
+        and verified_data["main_currency"] != user.main_currency
+    ):
+        convert_currency(user.select_transactions(), verified_data["main_currency"])
+
+    user.update(verified_data)
+    db.session.commit()
+
+    return UserSchema().dumps(user), 200
+
+
+@app.route("/api/users/<int:id>/change_password", methods=["PATCH"])
+@login_required
+def change_password(id: int) -> Tuple[JSONType, int]:
+    user: User = User.query.get(id)
+    if user != current_user:
+        abort(404)
+
+    try:
+        verified_data = ChangePasswordSchema().load(request.json)
+    except ValidationError as error:
+        return error.messages, 400
+
+    if not user.check_password(verified_data["old_password"]):
+        abort(400)
+    user.set_password(verified_data["new_password"])
+    db.session.commit()
+
+    return {}, 200
+
+
+@app.route("/api/users/<int:id>/delete", methods=["DELETE"])
+@login_required
+def delete_user(id: int) -> Tuple[JSONType, int]:
+    user: User = User.query.get(id)
+    if user != current_user:
+        abort(404)
+
+    db.session.delete(user)
+    # db.session.commit()
+    return {}, 200
+
+
+@app.route("/api/users/<int:id>/delete_transactions", methods=["DELETE"])
+@login_required
+def delete_all_transactions(id: int) -> Tuple[JSONType, int]:
+    user: User = User.query.get(id)
+    if user != current_user:
+        abort(404)
+
+    no_of_deleted = Transaction.query.filter_by(user=user).delete()
+    db.session.commit()
+    return {"number_of_deleted": no_of_deleted}, 200
 
 
 @app.route("/api/transactions", methods=["POST"])
@@ -252,7 +323,7 @@ def modify_category(id: int) -> tuple[JSONType, int]:
     """Modify category"""
 
     verified_data = CategorySchema().load(request.json)
-    category = Category.query.get_or_404(id)
+    category = Category.get_from_id(id, current_user)
     category.update(verified_data)
     db.session.commit()
     return CategorySchema().dumps(category), 201
@@ -369,7 +440,6 @@ def upload_statements() -> tuple[JSONType, int]:
         "revolut": {
             "import_func": import_revolut_statement,
             "instance": Bank.query.filter_by(name="Revolut").one(),
-            "aaa": Bank.get_from_name("Revolut"),
         },
         "equabank": {
             "import_func": import_equabank_statement,

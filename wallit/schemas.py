@@ -1,4 +1,4 @@
-from wallit import ma
+from wallit import ma, db
 from wallit.models import Bank, Category, Transaction, User
 from wallit.imports import get_currencies
 
@@ -11,6 +11,7 @@ from marshmallow import (
     pre_load,
     post_load,
     validate,
+    validates,
     validates_schema,
     ValidationError,
     EXCLUDE,
@@ -28,7 +29,7 @@ class UserSchema(ma.SQLAlchemySchema):
         validate=validate.Regexp(
             "^[A-Za-z0-9]+$",
             error="Username must be a single word consisting of alpha-numeric characters",
-        )
+        ),
     )
     email = ma.auto_field(validate=validate.Email())
     first_name = ma.auto_field(
@@ -48,6 +49,83 @@ class UserSchema(ma.SQLAlchemySchema):
             get_currencies(), error="Only available currency can be accepted"
         )
     )
+
+    @validates("username")
+    def check_unique_username(self, username: str) -> None:
+        username_exists: bool = (
+            User.query.filter_by(username=username).scalar() is not None
+        )
+        if username_exists:
+            raise ValidationError(f"Username {username} already exists")
+
+    @validates("email")
+    def check_unique_email(self, email: str) -> None:
+        if User.query.filter_by(email=email.lower()).scalar() is not None:
+            raise ValidationError(f"Username {email} already exists")
+
+
+class ModifyUserSchema(ma.SQLAlchemySchema):
+    class Meta:
+        model = User
+        ordered = True
+
+    username = ma.auto_field(
+        required=False,
+        validate=validate.Regexp(
+            "^[A-Za-z0-9]+$",
+            error="Username must be a single word consisting of alpha-numeric characters",
+        ),
+    )
+    first_name = ma.auto_field(
+        required=False,
+        validate=validate.Regexp(
+            "^[A-Za-z][a-z]*$",
+            error="Name must be a single word starting with a capital letter",
+        ),
+    )
+    last_name = ma.auto_field(
+        required=False,
+        validate=validate.Regexp(
+            "^[A-Za-z][a-z]*$",
+            error="Last name must be a single word starting with a capital letter",
+        ),
+    )
+    main_currency = ma.auto_field(
+        required=False,
+        validate=validate.OneOf(
+            get_currencies(), error="Only available currency can be accepted"
+        ),
+    )
+
+    @validates("username")
+    def _check_unique_username(self, username: str) -> None:
+        username_exists: bool = (
+            User.query.filter_by(username=username).scalar() is not None
+        )
+        if username_exists:
+            raise ValidationError(f"Username {username} already exists")
+
+
+class ChangePasswordSchema(ma.Schema):
+
+    old_password = fields.String(required=True)
+    new_password = fields.String(
+        required=True,
+        validate=validate.Length(
+            min=5, error="Password should be minimum 5 characters long"
+        ),
+    )
+    repeat_password = fields.String(required=True)
+
+    @validates_schema
+    def _check_new_password(self, data: dict, **kwargs: dict[str, Any]) -> None:
+        if data["old_password"] == data["new_password"]:
+            raise ValidationError("New password cannot be the same")
+
+    @validates_schema
+    def _repeated_password_check(self, data: dict, **kwargs: dict[str, Any]) -> None:
+        if data["new_password"] != data["repeat_password"]:
+            raise ValidationError("Passwords do not match")
 
 
 class CategorySchema(ma.SQLAlchemySchema):
