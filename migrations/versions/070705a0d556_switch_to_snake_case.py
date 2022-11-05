@@ -32,7 +32,7 @@ def upgrade():
             "users",
             ["user_id"],
             ["id"],
-            ondelete="CASCADE",
+            ondelete="CASCADE", 
         )
     op.drop_column("categories", "userId")
 
@@ -155,7 +155,7 @@ def downgrade():
         "transactions", naming_convention=naming_convention
     ) as batch_op:
         batch_op.drop_constraint(
-            "fk_transactions_category_id_categories", type_="foreignkey"
+            "fk_transactions_bankId_banks", type_="foreignkey"
         )
         batch_op.drop_constraint("fk_transactions_user_id_users", type_="foreignkey")
         batch_op.drop_constraint("fk_transactions_bank_id_banks", type_="foreignkey")
@@ -170,7 +170,7 @@ def downgrade():
             "fk_transactions_categoryId_categories", "banks", ["bankId"], ["id"]
         )
         batch_op.create_foreign_key(
-            "fk_transactions_bankId_banks",
+            "fk_transactions_category_id_categories",
             "categories",
             ["categoryId"],
             ["id"],

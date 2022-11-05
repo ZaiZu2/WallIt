@@ -60,10 +60,12 @@ def upgrade():
         sa.ForeignKeyConstraint(
             ["bankId"],
             ["banks.id"],
+            name="fk_transactions_bankId_banks"
         ),
         sa.ForeignKeyConstraint(
             ["userId"],
             ["users.id"],
+            name="fk_transactions_userId_users"
         ),
         sa.PrimaryKeyConstraint("id"),
     )
