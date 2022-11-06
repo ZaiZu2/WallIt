@@ -16,7 +16,7 @@ depends_on = None
 
 naming_convention = {
     "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-    "pk": "pk_%(table_name)s_%(column_0_name)s"
+    "pk": "pk_%(table_name)s_%(column_0_name)s",
 }
 
 
@@ -32,7 +32,7 @@ def upgrade():
             "users",
             ["user_id"],
             ["id"],
-            ondelete="CASCADE", 
+            ondelete="CASCADE",
         )
     op.drop_column("categories", "userId")
 
@@ -154,9 +154,7 @@ def downgrade():
     with op.batch_alter_table(
         "transactions", naming_convention=naming_convention
     ) as batch_op:
-        batch_op.drop_constraint(
-            "fk_transactions_bankId_banks", type_="foreignkey"
-        )
+        batch_op.drop_constraint("fk_transactions_bankId_banks", type_="foreignkey")
         batch_op.drop_constraint("fk_transactions_user_id_users", type_="foreignkey")
         batch_op.drop_constraint("fk_transactions_bank_id_banks", type_="foreignkey")
         batch_op.create_foreign_key(
