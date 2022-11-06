@@ -9,7 +9,7 @@ class Config:
     # postgres
     SQLALCHEMY_DATABASE_URI = (
         os.environ.get("DATABASE_URL")
-        or "postgresql://zaizu:admin@localhost:5433/wallit"
+        or "postgresql://jakub:admin@localhost:5432/wallit"
     )
     # #sqlite3
     # SQLALCHEMY_DATABASE_URI = (
