@@ -1,7 +1,3 @@
-from wallit import ma, db
-from wallit.models import Bank, Category, Transaction, User
-from wallit.imports import get_currencies
-
 from typing import Any
 from flask_login import current_user
 from marshmallow import (
@@ -17,6 +13,10 @@ from marshmallow import (
     EXCLUDE,
 )
 from copy import deepcopy
+
+from app import ma
+from app.models import Bank, Category, Transaction, User
+from app.api.utils import get_currencies
 
 
 class UserSchema(ma.SQLAlchemySchema):

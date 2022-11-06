@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-from wallit import db, login
-import config
-
 from werkzeug.security import check_password_hash, generate_password_hash
-from flask_login import UserMixin, current_user
-from flask import current_app, abort
+from flask_login import UserMixin
+from flask import current_app
 from sqlalchemy import UniqueConstraint, CheckConstraint, select
 from sqlalchemy.orm import with_parent
 from datetime import datetime
 from typing import Any, Optional
 import jwt
 from time import time
+
+from app import db, login
 
 
 class UpdatableMixin:
