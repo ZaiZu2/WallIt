@@ -12,7 +12,7 @@
         </div>
         <form class="form"
               name="loginForm"
-              action="{{ url_for('login') }}"
+              action="{{ url_for('main.login') }}"
               method="post">
             {{ login_form.hidden_tag() }}
             {{ login_form.username(placeholder='Username') }}
@@ -38,7 +38,7 @@
         </div>
         <form class="form"
               name="resetPasswordForm"
-              action="{{ url_for('request_reset_password') }}"
+              action="{{ url_for('main.request_reset_password') }}"
               method="post">
             {{ request_password_form.hidden_tag() }}
             {{ request_password_form.email(placeholder='E-mail') }}
@@ -60,7 +60,7 @@
         </div>
         <form class="form"
               name="signUpForm"
-              action="{{ url_for('sign_up') }}"
+              action="{{ url_for('main.sign_up') }}"
               method="post">
             {{ sign_up_form.hidden_tag() }}
             {{ sign_up_form.email(placeholder='E-mail') }}

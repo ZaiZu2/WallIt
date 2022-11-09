@@ -1,46 +1,11 @@
-from pathlib import Path
-from typing import Dict
 import typing
 import io
 import csv
 from datetime import datetime
 import xml.etree.ElementTree as ET
 
-from app import db
 from app.models import Transaction, User, Bank
-from app.exceptions import FileError, InvalidConfigError
-
-
-def validate_statement(origin: str, filename: str, file: typing.IO[bytes]) -> bool:
-    """Validate the uploaded file for correct extension and content (to be implemented)
-
-    Args:
-        origin (str): bank origin of statement
-        filename (str): sanitized filename
-        file (typing.BinaryIO): file binary stream for content validation
-
-    Returns:
-        bool: True if successfully validated
-    """
-    # TODO: Additional file content validation
-
-    is_validated = False
-
-    # Query for acceptable statement extensions associated with each bank
-    results = db.session.query(Bank.name, Bank.statement_type)
-    extension_map: Dict[str, str] = {
-        bank_name.lower(): file_extension for (bank_name, file_extension) in results
-    }
-
-    try:
-        # Check correctness of the associated filetype
-        if Path(filename).suffix == extension_map[origin]:
-            is_validated = True
-            return is_validated
-    except KeyError:
-        raise InvalidConfigError
-
-    return is_validated
+from app.exceptions import FileError
 
 
 def import_revolut_statement(

@@ -44,11 +44,7 @@ class UserSchema(ma.SQLAlchemySchema):
             error="Last name must be a single word starting with a capital letter",
         )
     )
-    main_currency = ma.auto_field(
-        validate=validate.OneOf(
-            get_currencies(), error="Only available currency can be accepted"
-        )
-    )
+    main_currency = ma.auto_field()
 
     @validates("username")
     def check_unique_username(self, username: str) -> None:
@@ -62,6 +58,11 @@ class UserSchema(ma.SQLAlchemySchema):
     def check_unique_email(self, email: str) -> None:
         if User.query.filter_by(email=email.lower()).scalar() is not None:
             raise ValidationError(f"Username {email} already exists")
+
+    @validates("main_currency")
+    def _check_available_currencies(self, currency: str) -> None:
+        if currency not in get_currencies():
+            raise ValidationError("Only available currency can be accepted")
 
 
 class ModifyUserSchema(ma.SQLAlchemySchema):
@@ -90,12 +91,7 @@ class ModifyUserSchema(ma.SQLAlchemySchema):
             error="Last name must be a single word starting with a capital letter",
         ),
     )
-    main_currency = ma.auto_field(
-        required=False,
-        validate=validate.OneOf(
-            get_currencies(), error="Only available currency can be accepted"
-        ),
-    )
+    main_currency = ma.auto_field(required=False)
 
     @validates("username")
     def _check_unique_username(self, username: str) -> None:
@@ -104,6 +100,11 @@ class ModifyUserSchema(ma.SQLAlchemySchema):
         )
         if username_exists:
             raise ValidationError(f"Username {username} already exists")
+
+    @validates("main_currency")
+    def _check_available_currencies(self, currency: str) -> None:
+        if currency not in get_currencies():
+            raise ValidationError("Only available currency can be accepted")
 
 
 class ChangePasswordSchema(ma.Schema):
@@ -164,15 +165,17 @@ class TransactionSchema(ma.SQLAlchemySchema):
     title = ma.auto_field()
     amount = ma.auto_field("main_amount", required=False)
     base_amount = ma.auto_field(required=True)
-    base_currency = ma.auto_field(
-        validate=validate.OneOf(get_currencies()),
-        required=True,
-    )
+    base_currency = ma.auto_field(required=True)
     date = ma.auto_field("transaction_date", required=True)
     creation_date = ma.auto_field()
     place = ma.auto_field()
     category = fields.Pluck(CategorySchema, "id", allow_none=True)
     bank = fields.Pluck(BankSchema, "id", allow_none=True)
+
+    @validates("base_currency")
+    def _check_available_currencies(self, currency: str) -> None:
+        if currency not in get_currencies():
+            raise ValidationError("Only available currency can be accepted")
 
     @post_load
     def _convert_to_transaction(
@@ -250,16 +253,28 @@ class FiltersSchema(ma.Schema):
         values=fields.DateTime(format="%Y-%m-%d", allow_none=True),
     )
     base_currencies = fields.List(
-        fields.String(
-            validate=validate.OneOf(
-                get_currencies(), error="Only available currency can be accepted"
-            )
-        ),
+        fields.String(),
         allow_none=True,
         data_key="base_currency",
     )
     banks = fields.List(fields.Integer(), allow_none=True, data_key="bank")
     categories = fields.List(fields.Integer(), allow_none=True, data_key="category")
+
+    @validates("base_currencies")
+    def _check_available_currencies(self, currencies: list[str]) -> None:
+        available_currencies = get_currencies()
+        if currencies and not set(currencies).issubset(set(available_currencies)):
+            raise ValidationError("Only available currencies can be filtered")
+
+    @validates_schema
+    def _check_range_filters(self, data: dict, **kwargs: dict[str, Any]) -> None:
+        for filter in ["amount", "date"]:
+            if (
+                data[filter]["min"]
+                and data[filter]["max"]
+                and data[filter]["min"] > data[filter]["max"]
+            ):
+                raise ValidationError("Lower end cannot be higher than higher end")
 
     @pre_load
     def _remove_blanks(self, data: dict, **kwargs: dict[str, Any]) -> dict:
@@ -278,16 +293,6 @@ class FiltersSchema(ma.Schema):
 
         return cleaned_data
 
-    @validates_schema
-    def _check_range_filters(self, data: dict, **kwargs: dict[str, Any]) -> None:
-        for filter in ["amount", "date"]:
-            if (
-                data[filter]["min"]
-                and data[filter]["max"]
-                and data[filter]["min"] > data[filter]["max"]
-            ):
-                raise ValidationError("Lower end cannot be higher than higher end")
-
 
 class UserEntitiesSchema(ma.Schema):
     """Schema used for dumping entities assigned to user"""
@@ -295,11 +300,7 @@ class UserEntitiesSchema(ma.Schema):
     user_details = fields.Nested(UserSchema, exclude=("main_currency",), dump_only=True)
     main_currency = fields.String(dump_only=True)
     base_currencies = fields.List(
-        fields.String(
-            validate=validate.OneOf(
-                get_currencies(), error="Only available currency can be accepted"
-            )
-        ),
+        fields.String(),
         dump_only=True,
         data_key="base_currencies",
     )
@@ -328,11 +329,7 @@ class SessionEntitiesSchema(ma.Schema):
     """Schema used for dumping entities assigned to user"""
 
     currencies = fields.List(
-        fields.String(
-            validate=validate.OneOf(
-                get_currencies(), error="Only available currency can be accepted"
-            )
-        ),
+        fields.String(),
         dump_only=True,
         data_key="currencies",
     )

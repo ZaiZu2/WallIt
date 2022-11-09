@@ -1,5 +1,3 @@
-from config import Config
-
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
@@ -8,19 +6,10 @@ from flask_login import LoginManager
 from flask_wtf import CSRFProtect
 from flask_caching import Cache
 from flask_mail import Mail
-
 import sys
 from loguru import logger
 
-logger.remove()
-DEBUG_HIGH = logger.level("DEBUG_HIGH", no=8)
-logger.add(
-    sys.stderr,
-    level="DEBUG",
-    format="<BLUE>{time:HH:mm:ss} | {level} | {name}:{function}:{line}</BLUE>\n"
-    "<cyan>{message}</cyan>",
-    colorize=True,
-)
+from config import Config
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -52,7 +41,21 @@ def create_app(config_class=Config) -> Flask:
 
     app.register_blueprint(api_blueprint)  # url_prefix defined in view functions
 
+    from app.errors import blueprint as errors_blueprint
+
+    app.register_blueprint(errors_blueprint)
+
+    logger.remove()
+    DEBUG_HIGH = logger.level("DEBUG_HIGH", no=8)
+    logger.add(
+        sys.stderr,
+        level="DEBUG",
+        format="<BLUE>{time:HH:mm:ss} | {level} | {name}:{function}:{line}</BLUE>\n"
+        "<cyan>{message}</cyan>",
+        colorize=True,
+    )
+
     return app
 
 
-from app import models, handlers
+from app import models

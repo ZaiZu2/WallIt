@@ -1,4 +1,4 @@
-from flask import request, abort, current_app
+from flask import request, abort
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 from sqlalchemy import select, func, between, and_, case
@@ -19,9 +19,13 @@ from app.api.schemas import (
 from app.api.imports import (
     import_equabank_statement,
     import_revolut_statement,
-    validate_statement,
 )
-from app.api.utils import filter_transactions, convert_currency, JSONType
+from app.api.utils import (
+    filter_transactions,
+    convert_currency,
+    validate_statement,
+    JSONType,
+)
 from app.exceptions import FileError
 
 
