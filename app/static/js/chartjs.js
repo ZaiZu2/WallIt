@@ -35,6 +35,7 @@ export function reloadCategoryChart(chart) {
   }
 }
 
+Chart.defaults.font.family = "'Lato', 'Times New Roman'";
 // Category spendings chart
 const categoryChartCell = document
   .getElementById("categoryChart")

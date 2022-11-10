@@ -65,6 +65,7 @@ th.custom-th {
 
   line-height: 23px;
 
+  font-family: var(--main-font);
   color: white;
   white-space: nowrap;
   overflow: hidden;
@@ -79,6 +80,7 @@ td.custom-td {
   border-left: none;
   border-right: none;
 
+  font-family: var(--main-font);
   color: white;
   vertical-align: middle;
   white-space: nowrap;

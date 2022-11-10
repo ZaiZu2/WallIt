@@ -3,7 +3,7 @@
   --subwindow-bg-color: rgb(12, 12, 12);
   --highlight-bg: rgb(112, 112, 112);
 
-  --main-font: "Times New Roman', Times, serif";
+  --main-font: "Lato";
   --main-font-size: 1.2rem;
   --main-font-active-color: rgb(255, 255, 255);
   --main-font-inactive-color: rgb(185, 185, 185);
@@ -17,6 +17,121 @@
 }
 
 /*********** CUSTOM-CHECKBOX ***********/
+
+/* @font-face {
+  font-family: "Montserrat";
+  src: url(https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap);
+} */
+
+/* Used as logo */
+h1 {
+  width: 100%;
+  height: 200px;
+
+  font-size: 4rem;
+  font-family: var(--main-font);
+  text-align: center;
+  vertical-align: center;
+  line-height: 200px;
+}
+
+/* Used in welcome subwindow */
+h2 {
+  padding: 16px;
+
+  font-size: 2rem;
+  font-family: var(--main-font);
+}
+
+/* Used as side-bar categories */
+h4 {
+  flex: 1;
+
+  font-size: 1.5rem;
+  font-family: var(--main-font);
+  vertical-align: middle;
+  line-height: 50px;
+}
+
+/* Used in sub-window headers */
+h5 {
+  flex: 1;
+
+  font-size: 1.3rem;
+  font-family: var(--main-font);
+  font-weight: bold;
+
+  line-height: 2rem;
+  text-align: left;
+}
+
+button {
+  all: unset;
+  color: var(--main-font-inactive-color);
+
+  font-size: 1.2rem;
+  font-family: var(--main-font);
+}
+
+button:active {
+  border: none;
+}
+
+/*********** CUSTOM-INPUT-FIELD ***********/
+
+input {
+  width: 100%;
+  background: none;
+  height: 2rem;
+  padding-left: 8px;
+
+  box-sizing: border-box;
+  border: var(--border-inactive);
+  border-radius: 0.5rem;
+
+  color: var(--main-font-active-color);
+  font-size: 1rem;
+  font-family: var(--main-font);
+}
+
+input:not(:placeholder-shown):invalid {
+  border-color: red;
+}
+
+input::placeholder {
+  color: var(--main-font-inactive-color);
+}
+
+input:hover,
+input:focus,
+input:active {
+  outline: none;
+  border-color: var(--main-font-active-color);
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  padding-right: 5px;
+  filter: invert(100%);
+  opacity: 0.7;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+input[type="date"]::-webkit-datetime-edit-text {
+  padding: 0 0.2rem;
+}
 
 input[type="checkbox"] {
   display: none;
@@ -69,6 +184,7 @@ input[type="checkbox"]:disabled + label:before {
 }
 
 label {
+  font-family: var(--main-font);
   white-space: nowrap;
   overflow: hidden;
   text-align: right;
@@ -76,4 +192,23 @@ label {
 
 option {
   background-color: var(--subwindow-bg-color);
+}
+
+select {
+  width: 100%;
+  background: none;
+  height: 2rem;
+  padding-left: 5px;
+  box-sizing: border-box;
+  border: var(--border-inactive);
+  border-radius: 0.5rem;
+  color: var(--main-font-active-color);
+  font-size: 1rem;
+  font-family: var(--main-font);
+}
+select:hover,
+select:focus,
+select:active {
+  outline: none;
+  border-color: var(--main-font-active-color);
 }

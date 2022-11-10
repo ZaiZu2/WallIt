@@ -1,348 +1,334 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <!-- Required meta tags -->
-        <meta charset="utf-8"/>
-        <meta name="viewport" content="width=device-width, initial-scale=1"/>
-        <meta name="author" content="Jakub Kawecki"/>
-        <meta name="description"
-              content="An easy way to have an eye on your change."/>
-        <meta name="csrf-token" content="{{ csrf_token() }}" />
-        <!-- JS -->
-        <script>
-            let user = {
-                transactions: [],
-                deletedTransactions: [],
-                categories: [],
-                banks: [],
-                user_details: {}
-            }
-            let session = {
-                currencies: []
-            }
-        </script>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script type="module" src="../static/js/index.js" defer></script>
-        <!-- CSS -->
-        <link rel="stylesheet"
-              href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"/>
-        <link rel="stylesheet" href="../static/css/css_reset.css"/>
-        <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css"
-              rel="stylesheet"/>
-        <link rel="stylesheet" href="../static/css/grid-js.css"/>
-        <link rel="stylesheet" href="../static/css/index-style.css"/>
-        <title>WallIt</title>
-    </head>
-    <body>
-        <div class="window">
-            <div class="side-bar">
-                <h1>WallIt</h1>
-                <div class="menu">
-                    <ol>
-                        <li>
-                            <button id="transactions_button">
-                                <span class="material-symbols-rounded custom-medium-icon">view_list</span>
-                                <h4>Transactions</h4>
-                            </button>
-                        </li>
-                        <li>
-                            <button id="monthly_button">
-                                <span class="material-symbols-rounded custom-medium-icon">data_exploration</span>
-                                <h4>Monthly</h4>
-                            </button>
-                        </li>
-                        <li>
-                            <button id="statistics_button">
-                                <span class="material-symbols-rounded custom-medium-icon">analytics</span>
-                                <h4>Statistics</h4>
-                            </button>
-                        </li>
-                        <li>
-                            <button id="filter_button">
-                                <span class="material-symbols-rounded custom-medium-icon">filter_alt</span>
-                                <h4>Filter</h4>
-                            </button>
-                        </li>
-                        <li>
-                            <button id="import_button">
-                                <span class="material-symbols-rounded custom-medium-icon">upload_file</span>
-                                <h4>Statements</h4>
-                            </button>
-                        </li>
-                        <li>
-                            <button id="settings_button">
-                                <span class="material-symbols-rounded custom-medium-icon">settings</span>
-                                <h4>Settings</h4>
-                            </button>
-                        </li>
-                    </ol>
-                </div>
-                <a id="log-out">
-                    <span class="material-symbols-rounded custom-medium-icon"
-                          style="font-size: 48px;">logout</span>
-                    <h3>Log out</h3>
-                </a>
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="author" content="Jakub Kawecki" />
+    <meta name="description" content="An easy way to have an eye on your change." />
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
+    <!-- JS -->
+    <script>
+        let user = {
+            transactions: [],
+            deletedTransactions: [],
+            categories: [],
+            banks: [],
+            user_details: {}
+        }
+        let session = {
+            currencies: []
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="../static/js/index.js" defer></script>
+    <!-- CSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato&family=Montserrat&family=Roboto&display=swap" rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <link rel="stylesheet" href="../static/css/css_reset.css" />
+    <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="../static/css/grid-js.css" />
+    <link rel="stylesheet" href="../static/css/index-style.css" />
+    <title>WallIt</title>
+</head>
+
+<body>
+    <div class="window">
+        <div class="side-bar">
+            <h1>WallIt</h1>
+            <div class="menu">
+                <ol>
+                    <li>
+                        <button id="transactions_button">
+                            <span class="material-symbols-rounded custom-medium-icon">view_list</span>
+                            <h4>Transactions</h4>
+                        </button>
+                    </li>
+                    <li>
+                        <button id="monthly_button">
+                            <span class="material-symbols-rounded custom-medium-icon">data_exploration</span>
+                            <h4>Monthly</h4>
+                        </button>
+                    </li>
+                    <li>
+                        <button id="statistics_button">
+                            <span class="material-symbols-rounded custom-medium-icon">analytics</span>
+                            <h4>Statistics</h4>
+                        </button>
+                    </li>
+                    <li>
+                        <button id="filter_button">
+                            <span class="material-symbols-rounded custom-medium-icon">filter_alt</span>
+                            <h4>Filter</h4>
+                        </button>
+                    </li>
+                    <li>
+                        <button id="import_button">
+                            <span class="material-symbols-rounded custom-medium-icon">upload_file</span>
+                            <h4>Statements</h4>
+                        </button>
+                    </li>
+                    <li>
+                        <button id="settings_button">
+                            <span class="material-symbols-rounded custom-medium-icon">settings</span>
+                            <h4>Settings</h4>
+                        </button>
+                    </li>
+                </ol>
             </div>
-            <div class="main-window">
-                <div class="section">
-                    <div class="subwindow-outline filter">
-                        <div class="subwindow-header">
-                            <span class="material-symbols-rounded custom-small-icon">filter_alt</span>
-                            <h5>Filtering</h5>
-                        </div>
-                        <div class="button-list filter">
-                            <button id="amount" class="button-no-outline filter">Amount</button>
-                            <button id="date" class="button-no-outline filter">Date</button>
-                            <button id="base_currency" class="button-no-outline filter">Currency</button>
-                            <button id="category" class="button-no-outline filter">Category</button>
-                            <button id="bank" class="button-no-outline filter">Banks</button>
-                        </div>
-                        <div>
-                            <form name="amount" class="collapsible-form filter">
-                                <div class="form-range">
-                                    <input type="number" name="min" id="minAmount" placeholder="Minimum"/>
-                                    <input type="number" name="max" id="maxAmount" placeholder="Maximum"/>
-                                </div>
-                            </form>
-                            <form name="date" class="collapsible-form filter">
-                                <div class="form-range">
-                                    <input type="date" name="min" id="minDate"/>
-                                    <input type="date" name="max" id="maxDate"/>
-                                </div>
-                            </form>
-                            <form name="base_currency" class="collapsible-form filter">
-                                <div class="form-set user-currency-dynamic-checkboxes"></div>
-                            </form>
-                            <form name="category" class="collapsible-form filter">
-                                <div class="form-set category-dynamic-checkboxes">
-                                </div>
-                            </form>
-                            <form name="bank" class="collapsible-form filter">
-                                <div class="form-set user-bank-dynamic-checkboxes">
-                                </div>
-                            </form>
-                            <div id="filter_submit" class="collapsible-form filter">
-                                <button id="filter_submit_button"
-                                        class="button-no-outline with-margin"
-                                        type="submit">
-                                    Submit
-                                </button>
-                            </div>
-                        </div>
+            <a id="log-out">
+                <span class="material-symbols-rounded custom-medium-icon" style="font-size: 48px;">logout</span>
+                <h3>Log out</h3>
+            </a>
+        </div>
+        <div class="main-window">
+            <div class="section">
+                <div class="subwindow-outline filter">
+                    <div class="subwindow-header">
+                        <span class="material-symbols-rounded custom-small-icon">filter_alt</span>
+                        <h5>Filtering</h5>
                     </div>
-                    <div class="subwindow-outline import">
-                        <div class="subwindow-header">
-                            <span class="material-symbols-rounded custom-small-icon">upload_file</span>
-                            <h5>
-                                Load statement
-                            </h5>
-                        </div>
-                        <div class="button-list import">
-                            <button id="revolut" class="button-no-outline import">
-                                Revolut
-                            </button>
-                            <button id="equabank" class="button-no-outline import">
-                                Equabank
-                            </button>
-                        </div>
-                        <div>
-                            <form name="revolut" class="collapsible-form import">
-                                <div class="form-file">
-                                    <input type="file" accept=".csv" name="revolut" multiple/>
-                                </div>
-                            </form>
-                            <form name="equabank" class="collapsible-form import">
-                                <div class="form-file">
-                                    <input type="file" accept=".xml" name="equabank" multiple/>
-                                </div>
-                            </form>
-                            <form name="mbank" class="collapsible-form import">
-                                <div class="form-file">
-                                    <input type="file" accept=".csv" name="mbank" multiple/>
-                                </div>
-                            </form>
-                            <div id="import_submit" class="collapsible-form import">
-                                <button id="import_submit_button"
-                                        class="button-no-outline with-margin"
-                                        type="submit"
-                                        multiple>
-                                    Submit
-                                </button>
-                            </div>
-                        </div>
+                    <div class="button-list filter">
+                        <button id="amount" class="button-no-outline filter">Amount</button>
+                        <button id="date" class="button-no-outline filter">Date</button>
+                        <button id="base_currency" class="button-no-outline filter">Currency</button>
+                        <button id="category" class="button-no-outline filter">Category</button>
+                        <button id="bank" class="button-no-outline filter">Banks</button>
                     </div>
-                    <div class="subwindow-outline create">
-                        <div class="subwindow-header">
-                            <span class="material-symbols-rounded custom-small-icon">add_circle</span>
-                            <h5>
-                                Edit element
-                            </h5>
-                        </div>
-                        <div class="selection-button-list create">
-                            <button id="transaction_menu_button" class="button-no-outline create">
-                                Transaction
-                            </button>
-                            <button id="category_menu_button" class="button-no-outline create">
-                                Category
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="section">
-                    <div class="subwindow-outline transactions">
-                        <div class="subwindow-header">
-                            <span class="material-symbols-rounded custom-small-icon">
-                                view_list
-                            </span>
-                            <h5>
-                                Transactions
-                            </h5>
-                            <button id="undo_deletion"
-                                    class="button-no-outline hidden"
-                                    title="Undo deletion">
-                                <span class="material-symbols-rounded custom-small-icon">
-                                    undo
-                                </span>
-                            </button>
-                        </div>
-                        <div id="transactionTable"></div>
-                    </div>
-                    <div id="transaction_menu"
-                         class="subwindow-outline creation-window hidden">
-                        <div class="subwindow-header">
-                            <span class="material-symbols-rounded custom-small-icon">
-                                add_circle
-                            </span>
-                            <h5>
-                                Create transaction
-                            </h5>
-                        </div>
-                        <form name="create_transaction" class="creation-form create-transaction">
-                            <div class="submenu-body">
-                                <input id="info" name="info" placeholder="Name" type="text" value=""/>
-                                <input id="title" name="title" placeholder="Title" type="text" value=""/>
-                                <input id="base_amount"
-                                       name="base_amount"
-                                       placeholder="Amount*"
-                                       required=""
-                                       type="number"
-                                       value=""/>
-                                <div class="session-currency-dynamic-dropdown">
-                                </div>
-                                <input id="date" name="date" type="date" value=""/>
-                                <input id="place" name="place" placeholder="Place" type="text" value=""/>
-                                <div class="session-bank-dynamic-dropdown-with-blank">
-                                </div>
-                                <div class="category-dynamic-dropdown-with-blank">
-                                </div>
-                                <button id="transaction_creation_submit"
-                                        class="button-no-outline centered with-margin"
-                                        type="submit">
-                                    Submit
-                                </button>
+                    <div>
+                        <form name="amount" class="collapsible-form filter">
+                            <div class="form-range">
+                                <input type="number" name="min" id="minAmount" placeholder="Minimum" />
+                                <input type="number" name="max" id="maxAmount" placeholder="Maximum" />
                             </div>
                         </form>
-                    </div>
-                    <div id="category_menu" class="subwindow-outline creation-window hidden">
-                        <div class="subwindow-header">
-                            <span class="material-symbols-rounded custom-small-icon">
-                                add_circle
-                            </span>
-                            <h5>
-                                Edit category
-                            </h5>
-                        </div>
-                        <div class="category-menu">
-                            <div class="category-submenu">
-                                <div class="submenu-header" style="border-top: none;">
-                                    Add category
-                                </div>
-                                <form name="add_category">
-                                    <div class="submenu-body">
-                                        <input name="name" placeholder="Name" type="text" value=""/>
-                                        <button class="button-std medium centered" type="submit">
-                                            Add
-                                        </button>
-                                    </div>
-                                </form>
+                        <form name="date" class="collapsible-form filter">
+                            <div class="form-range">
+                                <input type="date" name="min" id="minDate" />
+                                <input type="date" name="max" id="maxDate" />
                             </div>
-                            <div class="category-submenu">
-                                <div class="submenu-header">
-                                    Rename category
-                                </div>
-                                <form name="modify_category">
-                                    <div class="submenu-body">
-                                        <div class="category-dynamic-dropdown">
-                                        </div>
-                                        <input id="category_name"
-                                               name="category_name"
-                                               placeholder="Name"
-                                               type="text"
-                                               value=""/>
-                                        <button id="category_creation_submit_button"
-                                                class="button-std medium centered"
-                                                type="submit">
-                                            Rename
-                                        </button>
-                                    </div>
-                                </form>
+                        </form>
+                        <form name="base_currency" class="collapsible-form filter">
+                            <div class="form-set user-currency-dynamic-checkboxes"></div>
+                        </form>
+                        <form name="category" class="collapsible-form filter">
+                            <div class="form-set category-dynamic-checkboxes">
                             </div>
-                            <div class="category-submenu">
-                                <div class="submenu-header">
-                                    Delete category
-                                </div>
-                                <form name="delete_category">
-                                    <div class="submenu-body" style="border-bottom: none;">
-                                        <div class="form-grid-2-rows category-dynamic-checkboxes">
-                                        </div>
-                                        <button id="category_creation_submit_button"
-                                                class="button-std medium centered"
-                                                type="submit">
-                                            Delete
-                                        </button>
-                                    </div>
-                                </form>
+                        </form>
+                        <form name="bank" class="collapsible-form filter">
+                            <div class="form-set user-bank-dynamic-checkboxes">
                             </div>
+                        </form>
+                        <div id="filter_submit" class="collapsible-form filter">
+                            <button id="filter_submit_button" class="button-no-outline with-margin" type="submit">
+                                Submit
+                            </button>
                         </div>
                     </div>
                 </div>
-                <div class="section">
-                    <div class="subwindow-outline statistics">
-                        <div class="subwindow-header">
-                            <span class="material-symbols-rounded custom-small-icon">
-                                analytics
-                            </span>
-                            <h5>
-                                Spendings by category
-                            </h5>
-                        </div>
-                        <canvas id="categoryChart" width="500px" height="400px"></canvas>
+                <div class="subwindow-outline import">
+                    <div class="subwindow-header">
+                        <span class="material-symbols-rounded custom-small-icon">upload_file</span>
+                        <h5>
+                            Load statement
+                        </h5>
                     </div>
-                    <div class="subwindow-outline monthly">
-                        <div class="subwindow-header">
-                            <span class="material-symbols-rounded custom-small-icon">
-                                analytics
-                            </span>
-                            <h5>
-                                Monthly summary
-                            </h5>
+                    <div class="button-list import">
+                        <button id="revolut" class="button-no-outline import">
+                            Revolut
+                        </button>
+                        <button id="equabank" class="button-no-outline import">
+                            Equabank
+                        </button>
+                    </div>
+                    <div>
+                        <form name="revolut" class="collapsible-form import">
+                            <div class="form-file">
+                                <input type="file" accept=".csv" name="revolut" multiple />
+                            </div>
+                        </form>
+                        <form name="equabank" class="collapsible-form import">
+                            <div class="form-file">
+                                <input type="file" accept=".xml" name="equabank" multiple />
+                            </div>
+                        </form>
+                        <form name="mbank" class="collapsible-form import">
+                            <div class="form-file">
+                                <input type="file" accept=".csv" name="mbank" multiple />
+                            </div>
+                        </form>
+                        <div id="import_submit" class="collapsible-form import">
+                            <button id="import_submit_button" class="button-no-outline with-margin" type="submit"
+                                multiple>
+                                Submit
+                            </button>
                         </div>
-                        <canvas id="monthlyChart" width="800px" height="400px"></canvas>
+                    </div>
+                </div>
+                <div class="subwindow-outline create">
+                    <div class="subwindow-header">
+                        <span class="material-symbols-rounded custom-small-icon">add_circle</span>
+                        <h5>
+                            Edit element
+                        </h5>
+                    </div>
+                    <div class="selection-button-list create">
+                        <button id="transaction_menu_button" class="button-no-outline create">
+                            Transaction
+                        </button>
+                        <button id="category_menu_button" class="button-no-outline create">
+                            Category
+                        </button>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="dim-background inactive">
-        </div>
-        <div id="settings"></div>
-        <div class="modal inactive">
-            <h5 class="modal-header">
-            </h5>
-            <div class="modal-content">
+            <div class="section">
+                <div class="subwindow-outline transactions">
+                    <div class="subwindow-header">
+                        <span class="material-symbols-rounded custom-small-icon">
+                            view_list
+                        </span>
+                        <h5>
+                            Transactions
+                        </h5>
+                        <button id="undo_deletion" class="button-no-outline hidden" title="Undo deletion">
+                            <span class="material-symbols-rounded custom-small-icon">
+                                undo
+                            </span>
+                        </button>
+                    </div>
+                    <div id="transactionTable"></div>
+                </div>
+                <div id="transaction_menu" class="subwindow-outline creation-window hidden">
+                    <div class="subwindow-header">
+                        <span class="material-symbols-rounded custom-small-icon">
+                            add_circle
+                        </span>
+                        <h5>
+                            Create transaction
+                        </h5>
+                    </div>
+                    <form name="create_transaction" class="creation-form create-transaction">
+                        <div class="submenu-body">
+                            <input id="info" name="info" placeholder="Name" type="text" value="" />
+                            <input id="title" name="title" placeholder="Title" type="text" value="" />
+                            <input id="base_amount" name="base_amount" placeholder="Amount*" required="" type="number"
+                                value="" />
+                            <div class="session-currency-dynamic-dropdown">
+                            </div>
+                            <input id="date" name="date" type="date" value="" />
+                            <input id="place" name="place" placeholder="Place" type="text" value="" />
+                            <div class="session-bank-dynamic-dropdown-with-blank">
+                            </div>
+                            <div class="category-dynamic-dropdown-with-blank">
+                            </div>
+                            <button id="transaction_creation_submit" class="button-no-outline centered with-margin"
+                                type="submit">
+                                Submit
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div id="category_menu" class="subwindow-outline creation-window hidden">
+                    <div class="subwindow-header">
+                        <span class="material-symbols-rounded custom-small-icon">
+                            add_circle
+                        </span>
+                        <h5>
+                            Edit category
+                        </h5>
+                    </div>
+                    <div class="category-menu">
+                        <div class="category-submenu">
+                            <div class="submenu-header" style="border-top: none;">
+                                Add category
+                            </div>
+                            <form name="add_category">
+                                <div class="submenu-body">
+                                    <input name="name" placeholder="Name" type="text" value="" />
+                                    <button class="button-std medium centered" type="submit">
+                                        Add
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="category-submenu">
+                            <div class="submenu-header">
+                                Rename category
+                            </div>
+                            <form name="modify_category">
+                                <div class="submenu-body">
+                                    <div class="category-dynamic-dropdown">
+                                    </div>
+                                    <input id="category_name" name="category_name" placeholder="Name" type="text"
+                                        value="" />
+                                    <button id="category_creation_submit_button" class="button-std medium centered"
+                                        type="submit">
+                                        Rename
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="category-submenu">
+                            <div class="submenu-header">
+                                Delete category
+                            </div>
+                            <form name="delete_category">
+                                <div class="submenu-body" style="border-bottom: none;">
+                                    <div class="form-grid-2-rows category-dynamic-checkboxes">
+                                    </div>
+                                    <button id="category_creation_submit_button" class="button-std medium centered"
+                                        type="submit">
+                                        Delete
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <button id="modal-button" class="button-std medium with-margin">
-                Close
-            </button>
+            <div class="section">
+                <div class="subwindow-outline statistics">
+                    <div class="subwindow-header">
+                        <span class="material-symbols-rounded custom-small-icon">
+                            analytics
+                        </span>
+                        <h5>
+                            Spendings by category
+                        </h5>
+                    </div>
+                    <canvas id="categoryChart" width="500px" height="400px"></canvas>
+                </div>
+                <div class="subwindow-outline monthly">
+                    <div class="subwindow-header">
+                        <span class="material-symbols-rounded custom-small-icon">
+                            analytics
+                        </span>
+                        <h5>
+                            Monthly summary
+                        </h5>
+                    </div>
+                    <canvas id="monthlyChart" width="800px" height="400px"></canvas>
+                </div>
+            </div>
         </div>
-    </body>
+    </div>
+    <div class="dim-background inactive">
+    </div>
+    <div id="settings"></div>
+    <div class="modal inactive">
+        <h5 class="modal-header">
+        </h5>
+        <div class="modal-content">
+        </div>
+        <button id="modal-button" class="button-std medium with-margin">
+            Close
+        </button>
+    </div>
+</body>
+
 </html>
