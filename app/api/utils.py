@@ -169,12 +169,12 @@ def convert_currency(
 
 
 @cache.cached(key_prefix="available_currencies")
-def get_currencies() -> set[str]:
+def get_currencies() -> list[str]:
     """Consume CurrencyScoop API to get currency codes available for currency conversion
     Raises:
         InvalidConfigError: Invalid flask config for CurrencyScoop
     Returns:
-        set[str]: set of available currency codes
+        list[str]: set of available currency codes
     """
 
     if (
@@ -193,6 +193,6 @@ def get_currencies() -> set[str]:
         print("Error during currency load: ", error)
 
     response = r.json()
-    currencies = set(response["response"]["fiats"].keys())
+    currencies = list(response["response"]["fiats"].keys())
 
     return currencies
