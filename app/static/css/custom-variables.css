@@ -4,7 +4,7 @@
   --highlight-bg: rgb(112, 112, 112);
 
   --main-font: "Lato";
-  --main-font-size: 1.2rem;
+  --main-font-size: 1rem;
   --main-font-active-color: rgb(255, 255, 255);
   --main-font-inactive-color: rgb(185, 185, 185);
 
@@ -17,11 +17,6 @@
 }
 
 /*********** CUSTOM-CHECKBOX ***********/
-
-/* @font-face {
-  font-family: "Montserrat";
-  src: url(https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap);
-} */
 
 /* Used as logo */
 h1 {
@@ -65,11 +60,19 @@ h5 {
   text-align: left;
 }
 
+h6 {
+  font-family: var(--main-font);
+}
+
+p {
+  font-family: var(--main-font);
+}
+
 button {
   all: unset;
   color: var(--main-font-inactive-color);
 
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-family: var(--main-font);
 }
 
@@ -92,10 +95,6 @@ input {
   color: var(--main-font-active-color);
   font-size: 1rem;
   font-family: var(--main-font);
-}
-
-input:not(:placeholder-shown):invalid {
-  border-color: red;
 }
 
 input::placeholder {

@@ -45,7 +45,7 @@ body {
 }
 
 .menu {
-  min-width: 350px;
+  min-width: 300px;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.6);
 
@@ -59,6 +59,7 @@ body {
 
   display: flex;
   flex-direction: column;
+  gap: 16px;
   justify-content: center;
 }
 
@@ -72,7 +73,6 @@ div.feedback-field {
 
 div.feedback {
   position: absolute;
-  margin: 8px auto;
   bottom: 0px;
   left: 0;
   right: 0;
@@ -84,40 +84,40 @@ div.feedback {
 }
 
 .form {
-  padding: 0 12px;
+  padding: 0 20px;
 
   display: flex;
   flex-direction: column;
   justify-content: center;
+  gap: 8px;
+}
+
+label {
+  padding-left: 6px;
+  text-align: left;
 }
 
 input {
   background: none;
-  height: 3rem;
-  margin: 8px;
+  width: auto;
+  height: 2.5rem;
   padding-left: 12px;
   box-sizing: border-box;
-  border: 1px solid rgb(255, 255, 255);
+  border: 1px solid var(--main-font-inactive-color);
   border-radius: 1rem;
 
-  color: var(--main-font-active-color);
+  color: var(--main-font-inactive-color);
   font-size: var(--main-font-size);
   font-family: var(--main-font);
 }
 
-input:not(:placeholder-shown):invalid {
-  border-width: var(--border-width-active);
-  border-color: red;
-}
-
-input::placeholder {
-  color: var(--main-font-inactive-color);
-}
+/* input::placeholder {
+  color: var(--main-font-active-color);
+} */
 
 input:hover,
 input:focus,
 input:active {
-  border-width: var(--border-width-active);
   box-shadow: 1px;
   outline: none;
 }
@@ -128,8 +128,14 @@ input[type="checkbox"] + label {
   align-self: center;
 }
 
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .button-list {
-  padding: 8px;
+  padding: 8px 0px;
 
   display: flex;
   justify-content: center;
@@ -138,29 +144,26 @@ input[type="checkbox"] + label {
 }
 
 button {
+  height: 2.5rem;
   width: fit-content;
-  min-width: 90px;
-  height: 3rem;
-  padding: var(--btn-padding);
+  padding: 0px 10px;
 
   background: none;
-  border: var(--btn-border);
+  border: var(--border-inactive);
   border-radius: 1rem;
 
-  color: var(--main-font-active-color);
-  font-size: var(--main-font-size);
+  color: var(--main-font-inactive-color);
   font-family: var(--main-font);
-  line-height: 1rem;
 }
 
 button:hover,
 button:focus {
-  border-width: var(--border-width-active);
+  border: var(--border-active);
+  color: var(--main-font-active-color);
 }
 
 button:active {
   background-color: var(--main-font-active-color);
-  border-width: var(--border-width-active);
   outline: none;
   color: black;
 
@@ -171,16 +174,20 @@ button:active {
   transform: scale(0.95);
 }
 
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .menu a,
 .menu a:visited {
   display: block;
-  padding: 10px;
 
-  color: var(--main-font-active-color);
+  font-size: 0.9rem;
+  color: var(--main-font-inactive-color);
   text-align: center;
   text-decoration: none;
-
-  font-size: calc(var(--main-font-size) - 0.1rem);
 }
 
 a,
@@ -192,15 +199,17 @@ a:visited {
 a:hover,
 a:active {
   cursor: pointer;
-  font-weight: bold;
+  color: var(--main-font-active-color);
 }
 
 .author-references {
+  padding: 24px;
+
   display: flex;
   flex-direction: row-reverse;
+  gap: 12px;
   justify-content: flex-start;
   align-items: flex-end;
-  padding: 24px;
 }
 
 footer p {
@@ -212,10 +221,17 @@ img {
   width: 40px;
   -webkit-filter: invert(100%);
   filter: invert(100%);
+
+  transition: 0.1s ease-in-out;
+  position: relative;
+  -webkit-transform: scale(1);
+  -moz-transform: scale(1);
+  -ms-transform: scale(1);
+  transform: scale(1);
 }
 
 img:hover {
-  transition: 0.1s;
+  transition: 0.1s ease-in-out;
   position: relative;
   -webkit-transform: scale(1.2);
   -moz-transform: scale(1.2);
