@@ -99,7 +99,7 @@ function ModifyAccountForm(props) {
   return html` <form onsubmit="${handleAccountSubmit}">
     <div class="settings-subcontent">
       <div class="settings-grid">
-        <label for="email">E-mail</label>
+        <label for="email" class="label-horizontal">E-mail</label>
         <input
           id="email"
           name="email"
@@ -107,7 +107,7 @@ function ModifyAccountForm(props) {
           type="email"
           readonly
         />
-        <label for="username">Username</label>
+        <label for="username" class="label-horizontal">Username</label>
         <input
           name="username"
           placeholder=${props.userDetails.username}
@@ -115,7 +115,7 @@ function ModifyAccountForm(props) {
           value=${accountForm.username}
           oninput="${handleAccountChange}"
         />
-        <label for="first_name">First name</label>
+        <label for="first_name" class="label-horizontal">First name</label>
         <input
           name="first_name"
           placeholder=${props.userDetails.first_name}
@@ -123,7 +123,7 @@ function ModifyAccountForm(props) {
           value=${accountForm.first_name}
           oninput="${handleAccountChange}"
         />
-        <label for="last_name">Last name</label>
+        <label for="last_name" class="label-horizontal">Last name</label>
         <input
           name="last_name"
           placeholder=${props.userDetails.last_name}
@@ -131,7 +131,7 @@ function ModifyAccountForm(props) {
           value=${accountForm.last_name}
           oninput="${handleAccountChange}"
         />
-        <label for="main_currency">Currency</label>
+        <label for="main_currency" class="label-horizontal">Currency</label>
         <${DynamicListDropdown}
           name=${"main_currency"}
           items=${session.currencies}
@@ -202,7 +202,7 @@ function ModifyPasswordForm() {
   return html`<form onsubmit="${handlePasswordSubmit}">
     <div class="settings-subcontent">
       <div class="settings-grid">
-        <label for="old_password">Old password</label>
+        <label for="old_password" class="label-horizontal">Old password</label>
         <input
           name="old_password"
           placeholder="*"
@@ -211,7 +211,7 @@ function ModifyPasswordForm() {
           oninput=${handlePasswordChange}
           required
         />
-        <label for="new_password">New password</label>
+        <label for="new_password" class="label-horizontal">New password</label>
         <input
           name="new_password"
           placeholder="*"
@@ -220,7 +220,9 @@ function ModifyPasswordForm() {
           oninput=${handlePasswordChange}
           required
         />
-        <label for="repeat_password">Repeat password</label>
+        <label for="repeat_password" class="label-horizontal"
+          >Repeat password</label
+        >
         <input
           name="repeat_password"
           placeholder="*"

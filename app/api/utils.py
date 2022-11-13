@@ -68,14 +68,14 @@ def validate_statement(origin: str, filename: str, file: t.IO[bytes]) -> bool:
     is_validated = False
 
     # Query for acceptable statement extensions associated with each bank
-    results = db.session.query(Bank.name, Bank.statement_type)
+    results = db.session.query(Bank.name, Bank.statement_type).all()
     extension_map: dict[str, str] = {
         bank_name.lower(): file_extension for (bank_name, file_extension) in results
     }
 
     try:
         # Check correctness of the associated filetype
-        if Path(filename).suffix == extension_map[origin]:
+        if Path(filename).suffix[1:] == extension_map[origin]:
             is_validated = True
             return is_validated
     except KeyError:

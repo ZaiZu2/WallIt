@@ -10,8 +10,12 @@
 .custom-tbody,
 .custom-thead {
   background: none;
-  min-width: 1000px;
+  min-width: 100%;
   border-collapse: separate;
+}
+
+.gridjs-table.custom-table {
+  height: auto !important;
 }
 
 /* HEADER */
@@ -56,6 +60,7 @@
 }
 
 th.custom-th {
+  height: 24px;
   width: fit-content !important;
   padding: 8px;
   background-color: var(--subwindow-bg-color);

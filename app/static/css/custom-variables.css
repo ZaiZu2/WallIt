@@ -182,13 +182,6 @@ input[type="checkbox"]:disabled + label:before {
   background: #ddd;
 }
 
-label {
-  font-family: var(--main-font);
-  white-space: nowrap;
-  overflow: hidden;
-  text-align: right;
-}
-
 option {
   background-color: var(--subwindow-bg-color);
 }

@@ -277,7 +277,7 @@ export const transactionsTable = new Grid({
     },
   ],
   data: [],
-  width: "auto",
+  width: "100%",
   autoWidth: false,
   search: {
     enabled: true,
