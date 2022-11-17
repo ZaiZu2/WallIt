@@ -4,7 +4,6 @@ from app.models import User, Transaction, Bank, Category
 from typing import Any
 
 app = create_app()
-app.run()
 
 
 @app.shell_context_processor
@@ -17,3 +16,7 @@ def make_shell_context() -> dict[str, Any]:
         "Bank": Bank,
         "Category": Category,
     }
+
+
+if __name__ == "__main__":
+    app.run()
