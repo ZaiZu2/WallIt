@@ -1,5 +1,3 @@
-#! python3
-
 import os
 
 
@@ -8,12 +6,12 @@ class Config:
 
     # postgres
     SQLALCHEMY_DATABASE_URI = (
-        os.environ.get("DATABASE_URL")
+        os.environ.get("SQLALCHEMY_DATABASE_URI")
         or "postgresql://jakub:admin@localhost:5432/wallit"
     )
     # #sqlite3
     # SQLALCHEMY_DATABASE_URI = (
-    #     os.environ.get("DATABASE_URL")
+    #     os.environ.get("SQLALCHEMY_DATABASE_URI")
     #     or "sqlite:///C:/Users/z0043xev/Git/WallIt/database/data.db"
     # )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
