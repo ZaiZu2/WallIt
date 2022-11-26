@@ -1,25 +1,38 @@
-# version: '3'
+version: "3.9"
 services:
-  wallit:
+  nginx:
+    image: nginx:1.23.2
+    build:
+      context: .
+      dockerfile: ./deployment/nginx/Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: on-failure
+    depends_on:
+      - gunicorn
+
+  gunicorn:
     image: wallit-latest
+    hostname: gunicorn
     build: .
     ports:
-      - "8000:5000"
-    environment:
-      CURRENCYSCOOP_API_KEY: 39c83a7c50bb795501ee384a76c18cac
-      SQLALCHEMY_DATABASE_URI: postgresql://admin:password@postgres/wallit
+      - "5000:5000"
+    env_file:
+      - deployment/gunicorn/.gunicornenv
+    restart: on-failure
     depends_on:
       - postgres
+
   postgres:
     image: postgres:14
-    # ports:
-      # - 5433:5432 host:container
-    environment:
-      POSTGRES_DB: wallit
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    env_file:
+      - deployment/postgres/.postgresenv
+    restart: on-failure
     volumes:
       - postgres-db:/var/lib/postgresql/data
+
 volumes:
   postgres-db:
-    # driver: local

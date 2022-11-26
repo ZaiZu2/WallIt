@@ -1,19 +1,13 @@
 import os
+from dotenv import load_dotenv
+from pathlib import Path
+
+load_dotenv(Path(__file__).joinpath(".env"))
 
 
 class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "less_secret_key"
-
-    # postgres
-    SQLALCHEMY_DATABASE_URI = (
-        os.environ.get("SQLALCHEMY_DATABASE_URI")
-        or "postgresql://jakub:admin@localhost:5432/wallit"
-    )
-    # #sqlite3
-    # SQLALCHEMY_DATABASE_URI = (
-    #     os.environ.get("SQLALCHEMY_DATABASE_URI")
-    #     or "sqlite:///C:/Users/z0043xev/Git/WallIt/database/data.db"
-    # )
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+    SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_DATABASE_URI")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # File upload configuration
@@ -24,16 +18,14 @@ class Config:
     CACHE_DEFAULT_TIMEOUT = 3600
 
     # Flask-mail config
-    MAIL_SERVER = os.environ.get("MAIL_SERVER") or "localhost"
-    MAIL_PORT = int(os.environ.get("MAIL_PORT") or 8025)
-    # MAIL_USE_TLS = int(os.environ.get('MAIL_USE_TLS') or 1)
-    # MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
-    # MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    MAIL_SERVER = os.environ.get("MAIL_SERVER")
+    MAIL_PORT = int(os.environ.get("MAIL_PORT"))
+    MAIL_USE_TLS = int(os.environ.get("MAIL_USE_TLS"))
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
     ADMINS = ["donotreply@wallit.com"]
 
     RESET_TOKEN_MINUTES = int(os.environ.get("RESET_TOKEN_MINUTES") or "15")
 
     # Currency conversion API
-    CURRENCYSCOOP_API_KEY = (
-        os.environ.get("CURRENCYSCOOP_API_KEY") or "39c83a7c50bb795501ee384a76c18cac"
-    )
+    CURRENCYSCOOP_API_KEY = os.environ.get("CURRENCYSCOOP_API_KEY")

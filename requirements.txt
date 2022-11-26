@@ -24,7 +24,7 @@ flask-marshmallow==0.14.0
 Flask-Migrate==4.0.0
 Flask-SQLAlchemy==2.5.1
 Flask-WTF==1.0.1
-greenlet==2.0.1
+greenlet==1.1.2
 html-tag-names==0.1.2
 html-void-elements==0.1.0
 identify==2.5.0
