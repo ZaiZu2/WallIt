@@ -24,6 +24,6 @@ ENV FLASK_APP wallit.py
 RUN chown -R wallit:wallit ./
 USER wallit
 
-EXPOSE 5000
+EXPOSE 8080
 
 ENTRYPOINT ["./boot.sh"]

@@ -9,4 +9,6 @@ while true; do
     sleep 5
 done
 
-exec gunicorn -w 2 -b :5000 --access-logfile - --error-logfile - wallit:app
+# exec gunicorn -w 2 -b :5000 --access-logfile - --error-logfile - wallit:app
+
+exec gunicorn  -w 2 -b :8080 wallit:app

@@ -66,7 +66,6 @@ dmypy.json
 # private
 statements
 database
-*.env
+.*env
 !.flaskenv
-secrets
 *.pem

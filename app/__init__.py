@@ -7,8 +7,11 @@ from flask_login import LoginManager
 from flask_wtf import CSRFProtect
 from flask_caching import Cache
 from flask_mail import Mail
-import sys
+import sys, os
+from pathlib import Path
 from loguru import logger
+import logging
+from logging.handlers import RotatingFileHandler
 
 from config import Config
 
@@ -64,6 +67,23 @@ def create_app(config_class=Config) -> Flask:
         "<cyan>{message}</cyan>",
         colorize=True,
     )
+
+    if app.config["LOG_TO_STDOUT"]:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        app.logger.addHandler(stream_handler)
+    else:
+        Path("./logs").mkdir(exist_ok=True)
+        file_handler = RotatingFileHandler(
+            "logs/wallit.log", maxBytes=10240, backupCount=10
+        )
+        file_handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s %(levelname)s: %(message)s " "[in %(pathname)s:%(lineno)d]"
+            )
+        )
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
 
     return app
 

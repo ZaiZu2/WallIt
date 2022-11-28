@@ -4,7 +4,7 @@ services:
     image: nginx:1.23.2
     build:
       context: .
-      dockerfile: ./deployment/nginx/Dockerfile
+      dockerfile: ./deployment/self-hosting/nginx/Dockerfile
     ports:
       - "80:80"
       - "443:443"
@@ -17,9 +17,9 @@ services:
     hostname: gunicorn
     build: .
     ports:
-      - "5000:5000"
+      - "5000:8080"
     env_file:
-      - deployment/gunicorn/.gunicornenv
+      - deployment/self-hosting/gunicorn/.gunicornenv
     restart: on-failure
     depends_on:
       - postgres
@@ -29,7 +29,7 @@ services:
     ports:
       - "5433:5432"
     env_file:
-      - deployment/postgres/.postgresenv
+      - deployment/self-hosting/postgres/.postgresenv
     restart: on-failure
     volumes:
       - postgres-db:/var/lib/postgresql/data
