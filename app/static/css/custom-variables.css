@@ -14,6 +14,8 @@
 
   --btn-border: 1px solid white;
   --btn-padding: 14px;
+
+  font-family: var(--main-font);
 }
 
 /*********** CUSTOM-CHECKBOX ***********/
@@ -24,7 +26,6 @@ h1 {
   height: 200px;
 
   font-size: 4rem;
-  font-family: var(--main-font);
   text-align: center;
   vertical-align: center;
   line-height: 200px;
@@ -35,7 +36,6 @@ h2 {
   padding: 16px;
 
   font-size: 2rem;
-  font-family: var(--main-font);
 }
 
 /* Used as side-bar categories */
@@ -43,7 +43,6 @@ h4 {
   flex: 1;
 
   font-size: 1.5rem;
-  font-family: var(--main-font);
   vertical-align: middle;
   line-height: 50px;
 }
@@ -53,7 +52,6 @@ h5 {
   flex: 1;
 
   font-size: 1.3rem;
-  font-family: var(--main-font);
   font-weight: bold;
 
   line-height: 2rem;
@@ -61,11 +59,9 @@ h5 {
 }
 
 h6 {
-  font-family: var(--main-font);
 }
 
 p {
-  font-family: var(--main-font);
 }
 
 button {
@@ -73,7 +69,6 @@ button {
   color: var(--main-font-inactive-color);
 
   font-size: 1.1rem;
-  font-family: var(--main-font);
 }
 
 button:active {
@@ -94,7 +89,6 @@ input {
 
   color: var(--main-font-active-color);
   font-size: 1rem;
-  font-family: var(--main-font);
 }
 
 input::placeholder {
@@ -196,7 +190,6 @@ select {
   border-radius: 0.5rem;
   color: var(--main-font-active-color);
   font-size: 1rem;
-  font-family: var(--main-font);
 }
 select:hover,
 select:focus,

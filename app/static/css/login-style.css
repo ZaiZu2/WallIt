@@ -16,15 +16,17 @@ body {
   align-items: center;
 }
 
+footer {
+  margin: 20px 0px;
+}
+
 .window {
-  width: 80vw;
-  max-width: 1024px;
-  height: 80vh;
-  max-height: 1024px;
-  min-height: 600px;
+  width: clamp(600px, 90vh, 900px);
+  height: clamp(600px, 90vh, 900px);
+  margin: 20px 20px 0px 20px;
+
   background-color: var(--main-window-bg-color);
   overflow: hidden;
-  margin: 50px 0px;
 
   border-radius: 3rem;
   -webkit-box-shadow: 20px 20px 25px -15px rgba(0, 0, 0, 0.7);
@@ -37,7 +39,8 @@ body {
 }
 
 .logo {
-  flex: 1;
+  width: 400px;
+  flex: 1 0 auto;
   overflow: hidden;
 
   font-size: 96px;
@@ -45,7 +48,9 @@ body {
 }
 
 .menu {
-  min-width: 300px;
+  flex: 0 1 auto;
+  width: 300px;
+  min-width: 200px;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.6);
 
@@ -96,7 +101,6 @@ label {
   padding-left: 6px;
   text-align: left;
 
-  font-family: var(--main-font);
   font-size: 1rem;
 }
 
@@ -111,7 +115,6 @@ input {
 
   color: var(--main-font-inactive-color);
   font-size: var(--main-font-size);
-  font-family: var(--main-font);
 }
 
 /* input::placeholder {
@@ -156,7 +159,6 @@ button {
   border-radius: 1rem;
 
   color: var(--main-font-inactive-color);
-  font-family: var(--main-font);
 }
 
 button:hover,

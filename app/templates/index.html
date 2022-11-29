@@ -305,7 +305,7 @@
                     </div>
                 </div>
                 <div class="section">
-                    <div class="subwindow-outline statistics">
+                    <div class="subwindow-outline statistics" style="flex: 1 1 40%;">
                         <div class="subwindow-header">
                             <span class="material-symbols-rounded custom-small-icon">
                                 analytics
@@ -314,9 +314,11 @@
                                 Spendings by category
                             </h5>
                         </div>
-                        <canvas id="categoryChart" width="500px" height="400px"></canvas>
+                        <div class="chart-container">
+                            <canvas id="categoryChart" style="max-width: 100%"></canvas>
+                        </div>
                     </div>
-                    <div class="subwindow-outline monthly">
+                    <div class="subwindow-outline monthly" style="flex: 1.5 1 60%;">
                         <div class="subwindow-header">
                             <span class="material-symbols-rounded custom-small-icon">
                                 analytics
@@ -325,7 +327,9 @@
                                 Monthly summary
                             </h5>
                         </div>
-                        <canvas id="monthlyChart" width="800px" height="400px"></canvas>
+                        <div class="chart-container">
+                            <canvas id="monthlyChart" style="max-width: 100%"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>

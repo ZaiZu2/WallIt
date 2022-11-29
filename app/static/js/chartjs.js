@@ -70,7 +70,8 @@ export const categoryChart = new Chart(categoryChartCell, {
     ],
   },
   options: {
-    responsive: false,
+    maintainAspectRatio: false,
+    responsive: true,
     scales: {
       x: {
         ticks: {
@@ -169,7 +170,8 @@ export const monthlyChart = new Chart(monthlyChartCell, {
     ],
   },
   options: {
-    responsive: false,
+    maintainAspectRatio: false,
+    responsive: true,
     scales: {
       x: {
         grid: {
