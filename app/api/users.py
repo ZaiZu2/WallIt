@@ -12,31 +12,18 @@ from app.api.schemas import (
     UserSchema,
     UserEntitiesSchema,
 )
-from app.api.utils import convert_currency, JSONType
+from app.api.utils import JSONType
 
 
 @blueprint.route("/api/users/<int:id>/modify", methods=["PATCH"])
 @login_required
 def modify_user(id: int) -> tuple[JSONType, int]:
-    user: User = User.query.get(id)
-    if user != current_user:
-        abort(404)
 
-    try:
-        verified_data = ModifyUserSchema().load(request.json)
-    except ValidationError as error:
-        return error.messages, 400
-
-    if (
-        "main_currency" in verified_data
-        and verified_data["main_currency"] != user.main_currency
-    ):
-        convert_currency(user.select_transactions(), verified_data["main_currency"])
-
-    user.update(verified_data)
+    verified_data = ModifyUserSchema().load(request.json)
+    current_user.update(verified_data)
     db.session.commit()
 
-    return UserSchema().dumps(user), 200
+    return UserSchema().dumps(current_user), 200
 
 
 @blueprint.route("/api/users/<int:id>/change_password", methods=["PATCH"])

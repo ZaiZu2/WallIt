@@ -32,18 +32,18 @@ def import_revolut_statement(
             for row in reader:
                 # Ignore rows with internal revolut exchanges
                 if row["Type"] != "EXCHANGE":
-                    transaction = Transaction()
-
-                    transaction.info = row["Type"]
-                    transaction.title = row["Description"]
-                    transaction.base_amount = float(row["Amount"])
-                    transaction.base_currency = row["Currency"]
-                    transaction.transaction_date = datetime.strptime(
+                    data = {}
+                    data["info"] = row["Type"]
+                    data["title"] = row["Description"]
+                    data["base_amount"] = float(row["Amount"])
+                    data["base_currency"] = row["Currency"]
+                    data["transaction_date"] = datetime.strptime(
                         row["Completed Date"], "%Y-%m-%d %H:%M:%S"
                     )
-                    transaction.bank_id = bank.id
-                    transaction.user_id = user.id
+                    data["bank_id"] = bank.id
+                    data["user_id"] = user.id
 
+                    transaction = Transaction(**data)
                     transactions.append(transaction)
         except Exception as e:
             raise FileError("Error during parsing necessary statement details") from e
@@ -164,27 +164,27 @@ def import_equabank_statement(
 
             # iterate through transaction elements in the statement tree
             for transaction_element in root.findall(".//nms:Ntry", namespace):
-
                 # Parsing transaction data
-                transaction = Transaction()
-                transaction.info = parse_record(
+                data = {}
+                data["info"] = parse_record(
                     transaction_element, ".//nms:RltdPties//nms:Nm"
                 )
-                transaction.title = parse_record(transaction_element, ".//nms:Ustrd")
-                transaction.place = parse_record(
+                data["title"] = parse_record(transaction_element, ".//nms:Ustrd")
+                data["place"] = parse_record(
                     transaction_element, ".//nms:PstlAdr/nms:TwnNm"
                 )
-                transaction.transaction_date = parse_date(
+                data["transaction_date"] = parse_date(
                     transaction_element, ".//nms:BookgDt/nms:Dt"
                 )
-                transaction.base_amount, transaction.base_currency = parse_amount(
+                data["base_amount"], data["base_currency"] = parse_amount(
                     transaction_element,
                     amount_XPath="./nms:Amt",
                     vector_XPath="./nms:CdtDbtInd",
                 )
-                transaction.bank_id = bank.id
-                transaction.user_id = user.id
+                data["bank_id"] = bank.id
+                data["user_id"] = user.id
 
+                transaction = Transaction(**data)
                 transactions.append(transaction)
                 calculated_sum += transaction.base_amount
         except (ET.ParseError) as e:

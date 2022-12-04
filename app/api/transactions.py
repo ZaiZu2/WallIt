@@ -22,7 +22,6 @@ from app.api.imports import (
 )
 from app.api.utils import (
     filter_transactions,
-    convert_currency,
     validate_statement,
     JSONType,
 )
@@ -78,7 +77,6 @@ def add_transaction() -> Tuple[JSONType, int]:
 
     verified_data = TransactionSchema().load(request.json)
     transaction = Transaction(user=current_user, **verified_data)
-    transaction = convert_currency([transaction], current_user.main_currency)[0]
     db.session.add(transaction)
     db.session.commit()
 
@@ -191,9 +189,6 @@ def upload_statements() -> tuple[JSONType, int]:
             else:
                 failed_upload[filename] = statement_origin
 
-    uploaded_transactions = convert_currency(
-        uploaded_transactions, current_user.main_currency
-    )
     db.session.add_all(uploaded_transactions)
     db.session.commit()
 

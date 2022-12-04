@@ -13,6 +13,7 @@ from marshmallow import (
     EXCLUDE,
 )
 from copy import deepcopy
+from datetime import datetime, timezone
 
 from app import ma
 from app.models import Bank, Category, Transaction, User
@@ -166,39 +167,52 @@ class TransactionSchema(ma.SQLAlchemySchema):
     amount = ma.auto_field("main_amount", required=False)
     base_amount = ma.auto_field(required=True)
     base_currency = ma.auto_field(required=True)
-    date = ma.auto_field("transaction_date", required=True)
+    date = ma.auto_field(
+        "transaction_date",
+        required=True,
+        validate=validate.Range(max=datetime.now(timezone.utc), max_inclusive=True),
+    )
     creation_date = ma.auto_field()
     place = ma.auto_field()
     category = fields.Pluck(CategorySchema, "id", allow_none=True)
     bank = fields.Pluck(BankSchema, "id", allow_none=True)
 
+    @pre_load
+    def _convert_to_nones(self, data: dict, **kwargs) -> dict:
+        """Convert values with empty strings to Nones"""
+        return {key: None if value == "" else value for key, value in data.items()}
+
     @validates("base_currency")
     def _check_available_currencies(self, currency: str) -> None:
         if currency not in get_currencies():
-            raise ValidationError("Only available currency can be accepted")
+            raise ValidationError("Specified currency is not available")
+
+    @validates("category")
+    def _check_available_categories(self, category: dict[str, int]) -> None:
+        if category is not None and not Category.get_from_id(
+            category["id"], current_user
+        ):
+            raise ValidationError("User does not have a specified category")
+
+    @validates("bank")
+    def _check_available_banks(self, bank: dict[str, int]) -> None:
+        if bank is not None and not Bank.query.filter_by(id=bank["id"]).first():
+            raise ValidationError("Specified bank is not available")
 
     @post_load
-    def _convert_to_transaction(
-        self, data: dict, **kwargs: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Convert nested schema name to foreign key relationships and load into Transaction object"""
+    def _convert_to_models(self, data: dict, **kwargs) -> dict:
+        """Convert nested schema name to referenced model objects"""
 
-        if "category" in data:
-            if data["category"]:
-                data["category"] = Category.get_from_id(
-                    data["category"]["id"], current_user
-                )
-            else:
-                data["category"] = None
-        if "bank" in data:
-            if data["bank"]:
-                data["bank"] = Bank.query.filter_by(id=data["bank"]["id"]).first()
-            else:
-                data["bank"] = None
+        if "category" in data and data["category"]:
+            data["category"] = Category.query.filter_by(
+                id=data["category"]["id"]
+            ).first()
+        if "bank" in data and data["bank"]:
+            data["bank"] = Bank.query.filter_by(id=data["bank"]["id"]).first()
         return data
 
     @post_dump(pass_many=True)
-    def _create_envelope(self, data: dict, **kwargs: dict[str, Any]) -> dict[str, dict]:
+    def _create_envelope(self, data: dict, **kwargs) -> dict:
         return {"transactions": data}
 
 
