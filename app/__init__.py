@@ -7,13 +7,15 @@ from flask_login import LoginManager
 from flask_wtf import CSRFProtect
 from flask_caching import Cache
 from flask_mail import Mail
-import sys, os
+import sys
 from pathlib import Path
 from loguru import logger
 import logging
 from logging.handlers import RotatingFileHandler
 
 from config import Config
+
+DEBUG_HIGH = logger.level("DEBUG_HIGH", no=8)
 
 metadata = MetaData(
     naming_convention={
@@ -59,7 +61,6 @@ def create_app(config_class=Config) -> Flask:
     app.register_blueprint(errors_blueprint)
 
     logger.remove()
-    DEBUG_HIGH = logger.level("DEBUG_HIGH", no=8)
     logger.add(
         sys.stderr,
         level="DEBUG",

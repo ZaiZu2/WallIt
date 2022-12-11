@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from werkzeug.security import check_password_hash, generate_password_hash
-from flask_login import UserMixin, current_user
+from flask_login import UserMixin
 from flask import current_app
 from sqlalchemy import UniqueConstraint, CheckConstraint, select
 from sqlalchemy.orm import with_parent
@@ -51,7 +51,7 @@ class User(UserMixin, UpdatableMixin, db.Model):
         uselist=True,
     )
 
-    def __init__(self, password: str, **kwargs: dict[str, Any]) -> None:
+    def __init__(self, password: str, **kwargs) -> None:
         super(User, self).__init__(**kwargs)
         self.set_password(password)
 
@@ -158,7 +158,7 @@ class Transaction(UpdatableMixin, db.Model):
 
     def __init__(self, **kwargs) -> None:
         super(Transaction, self).__init__(**kwargs)
-        self.convert_to_main_amount()
+        self.convert_to_main_amount(self.user.main_currency)
 
     def __repr__(self) -> str:
         return f"Transaction: {self.base_amount} {self.base_currency} on {self.transaction_date}"
@@ -166,19 +166,16 @@ class Transaction(UpdatableMixin, db.Model):
     def update(self, data: dict) -> None:
         super(self.__class__, self).update(data)
         if "base_amount" in data or "base_currency" in data:
-            self.convert_to_main_amount()
+            self.convert_to_main_amount(self.user.main_currency)
 
-    def convert_to_main_amount(self, target_currency: str | None = None) -> None:
+    def convert_to_main_amount(self, target_currency: str) -> None:
         """Calculate the transaction value from base currency to user's currency
 
         Raises:
             InvalidConfigError: raised due to error during API key read
         """
 
-        if target_currency is None:
-            target_currency = current_user.main_currency
-
-        if self.base_currency == target_currency:
+        if target_currency == self.base_currency:
             self.main_amount = self.base_amount
         else:
             # date_cache = {

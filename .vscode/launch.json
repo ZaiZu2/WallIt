@@ -10,6 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
             "justMyCode": true
         },
         {
@@ -18,6 +19,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
             "justMyCode": false
         },
         {
