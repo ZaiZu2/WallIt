@@ -12,9 +12,11 @@ from time import time
 import requests
 from requests.exceptions import RequestException
 from collections import defaultdict
+import httpx
+import asyncio
 
 from app import db, login, cache, logger
-from app.exceptions import InvalidConfigError
+from app.exceptions import InvalidConfigError, ExternalError
 
 
 class UpdatableMixin:
@@ -51,8 +53,8 @@ class User(UserMixin, UpdatableMixin, db.Model):
         uselist=True,
     )
 
-    def __init__(self, password: str, **kwargs) -> None:
-        super(User, self).__init__(**kwargs)
+    def __init__(self, username: str, email: str, password: str, **kwargs) -> None:
+        super(User, self).__init__(username=username, email=email, **kwargs)
         self.set_password(password)
 
     def __repr__(self) -> str:
@@ -156,8 +158,19 @@ class Transaction(UpdatableMixin, db.Model):
     user = db.relationship("User", back_populates="transactions")
     bank = db.relationship("Bank", back_populates="transactions")
 
-    def __init__(self, **kwargs) -> None:
-        super(Transaction, self).__init__(**kwargs)
+    def __init__(
+        self,
+        base_amount: float,
+        base_currency: str,
+        transaction_date: datetime,
+        **kwargs,
+    ) -> None:
+        super(Transaction, self).__init__(
+            base_amount=base_amount,
+            base_currency=base_currency,
+            transaction_date=transaction_date,
+            **kwargs,
+        )
         self.convert_to_main_amount(self.user.main_currency)
 
     def __repr__(self) -> str:
@@ -166,66 +179,65 @@ class Transaction(UpdatableMixin, db.Model):
     def update(self, data: dict) -> None:
         super(self.__class__, self).update(data)
         if "base_amount" in data or "base_currency" in data:
-            self.convert_to_main_amount(self.user.main_currency)
+            self.convert_to_main_amount()
 
-    def convert_to_main_amount(self, target_currency: str) -> None:
+    def convert_to_main_amount(self, target_currency: str | None = None) -> None:
         """Calculate the transaction value from base currency to user's currency
 
         Raises:
             InvalidConfigError: raised due to error during API key read
         """
-
+        if target_currency is None:
+            target_currency = self.user.main_currency
         if target_currency == self.base_currency:
             self.main_amount = self.base_amount
-        else:
-            # date_cache = {
-            #   "EUR": {
-            #       "10-11-2021": {
-            #           "USD": 0.95,
-            #       },
-            #   },
-            # }
-            date_cache: dict[str, dict[str, list]] = cache.get(
-                "conversion_rates"
-            ) or defaultdict(dict)
-            # Check if currency exchange rates are already cached for this date
-            # If not, consume API and populate the date_cache with it
-            date = self.transaction_date.strftime("%Y-%m-%d")
-            if not date_cache or date not in date_cache[target_currency]:
-                if "CURRENCYSCOOP_API_KEY" in current_app.config:
-                    base_url = "https://api.currencyscoop.com/v1/historical?api_key={key}&base={target_currency}"
-                    base_url = base_url.format(
-                        key=current_app.config["CURRENCYSCOOP_API_KEY"],
-                        target_currency=target_currency,
-                    )
-                else:
-                    raise InvalidConfigError("CurrencyScoop API key is not accessible")
+            return
 
-                # Stringified transaction date used for
-                date_template = "&date={date}"
-                date_template = date_template.format(date=date)
+        # date_cache = {
+        #   "EUR": {
+        #       "10-11-2021": {
+        #           "USD": 0.95, ...
+        #       },
+        #   },
+        # }
+        date_cache: dict[str, dict[str, dict[str, int]]] = cache.get(
+            "conversion_rates"
+        ) or defaultdict(dict)
+        # Check if currency exchange rates are already cached for this date
+        # If not, consume API and populate the date_cache with it
+        date = self.transaction_date.strftime("%Y-%m-%d")
+        if not date_cache or date not in date_cache[target_currency]:
+            if set(["CURRENCYSCOOP_API_KEY", "CURRENCYSCOOP_API_URL"]).issubset(
+                current_app.config
+            ):
+                api_url = current_app.config["CURRENCYSCOOP_API_URL"].format(
+                    key=current_app.config["CURRENCYSCOOP_API_KEY"],
+                    target_currency=target_currency,
+                    date=date,
+                )
+            else:
+                raise InvalidConfigError("CurrencyScoop API key is not accessible")
 
-                try:
-                    r = requests.get(base_url + date_template)
-                    r.raise_for_status()
-                except RequestException as error:
-                    logger.error("Error during currency conversion: ", error)
-
+            try:
+                r = requests.get(api_url)
+                r.raise_for_status()
                 json = r.json()["response"]
-                base_currency, rates = json["base"], json["rates"]
-                date_cache[base_currency][date] = rates
-                cache.set("conversion_rates", date_cache)
+            except RequestException as error:
+                raise ExternalError(error)
 
-            # Calculate the amount
-            self.main_amount = round(
-                self.base_amount
-                / date_cache[target_currency][date][self.base_currency],
-                2,
-            )
+            base_currency, rates = json["base"], json["rates"]
+            date_cache[base_currency][date] = rates
+            cache.set("conversion_rates", date_cache)
+
+        # Calculate the amount
+        self.main_amount = round(
+            self.base_amount / date_cache[target_currency][date][self.base_currency],
+            2,
+        )
 
     @classmethod
-    def get_from_id(cls, id: int, user: User) -> Transaction:
-        """Get transaction by id and check if it belongs to specified user. Abort in case user/id is incorrect.
+    def get_from_id(cls, id: int, user: User) -> Transaction | None:
+        """Get transaction by id and check if it belongs to specified user.
 
         Args:
             id (int): id of transaction
@@ -249,11 +261,6 @@ class Bank(db.Model):
 
     def __repr__(self) -> str:
         return f"Bank: {self.name}"
-
-    @classmethod
-    def get_from_name(cls, bank_name: str) -> Optional[Bank]:
-        """Query for Bank with a name"""
-        return cls.query.filter_by(name=bank_name).first()
 
 
 class Category(db.Model, UpdatableMixin):
@@ -284,12 +291,7 @@ class Category(db.Model, UpdatableMixin):
     def __repr__(self) -> str:
         return f"Category: {self.name}"
 
-    # @classmethod
-    # def get_from_name(cls, category_name: str, user: User) -> Optional[Category]:
-    #     """Query for Category with a name"""
-    #     return cls.query.filter_by(name=category_name, user=user).first()
-
     @classmethod
-    def get_from_id(cls, category_id: int, user: User) -> Optional[Category]:
+    def get_from_id(cls, category_id: int, user: User) -> Category | None:
         """Query for Category with an id"""
         return cls.query.filter_by(id=category_id, user=user).first()

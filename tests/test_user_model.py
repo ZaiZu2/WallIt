@@ -1,23 +1,23 @@
 import pytest
 from unittest.mock import patch
 from datetime import datetime
-from flask import Flask
 import string
 import random
 
-from app import db
 from app.models import User, Transaction, Category, Bank
 
 
 def test_password_hashing() -> None:
-    user_1 = User(password="password_1")
+    user_1 = User(
+        username="username_1", email="email_1@gmail.com", password="password_1"
+    )
     assert user_1.check_password("password_1")
     assert not user_1.check_password("wrong_password")
     with pytest.raises(AttributeError):
         user_1.password
 
 
-def test_reset_password_tokens(app: Flask, user_1: User) -> None:
+def test_reset_password_tokens(user_1: User) -> None:
     token = user_1.get_reset_password_token()
     assert user_1.verify_reset_password_token(token) == user_1
 
@@ -26,13 +26,13 @@ def test_reset_password_tokens(app: Flask, user_1: User) -> None:
     assert user_1.verify_reset_password_token(token) == None
 
 
-def test_user_update(app: Flask, user_1: User, transaction_1: Transaction) -> None:
-
-    user_1.update(dict(first_name="first_2", username="username_2"))
-    assert user_1.first_name == "first_2"
-    assert user_1.username == "username_2"
-
+def test_user_update(user_1: User, transaction_1: Transaction) -> None:
     with patch("app.models.Transaction.convert_to_main_amount") as convert_mock:
+        user_1.update(dict(first_name="first_2", username="username_2"))
+        assert user_1.first_name == "first_2"
+        assert user_1.username == "username_2"
+        assert convert_mock.call_count == 0
+
         # Convert_to_main_amount is only called if user is updated with new currency
         user_1.update(dict(main_currency="USD"))
         assert convert_mock.call_count == 0
@@ -40,7 +40,7 @@ def test_user_update(app: Flask, user_1: User, transaction_1: Transaction) -> No
         assert convert_mock.call_count == 1
 
 
-def test_user_selects(app: Flask, user_1: User) -> None:
+def test_user_selects(user_1: User) -> None:
     user_2 = User(
         username="username_2",
         password="password_2",

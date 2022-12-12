@@ -1,4 +1,4 @@
-from flask import request
+from flask import request, abort
 from flask_login import current_user, login_required
 
 from app import db
@@ -25,16 +25,18 @@ def add_category() -> tuple[JSONType, int]:
 def modify_category(id: int) -> tuple[JSONType, int]:
     """Modify category"""
 
+    if not (category := Category.get_from_id(id, current_user)):
+        abort(404)
     verified_data = CategorySchema().load(request.json)
-    category = Category.get_from_id(id, current_user)
     category.update(verified_data)
     db.session.commit()
     return CategorySchema().dumps(category), 201
 
 
+# TODO: Delete and replace with single category delete
 @blueprint.route("/api/categories/delete", methods=["DELETE"])
 @login_required
-def delete_category() -> tuple[JSONType, int]:
+def delete_categories() -> tuple[JSONType, int]:
     """Delete multiple categories"""
 
     verified_data = CategorySchema(many=True).load(request.json, partial=True)
@@ -49,3 +51,16 @@ def delete_category() -> tuple[JSONType, int]:
     db.session.commit()
 
     return CategorySchema(many=True).dumps(deleted_categories), 201
+
+
+@blueprint.route("/api/categories/<int:id>delete", methods=["DELETE"])
+@login_required
+def delete_category(id: int) -> tuple[JSONType, int]:
+    """Delete multiple categories"""
+
+    if not (category := Category.get_from_id(id, current_user)):
+        abort(404)
+    db.session.delete(category)
+    db.session.commit()
+
+    return CategorySchema().dumps(category), 201

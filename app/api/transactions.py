@@ -5,7 +5,7 @@ from sqlalchemy import select, func, between, and_, case
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, MONTHLY
-from typing import Callable, Tuple
+from typing import Callable
 
 from app import db, logger
 from app.models import Transaction, User, Bank
@@ -30,7 +30,7 @@ from app.exceptions import FileError
 
 @blueprint.route("/api/transactions", methods=["POST"])
 @login_required
-def fetch_transactions() -> Tuple[JSONType, int]:
+def fetch_transactions() -> tuple[JSONType, int]:
     """Receive filter parameters in JSON, query DB for filtered values
     and return Transactions serialized to JSON
 
@@ -72,7 +72,7 @@ def fetch_transactions() -> Tuple[JSONType, int]:
 
 @blueprint.route("/api/transactions/add", methods=["POST"])
 @login_required
-def add_transaction() -> Tuple[JSONType, int]:
+def add_transaction() -> tuple[JSONType, int]:
     """Add transaction"""
 
     verified_data = TransactionSchema().load(request.json)
@@ -85,10 +85,11 @@ def add_transaction() -> Tuple[JSONType, int]:
 
 @blueprint.route("/api/transactions/<int:id>/modify", methods=["PATCH"])
 @login_required
-def modify_transaction(id: int) -> Tuple[str, int]:
+def modify_transaction(id: int) -> tuple[str, int]:
     "Modify 'info','title','place', 'category' column of the transaction"
 
-    transaction = Transaction.get_from_id(id, current_user)
+    if not (transaction := Transaction.get_from_id(id, current_user)):
+        abort(404)
     verified_data = ModifyTransactionSchema().load(request.json)
     transaction.update(verified_data)
     db.session.commit()
@@ -97,10 +98,11 @@ def modify_transaction(id: int) -> Tuple[str, int]:
 
 @blueprint.route("/api/transactions/<int:id>/delete", methods=["DELETE"])
 @login_required
-def delete_transaction(id: int) -> Tuple[str, int]:
+def delete_transaction(id: int) -> tuple[dict, int]:
     """Delete transaction with given Id"""
 
-    transaction = Transaction.get_from_id(id, current_user)
+    if not (transaction := Transaction.get_from_id(id, current_user)):
+        abort(404)
     db.session.delete(transaction)
     db.session.commit()
     return {}, 200
