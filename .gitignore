@@ -69,3 +69,4 @@ database
 .*env
 !.flaskenv
 *.pem
+logs

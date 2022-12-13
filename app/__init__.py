@@ -6,7 +6,6 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_wtf import CSRFProtect
 from flask_caching import Cache
-from flask_mail import Mail
 import sys
 from pathlib import Path
 from loguru import logger
@@ -33,7 +32,6 @@ login = LoginManager()
 login.login_view = "main.welcome"
 csrf = CSRFProtect()
 cache = Cache()
-mail = Mail()
 
 
 def create_app(config_class=Config) -> Flask:
@@ -46,7 +44,6 @@ def create_app(config_class=Config) -> Flask:
     login.init_app(app)
     csrf.init_app(app)
     cache.init_app(app)
-    mail.init_app(app)
 
     from app.main import blueprint as main_blueprint
 

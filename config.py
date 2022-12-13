@@ -19,18 +19,14 @@ class Config:
     CACHE_TYPE = "SimpleCache"
     CACHE_DEFAULT_TIMEOUT = 3600
 
-    # Flask-mail config
-    MAIL_SERVER = os.environ.get("MAIL_SERVER")
-    MAIL_PORT = int(os.environ.get("MAIL_PORT") or 25)
-    MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS") is not None
-    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
-    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
-    ADMINS = ["donotreply@wallit.com"]
-
     RESET_TOKEN_MINUTES = int(os.environ.get("RESET_TOKEN_MINUTES") or "15")
 
     # Currency conversion API
     CURRENCYSCOOP_API_URL = "https://api.currencyscoop.com/v1/historical?api_key={key}&base={target_currency}&date={date}"
     CURRENCYSCOOP_API_KEY = os.environ.get("CURRENCYSCOOP_API_KEY")
+
+    # Email API
+    ADMINS = ["wall.it@gmail.com"]
+    SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY")
 
     LOG_TO_STDOUT = os.environ.get("LOG_TO_STDOUT")

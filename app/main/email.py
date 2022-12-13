@@ -1,18 +1,23 @@
 from flask import render_template, current_app
-from flask_mail import Message
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 from app.models import User
-from app import mail
+from app.exceptions import ExternalError
 
 
 def send_password_reset_email(user: User) -> None:
 
     token = user.get_reset_password_token()
-    message = Message(
+    message = Mail(
+        from_email="qba200@gmail.com",
+        to_emails=user.email,
         subject="WallIt - password reset request",
-        recipients=[user.email],
-        body=render_template("email/reset_password.txt", token=token),
-        html=render_template("email/reset_password.html", token=token),
-        sender=current_app.config["ADMINS"][0],
+        plain_text_content=render_template("email/reset_password.txt", token=token),
+        html_content=render_template("email/reset_password.html", token=token),
     )
-    mail.send(message)
+    try:
+        sg = SendGridAPIClient(current_app.config["SENDGRID_API_KEY"])
+        sg.send(message)
+    except Exception as error:
+        raise ExternalError(error)
