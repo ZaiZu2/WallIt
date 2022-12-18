@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, EmailField
-from wtforms.validators import InputRequired, Email, EqualTo, Length
+from wtforms.validators import InputRequired, Email, EqualTo, Length, Regexp, Optional
 
 
 class LoginForm(FlaskForm):
@@ -8,8 +8,7 @@ class LoginForm(FlaskForm):
         "Username", validators=[InputRequired(message="Username is required")]
     )
     password = PasswordField(
-        "Password",
-        validators=[InputRequired(message="Password is required")],
+        "Password", validators=[InputRequired(message="Password is required")]
     )
     remember_me = BooleanField("Remember me")
     submit = SubmitField("Sign in")
@@ -51,6 +50,10 @@ class SignUpForm(FlaskForm):
         "Username",
         validators=[
             InputRequired(message="Username is required"),
+            Regexp(
+                "^[A-Za-z0-9]+$",
+                message="Username must be a single word consisting of alpha-numeric characters",
+            ),
         ],
     )
     password = PasswordField(
@@ -70,12 +73,20 @@ class SignUpForm(FlaskForm):
     first_name = StringField(
         "First name",
         validators=[
-            InputRequired(message="First name is required"),
+            Regexp(
+                "^[A-Za-z]+$",
+                message="First name must be a single word starting with a capital letter",
+            ),
+            Optional(),
         ],
     )
     last_name = StringField(
         "Last name",
         validators=[
-            InputRequired(message="Last name is required"),
+            Regexp(
+                "^[A-Za-z]+$",
+                message="Last name must be a single word starting with a capital letter",
+            ),
+            Optional(),
         ],
     )

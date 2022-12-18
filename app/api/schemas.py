@@ -35,13 +35,13 @@ class UserSchema(ma.SQLAlchemySchema):
     email = ma.auto_field(validate=validate.Email())
     first_name = ma.auto_field(
         validate=validate.Regexp(
-            "^[A-Za-z][a-z]*$",
+            "^[A-Za-z]+$",
             error="Name must be a single word starting with a capital letter",
         )
     )
     last_name = ma.auto_field(
         validate=validate.Regexp(
-            "^[A-Za-z][a-z]*$",
+            "^[A-Za-z]+$",
             error="Last name must be a single word starting with a capital letter",
         )
     )
@@ -81,14 +81,14 @@ class ModifyUserSchema(ma.SQLAlchemySchema):
     first_name = ma.auto_field(
         required=False,
         validate=validate.Regexp(
-            "^[A-Za-z][a-z]*$",
+            "^[A-Za-z]+$",
             error="Name must be a single word starting with a capital letter",
         ),
     )
     last_name = ma.auto_field(
         required=False,
         validate=validate.Regexp(
-            "^[A-Za-z][a-z]*$",
+            "^[A-Za-z]+$",
             error="Last name must be a single word starting with a capital letter",
         ),
     )

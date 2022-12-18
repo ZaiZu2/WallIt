@@ -14,19 +14,17 @@ class Config:
 
     # File upload configuration
     MAX_CONTENT_LENGTH = 1024 * 1024
+    RESET_TOKEN_MINUTES = int(os.environ.get("RESET_TOKEN_MINUTES") or "15")
+    LOG_TO_STDOUT = os.environ.get("LOG_TO_STDOUT")
 
     # Cache config
     CACHE_TYPE = "SimpleCache"
     CACHE_DEFAULT_TIMEOUT = 3600
-
-    RESET_TOKEN_MINUTES = int(os.environ.get("RESET_TOKEN_MINUTES") or "15")
 
     # Currency conversion API
     CURRENCYSCOOP_API_URL = "https://api.currencyscoop.com/v1/historical?api_key={key}&base={target_currency}&date={date}"
     CURRENCYSCOOP_API_KEY = os.environ.get("CURRENCYSCOOP_API_KEY")
 
     # Email API
-    ADMINS = ["wall.it@gmail.com"]
+    ADMINS = ["wallit.help@gmail.com"]
     SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY")
-
-    LOG_TO_STDOUT = os.environ.get("LOG_TO_STDOUT")

@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import patch
 from flask import Flask
 from flask.testing import FlaskClient
+from flask_login import login_user
 from typing import Generator
 from datetime import datetime
 
@@ -20,14 +21,16 @@ class TestConfig(Config):
 @pytest.fixture()
 def app() -> Generator[Flask, None, None]:
     app = create_app(TestConfig)
-    # app.config["WTF_CSRF_ENABLED"] = False
 
     app_context = app.app_context()
     app_context.push()
+    test_context = app.test_request_context()
+    test_context.push()
     db.create_all()
     yield app
     db.session.close()
     db.drop_all()
+    test_context.pop()
     app_context.pop()
 
 
@@ -39,11 +42,11 @@ def client(app: Flask) -> FlaskClient:
 @pytest.fixture()
 def user_1(app: Flask) -> User:
     user_1 = User(
-        username="username_1",
-        password="password_1",
-        email="email_1@gmail.com",
-        first_name="first_1",
-        last_name="last_1",
+        username="username1",
+        password="password1",
+        email="email1@gmail.com",
+        first_name="firstOne",
+        last_name="lastOne",
         main_currency="USD",
     )
     db.session.add(user_1)
@@ -52,20 +55,19 @@ def user_1(app: Flask) -> User:
 
 
 @pytest.fixture()
-def logged_user_1(client: FlaskClient, user_1: User) -> User:
-    with client:
-        client.post("/login", data={"username": "username_1", "password": "password_1"})
-        return user_1
+def logged_user_1(user_1: User) -> User:
+    login_user(user_1, remember=True)
+    return user_1
 
 
 @pytest.fixture()
 def user_2(app: Flask) -> User:
     user_2 = User(
-        username="username_2",
-        password="password_2",
-        email="email_2@gmail.com",
-        first_name="first_2",
-        last_name="last_2",
+        username="username2",
+        password="password2",
+        email="email2@gmail.com",
+        first_name="firstTwo",
+        last_name="lastTwo",
         main_currency="EUR",
     )
     db.session.add(user_2)
@@ -74,16 +76,15 @@ def user_2(app: Flask) -> User:
 
 
 @pytest.fixture()
-def logged_user_2(client: FlaskClient, user_2: User) -> User:
-    with client:
-        client.post("/login", data={"username": "username_2", "password": "password_2"})
-        return user_2
+def logged_user_2(user_2: User) -> User:
+    login_user(user_2, remember=True)
+    return user_2
 
 
 @pytest.fixture()
 def category_1(user_1: User) -> Category:
     category_1 = Category(
-        name="name_1",
+        name="name1",
         user=user_1,
     )
     db.session.add(category_1)
@@ -94,7 +95,7 @@ def category_1(user_1: User) -> Category:
 @pytest.fixture()
 def category_2(user_2: User) -> Category:
     category_2 = Category(
-        name="name_2",
+        name="name2",
         user=user_2,
     )
     db.session.add(category_2)
@@ -106,14 +107,14 @@ def category_2(user_2: User) -> Category:
 def transaction_1(user_1: User, category_1: Category) -> Transaction:
     with patch("app.models.Transaction.convert_to_main_amount"):
         transaction_1 = Transaction(
-            info="info_1",
-            title="title_1",
+            info="info1",
+            title="title1",
             main_amount=1,
             base_amount=11,
             base_currency="CZK",
             transaction_date=datetime(2001, 1, 1, 1, 1, 1, 1),
             creation_date=datetime(2011, 1, 1, 1, 1, 1, 1),
-            place="place_1",
+            place="place1",
             user=user_1,
             category=category_1,
         )
@@ -126,14 +127,14 @@ def transaction_1(user_1: User, category_1: Category) -> Transaction:
 def transaction_2(user_2: User, category_2: Category) -> Transaction:
     with patch("app.models.Transaction.convert_to_main_amount"):
         transaction_2 = Transaction(
-            info="info_2",
-            title="title_2",
+            info="info2",
+            title="title2",
             main_amount=2,
             base_amount=22,
             base_currency="CZK",
             transaction_date=datetime(2002, 2, 2, 2, 2, 2, 2),
             creation_date=datetime(2022, 2, 2, 2, 2, 2, 2),
-            place="place_2",
+            place="place2",
             user=user_2,
             category=category_2,
         )

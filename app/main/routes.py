@@ -65,8 +65,6 @@ def logout() -> Response:
 
 @blueprint.route("/reset_password", methods=["POST"])
 def request_reset_password() -> Response:
-    if current_user.is_authenticated:
-        return redirect(url_for("main.index"))
     request_password_form = RequestPasswordForm()
     if request_password_form.validate_on_submit():
         if user := User.query.filter_by(email=request_password_form.email.data).first():
@@ -83,8 +81,6 @@ def request_reset_password() -> Response:
 
 @blueprint.route("/reset_password/<string:token>", methods=["GET", "POST"])
 def reset_password(token: str) -> str | Response:
-    if current_user.is_authenticated:
-        return redirect(url_for("main.index"))
     user = User.verify_reset_password_token(token)
     if user is None:
         return redirect(url_for("main.welcome"))
@@ -93,23 +89,26 @@ def reset_password(token: str) -> str | Response:
         user.set_password(reset_password_form.password.data)
         db.session.commit()
         flash("Password has been successfully reset", "login_message")
-        return redirect(url_for("main.welcome"))
+        return redirect(url_for("main.logout"))
     return render_template(
         "reset_password.html", reset_password_form=reset_password_form
     )
 
 
-@blueprint.route("/users/new", methods=["POST"])
+@blueprint.route("/users/add", methods=["POST"])
 def sign_up() -> Response:
     if current_user.is_authenticated:
         return redirect(url_for("main.index"))
     sign_up_form = SignUpForm()
     if sign_up_form.validate_on_submit():
+        param_taken = False
         if User.query.filter_by(username=sign_up_form.username.data).first():
-            flash("Username is already used, 'sign_up_message'")
-            return redirect(url_for("main.welcome"))
+            flash("Username is already used", "sign_up_message")
+            param_taken = True
         if User.query.filter_by(email=sign_up_form.email.data).first():
             flash("Email is already used", "sign_up_message")
+            param_taken = True
+        if param_taken:
             return redirect(url_for("main.welcome"))
 
         new_user = User(
