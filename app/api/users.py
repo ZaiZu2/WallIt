@@ -1,5 +1,6 @@
 from marshmallow import ValidationError
 from flask import request, abort
+from flask.typing import ResponseReturnValue
 from flask_login import current_user, login_required
 from collections import defaultdict
 
@@ -12,32 +13,30 @@ from app.api.schemas import (
     UserSchema,
     UserEntitiesSchema,
 )
-from app.api.utils import JSONType
 
 
 @blueprint.route("/api/users/<int:id>/modify", methods=["PATCH"])
 @login_required
-def modify_user(id: int) -> tuple[JSONType, int]:
+def modify_user(id: int) -> ResponseReturnValue:
+    user: User = User.query.get(id)
+    if user is None or user != current_user:
+        abort(404)
 
     verified_data = ModifyUserSchema().load(request.json)
-    current_user.update(verified_data)
+    user.update(verified_data)
     db.session.commit()
 
-    return UserSchema().dumps(current_user), 200
+    return UserSchema().dump(user), 200
 
 
 @blueprint.route("/api/users/<int:id>/change_password", methods=["PATCH"])
 @login_required
-def change_password(id: int) -> tuple[JSONType, int]:
-    user: User = User.query.get(id)
-    if user != current_user:
+def change_password(id: int) -> ResponseReturnValue:
+    user = User.query.get(id)
+    if user is None or user != current_user:
         abort(404)
 
-    try:
-        verified_data = ChangePasswordSchema().load(request.json)
-    except ValidationError as error:
-        return error.messages, 400
-
+    verified_data = ChangePasswordSchema().load(request.json)
     if not user.check_password(verified_data["old_password"]):
         abort(400)
     user.set_password(verified_data["new_password"])
@@ -48,19 +47,19 @@ def change_password(id: int) -> tuple[JSONType, int]:
 
 @blueprint.route("/api/users/<int:id>/delete", methods=["DELETE"])
 @login_required
-def delete_user(id: int) -> tuple[JSONType, int]:
-    user: User = User.query.get(id)
-    if user != current_user:
+def delete_user(id: int) -> ResponseReturnValue:
+    user = User.query.get(id)
+    if user is None or user != current_user:
         abort(404)
 
     db.session.delete(user)
-    # db.session.commit()
+    db.session.commit()
     return {}, 200
 
 
 @blueprint.route("/api/user/entities", methods=["GET"])
 @login_required
-def fetch_user_entities() -> tuple[JSONType, int]:
+def fetch_user_entities() -> ResponseReturnValue:
     """Fetch entities assigned to user
 
     Response JSON structure example:
@@ -85,4 +84,4 @@ def fetch_user_entities() -> tuple[JSONType, int]:
         response_body["banks"][bank.name] = bank
 
     # Schema used only to map server-side 'json' names to general ones specified by schema
-    return UserEntitiesSchema().dumps(response_body), 200
+    return UserEntitiesSchema().dump(response_body), 200

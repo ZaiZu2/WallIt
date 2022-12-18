@@ -1,11 +1,11 @@
 from marshmallow.exceptions import ValidationError
+from flask.typing import ResponseReturnValue
 
 from app.api import blueprint
-from app.api.utils import JSONType
 
 
 @blueprint.errorhandler(ValidationError)
-def validation_error(error: ValidationError) -> tuple[JSONType, int]:
+def validation_error(error: ValidationError) -> ResponseReturnValue:
     return {
         "code": 400,
         "message": "Information provided in the request contains errors",

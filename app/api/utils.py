@@ -5,14 +5,10 @@ import typing as t
 from pathlib import Path
 import requests
 from requests.exceptions import RequestException
-from collections import defaultdict
 
 from app import db, cache, logger
 from app.models import Transaction, Bank
 from app.exceptions import InvalidConfigError
-
-
-JSONType = str | int | float | bool | None | t.Dict[str, t.Any] | t.List[t.Any]
 
 
 def filter_transactions(filters: dict) -> list[Transaction]:

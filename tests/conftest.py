@@ -1,13 +1,13 @@
 import pytest
 from unittest.mock import patch
-from flask import Flask
+from flask import Flask, url_for
 from flask.testing import FlaskClient
 from flask_login import login_user
 from typing import Generator
 from datetime import datetime
 
 from app import create_app, db
-from app.models import User, Transaction, Category
+from app.models import User, Transaction, Category, Bank
 from config import Config
 
 
@@ -16,6 +16,16 @@ class TestConfig(Config):
     SQLALCHEMY_DATABASE_URI = "postgresql://test:test@localhost:5434/wallit_test"
     SECRET_KEY = "test"
     WTF_CSRF_ENABLED = False
+
+
+def login(user: User, client: FlaskClient) -> None:
+    """Helper function to login user_1"""
+
+    client.post(
+        url_for("main.login"),
+        follow_redirects=True,
+        data=dict(username=user.username, password="password1"),
+    )
 
 
 @pytest.fixture()
@@ -55,12 +65,6 @@ def user_1(app: Flask) -> User:
 
 
 @pytest.fixture()
-def logged_user_1(user_1: User) -> User:
-    login_user(user_1, remember=True)
-    return user_1
-
-
-@pytest.fixture()
 def user_2(app: Flask) -> User:
     user_2 = User(
         username="username2",
@@ -76,9 +80,21 @@ def user_2(app: Flask) -> User:
 
 
 @pytest.fixture()
-def logged_user_2(user_2: User) -> User:
-    login_user(user_2, remember=True)
-    return user_2
+def bank_1() -> Category:
+    bank_1 = Bank(name="Revolut", statement_type="csv")
+
+    db.session.add(bank_1)
+    db.session.commit()
+    return bank_1
+
+
+@pytest.fixture()
+def bank_2() -> Category:
+    bank_2 = Bank(name="mBank", statement_type="xml")
+
+    db.session.add(bank_2)
+    db.session.commit()
+    return bank_2
 
 
 @pytest.fixture()
@@ -104,7 +120,7 @@ def category_2(user_2: User) -> Category:
 
 
 @pytest.fixture()
-def transaction_1(user_1: User, category_1: Category) -> Transaction:
+def transaction_1(user_1: User, bank_1: Bank, category_1: Category) -> Transaction:
     with patch("app.models.Transaction.convert_to_main_amount"):
         transaction_1 = Transaction(
             info="info1",
@@ -116,6 +132,7 @@ def transaction_1(user_1: User, category_1: Category) -> Transaction:
             creation_date=datetime(2011, 1, 1, 1, 1, 1, 1),
             place="place1",
             user=user_1,
+            bank=bank_1,
             category=category_1,
         )
     db.session.add(transaction_1)
@@ -124,7 +141,7 @@ def transaction_1(user_1: User, category_1: Category) -> Transaction:
 
 
 @pytest.fixture()
-def transaction_2(user_2: User, category_2: Category) -> Transaction:
+def transaction_2(user_2: User, bank_2: Bank, category_2: Category) -> Transaction:
     with patch("app.models.Transaction.convert_to_main_amount"):
         transaction_2 = Transaction(
             info="info2",
@@ -136,6 +153,7 @@ def transaction_2(user_2: User, category_2: Category) -> Transaction:
             creation_date=datetime(2022, 2, 2, 2, 2, 2, 2),
             place="place2",
             user=user_2,
+            bank=bank_2,
             category=category_2,
         )
     db.session.add(transaction_2)

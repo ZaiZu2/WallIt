@@ -1,4 +1,5 @@
 from flask import request, abort
+from flask.typing import ResponseReturnValue
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 from sqlalchemy import select, func, between, and_, case
@@ -23,14 +24,13 @@ from app.api.imports import (
 from app.api.utils import (
     filter_transactions,
     validate_statement,
-    JSONType,
 )
 from app.exceptions import FileError
 
 
 @blueprint.route("/api/transactions", methods=["POST"])
 @login_required
-def fetch_transactions() -> tuple[JSONType, int]:
+def fetch_transactions() -> ResponseReturnValue:
     """Receive filter parameters in JSON, query DB for filtered values
     and return Transactions serialized to JSON
 
@@ -67,12 +67,12 @@ def fetch_transactions() -> tuple[JSONType, int]:
 
     transaction_filters = FiltersSchema().load(request.json)
     transactions = filter_transactions(transaction_filters)
-    return TransactionSchema(many=True).dumps(transactions), 201
+    return TransactionSchema(many=True).dump(transactions), 201
 
 
 @blueprint.route("/api/transactions/add", methods=["POST"])
 @login_required
-def add_transaction() -> tuple[JSONType, int]:
+def add_transaction() -> ResponseReturnValue:
     """Add transaction"""
 
     verified_data = TransactionSchema().load(request.json)
@@ -80,7 +80,7 @@ def add_transaction() -> tuple[JSONType, int]:
     db.session.add(transaction)
     db.session.commit()
 
-    return TransactionSchema().dumps(transaction), 201
+    return TransactionSchema().dump(transaction), 201
 
 
 @blueprint.route("/api/transactions/<int:id>/modify", methods=["PATCH"])
@@ -93,7 +93,7 @@ def modify_transaction(id: int) -> tuple[str, int]:
     verified_data = ModifyTransactionSchema().load(request.json)
     transaction.update(verified_data)
     db.session.commit()
-    return TransactionSchema().dumps(transaction), 200
+    return TransactionSchema().dump(transaction), 200
 
 
 @blueprint.route("/api/transactions/<int:id>/delete", methods=["DELETE"])
@@ -110,7 +110,7 @@ def delete_transaction(id: int) -> tuple[dict, int]:
 
 @blueprint.route("/api/users/<int:id>/delete_transactions", methods=["DELETE"])
 @login_required
-def delete_all_transactions(id: int) -> tuple[JSONType, int]:
+def delete_all_transactions(id: int) -> ResponseReturnValue:
     user: User = User.query.get(id)
     if user != current_user:
         abort(404)
@@ -122,7 +122,7 @@ def delete_all_transactions(id: int) -> tuple[JSONType, int]:
 
 @blueprint.route("/api/transactions/upload", methods=["POST"])
 @login_required
-def upload_statements() -> tuple[JSONType, int]:
+def upload_statements() -> ResponseReturnValue:
     """Parse and save transactions from uploaded files
 
     Response JSON structure example:
@@ -211,7 +211,7 @@ def upload_statements() -> tuple[JSONType, int]:
 
 @blueprint.route("/api/transactions/monthly", methods=["GET"])
 @login_required
-def monthly_statements() -> tuple[JSONType, int]:
+def monthly_statements() -> ResponseReturnValue:
     """Return list of monthly saldos featuring incoming, outgoing and balance value
 
     Response JSON structure example:
@@ -225,7 +225,7 @@ def monthly_statements() -> tuple[JSONType, int]:
     ]
 
     Returns:
-        tuple[JSONType, int]: (response, http_code)
+        ResponseReturnValue: (response, http_code)
     """
 
     oldest = (
@@ -287,4 +287,4 @@ def monthly_statements() -> tuple[JSONType, int]:
                 }
             )
 
-    return MonthlySaldoSchema(many=True).dumps(saldo), 200
+    return MonthlySaldoSchema(many=True).dump(saldo), 200
