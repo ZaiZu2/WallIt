@@ -1,13 +1,12 @@
 from app import create_app, db, login
 from app.models import User, Transaction, Bank, Category
-
-from typing import Any
+from app.main import cli
 
 app = create_app()
-
+cli.register(app)
 
 @app.shell_context_processor
-def make_shell_context() -> dict[str, Any]:
+def make_shell_context() -> dict:
     return {
         "db": db,
         "login": login,

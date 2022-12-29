@@ -3,19 +3,16 @@ from __future__ import annotations
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin
 from flask import current_app
-from sqlalchemy import UniqueConstraint, CheckConstraint, select
-from sqlalchemy.orm import with_parent
+from sqlalchemy import UniqueConstraint, CheckConstraint, select, Table, Column, Integer, Float
+from sqlalchemy.orm import with_parent, mapper
 from datetime import datetime
-from typing import Any, Optional
 import jwt
 from time import time
 import requests
 from requests.exceptions import RequestException
 from collections import defaultdict
-import httpx
-import asyncio
 
-from app import db, login, cache, logger
+from app import db, login, cache
 from app.exceptions import InvalidConfigError, ExternalError
 
 
@@ -295,3 +292,19 @@ class Category(db.Model, UpdatableMixin):
     def get_from_id(cls, category_id: int, user: User) -> Category | None:
         """Query for Category with an id"""
         return cls.query.filter_by(id=category_id, user=user).first()
+
+
+currencies = ["USD", "EUR", "PLN"]
+table = Table(
+    "currencies",
+    db.metadata,
+    Column("id", Integer, primary_key=True),
+    *((Column(currency), Float) for currency in currencies),
+)
+
+
+class Currency(db.Model):
+    pass
+
+
+mapper(table, Currency)
