@@ -3,7 +3,7 @@ from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
 from app.models import User
-from app.exceptions import ExternalError
+from app.exceptions import ExternalApiError
 
 
 def send_password_reset_email(user: User) -> None:
@@ -20,4 +20,4 @@ def send_password_reset_email(user: User) -> None:
         sg = SendGridAPIClient(current_app.config["SENDGRID_API_KEY"])
         sg.send(message)
     except Exception as error:
-        raise ExternalError(error)
+        raise ExternalApiError("Unable to send email")

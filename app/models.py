@@ -3,8 +3,8 @@ from __future__ import annotations
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin
 from flask import current_app
-from sqlalchemy import UniqueConstraint, CheckConstraint, select, Table, Column, Integer, Float
-from sqlalchemy.orm import with_parent, mapper
+from sqlalchemy import UniqueConstraint, CheckConstraint, select, inspect
+from sqlalchemy.orm import with_parent, class_mapper
 from datetime import datetime
 import jwt
 from time import time
@@ -13,7 +13,7 @@ from requests.exceptions import RequestException
 from collections import defaultdict
 
 from app import db, login, cache
-from app.exceptions import InvalidConfigError, ExternalError
+from app.exceptions import InvalidConfigError, ExternalApiError
 
 
 class UpdatableMixin:
@@ -220,7 +220,7 @@ class Transaction(UpdatableMixin, db.Model):
                 r.raise_for_status()
                 json = r.json()["response"]
             except RequestException as error:
-                raise ExternalError(error)
+                raise ExternalApiError(error)
 
             base_currency, rates = json["base"], json["rates"]
             date_cache[base_currency][date] = rates
@@ -262,9 +262,7 @@ class Bank(db.Model):
 
 class Category(db.Model, UpdatableMixin):
     __tablename__ = "categories"
-    __table_args__ = (
-        UniqueConstraint("name", "user_id", name="unique_user_category_key"),
-    )
+    __table_args__ = (UniqueConstraint("name", "user_id"),)
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(
@@ -294,17 +292,15 @@ class Category(db.Model, UpdatableMixin):
         return cls.query.filter_by(id=category_id, user=user).first()
 
 
-currencies = ["USD", "EUR", "PLN"]
-table = Table(
-    "currencies",
-    db.metadata,
-    Column("id", Integer, primary_key=True),
-    *((Column(currency), Float) for currency in currencies),
-)
+class ExchangeRate(db.Model, UpdatableMixin):
+    __tablename__ = "exchange_rates"
+    __tableargs__ = (UniqueConstraint("date", "source", "rate"),)
 
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.DateTime, nullable=False)
+    target = db.Column(db.String(3), default="EUR")
+    source = db.Column(db.String(3), nullable=False)
+    rate = db.Column(db.Float)
 
-class Currency(db.Model):
-    pass
-
-
-mapper(table, Currency)
+    def __repr__(self) -> str:
+        return f"""{type(self).__name__}: 1 {self.source} : {self.rate:.2f} {self.target if self.target else 'EUR'} on {self.date.strftime('%Y-%m-%d')}"""

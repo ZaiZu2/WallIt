@@ -22,8 +22,11 @@ class Config:
     CACHE_DEFAULT_TIMEOUT = 3600
 
     # Currency conversion API
-    CURRENCYSCOOP_API_URL = "https://api.currencyscoop.com/v1/historical?api_key={key}&base={target_currency}&date={date}"
     CURRENCYSCOOP_API_KEY = os.environ.get("CURRENCYSCOOP_API_KEY")
+    CURRENCYSCOOP_HISTORICAL_URL = "https://api.currencyscoop.com/v1/historical?api_key={key}&base={target_currency}&date={date}"
+    CURRENCYSCOOP_CURRENCIES_URL = (
+        "https://api.currencybeacon.com/v1/currencies?api_key={key}"
+    )
 
     # Email API
     ADMINS = ["wallit.help@gmail.com"]

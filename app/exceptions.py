@@ -3,10 +3,15 @@ class InvalidConfigError(Exception):
 
 
 class FileError(Exception):
-    """Error raised during bank statement import"""
+    """Error raised due to incompatibility or
+    errors in imported external files (statements/exchange rate csvs)"""
 
-    pass
+    def __init__(self, message: str) -> None:
+        self.message = message
 
 
-class ExternalError(Exception):
+class ExternalApiError(Exception):
     """Error raised as a consequence of failed external API calls"""
+
+    def __init__(self, message: str) -> None:
+        self.message = message
