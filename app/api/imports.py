@@ -40,8 +40,8 @@ def import_revolut_statement(
                     data["transaction_date"] = datetime.strptime(
                         row["Completed Date"], "%Y-%m-%d %H:%M:%S"
                     )
-                    data["bank_id"] = bank.id
-                    data["user_id"] = user.id
+                    data["bank"] = bank
+                    data["user"] = user
 
                     transaction = Transaction(**data)
                     transactions.append(transaction)
@@ -181,8 +181,8 @@ def import_equabank_statement(
                     amount_XPath="./nms:Amt",
                     vector_XPath="./nms:CdtDbtInd",
                 )
-                data["bank_id"] = bank.id
-                data["user_id"] = user.id
+                data["bank"] = bank
+                data["user"] = user
 
                 transaction = Transaction(**data)
                 transactions.append(transaction)

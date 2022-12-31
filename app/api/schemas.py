@@ -12,6 +12,7 @@ from marshmallow import (
     ValidationError,
     EXCLUDE,
 )
+from marshmallow.validate import Length, OneOf, And, Range, Regexp, Email
 from copy import deepcopy
 from datetime import datetime, timezone
 
@@ -27,20 +28,20 @@ class UserSchema(ma.SQLAlchemySchema):
 
     id = ma.auto_field()
     username = ma.auto_field(
-        validate=validate.Regexp(
+        validate=Regexp(
             "^[A-Za-z0-9]+$",
             error="Username must be a single word consisting of alpha-numeric characters",
         ),
     )
-    email = ma.auto_field(validate=validate.Email())
+    email = ma.auto_field(validate=Email())
     first_name = ma.auto_field(
-        validate=validate.Regexp(
+        validate=Regexp(
             "^[A-Za-z]+$",
             error="Name must be a single word starting with a capital letter",
         )
     )
     last_name = ma.auto_field(
-        validate=validate.Regexp(
+        validate=Regexp(
             "^[A-Za-z]+$",
             error="Last name must be a single word starting with a capital letter",
         )
@@ -73,21 +74,21 @@ class ModifyUserSchema(ma.SQLAlchemySchema):
 
     username = ma.auto_field(
         required=False,
-        validate=validate.Regexp(
+        validate=Regexp(
             "^[A-Za-z0-9]+$",
             error="Username must be a single word consisting of alpha-numeric characters",
         ),
     )
     first_name = ma.auto_field(
         required=False,
-        validate=validate.Regexp(
+        validate=Regexp(
             "^[A-Za-z]+$",
             error="Name must be a single word starting with a capital letter",
         ),
     )
     last_name = ma.auto_field(
         required=False,
-        validate=validate.Regexp(
+        validate=Regexp(
             "^[A-Za-z]+$",
             error="Last name must be a single word starting with a capital letter",
         ),
@@ -113,19 +114,17 @@ class ChangePasswordSchema(ma.Schema):
     old_password = fields.String(required=True)
     new_password = fields.String(
         required=True,
-        validate=validate.Length(
-            min=5, error="Password should be minimum 5 characters long"
-        ),
+        validate=Length(min=5, error="Password should be minimum 5 characters long"),
     )
     repeat_password = fields.String(required=True)
 
     @validates_schema
-    def _check_new_password(self, data: dict, **kwargs: dict[str, Any]) -> None:
+    def _check_new_password(self, data: dict, **kwargs: dict) -> None:
         if data["old_password"] == data["new_password"]:
             raise ValidationError("New password cannot be the same")
 
     @validates_schema
-    def _repeated_password_check(self, data: dict, **kwargs: dict[str, Any]) -> None:
+    def _repeated_password_check(self, data: dict, **kwargs: dict) -> None:
         if data["new_password"] != data["repeat_password"]:
             raise ValidationError("Passwords do not match")
 
@@ -137,7 +136,7 @@ class CategorySchema(ma.SQLAlchemySchema):
 
     id = ma.auto_field()
     name = ma.auto_field(
-        validate=validate.Regexp(
+        validate=Regexp(
             # Single chain of characters/digits
             # with no whitespaces (foreign characters included)
             "^[\u00BF-\u1FFF\u2C00-\uD7FF\w]+$",
@@ -170,7 +169,7 @@ class TransactionSchema(ma.SQLAlchemySchema):
     date = ma.auto_field(
         "transaction_date",
         required=True,
-        validate=validate.Range(max=datetime.now(timezone.utc), max_inclusive=True),
+        validate=Range(max=datetime.now(timezone.utc), max_inclusive=True),
     )
     creation_date = ma.auto_field()
     place = ma.auto_field()
@@ -178,7 +177,7 @@ class TransactionSchema(ma.SQLAlchemySchema):
     bank = fields.Pluck(BankSchema, "id", allow_none=True)
 
     @pre_load
-    def _convert_to_nones(self, data: dict, **kwargs) -> dict:
+    def _convert_to_nones(self, data: dict, **kwargs: dict) -> dict:
         """Convert values with empty strings to Nones"""
         return {key: None if value == "" else value for key, value in data.items()}
 
@@ -200,7 +199,7 @@ class TransactionSchema(ma.SQLAlchemySchema):
             raise ValidationError("Specified bank is not available")
 
     @post_load
-    def _convert_to_models(self, data: dict, **kwargs) -> dict:
+    def _convert_to_models(self, data: dict, **kwargs: dict) -> dict:
         """Convert nested schema name to referenced model objects"""
 
         if "category" in data and data["category"]:
@@ -212,7 +211,7 @@ class TransactionSchema(ma.SQLAlchemySchema):
         return data
 
     @post_dump(pass_many=True)
-    def _create_envelope(self, data: dict, **kwargs) -> dict:
+    def _create_envelope(self, data: dict, **kwargs: dict) -> dict:
         return {"transactions": data}
 
 
@@ -226,9 +225,7 @@ class ModifyTransactionSchema(ma.Schema):
     bank = fields.Pluck(BankSchema, "id", allow_none=True, load_only=True)
 
     @post_load
-    def _findModelObjects(
-        self, data: dict[str, Any], **kwargs: dict[str, Any]
-    ) -> dict[str, Any]:
+    def _findModelObjects(self, data: dict[str, Any], **kwargs: dict) -> dict[str, Any]:
         if "category" in data:
             if data["category"]:
                 data["category"] = Category.get_from_id(
@@ -259,11 +256,11 @@ class FiltersSchema(ma.Schema):
     """Schema used for validation of filtering values"""
 
     amount = fields.Dict(
-        keys=fields.String(validate=validate.OneOf(["min", "max"])),
+        keys=fields.String(validate=OneOf(["min", "max"])),
         values=fields.Float(allow_none=True),
     )
     date = fields.Dict(
-        keys=fields.String(validate=validate.OneOf(["min", "max"])),
+        keys=fields.String(validate=OneOf(["min", "max"])),
         values=fields.DateTime(format="%Y-%m-%d", allow_none=True),
     )
     base_currencies = fields.List(
@@ -281,7 +278,7 @@ class FiltersSchema(ma.Schema):
             raise ValidationError("Only available currencies can be filtered")
 
     @validates_schema
-    def _check_range_filters(self, data: dict, **kwargs: dict[str, Any]) -> None:
+    def _check_range_filters(self, data: dict, **kwargs: dict) -> None:
         for filter in ["amount", "date"]:
             if (
                 data[filter]["min"]
@@ -291,7 +288,7 @@ class FiltersSchema(ma.Schema):
                 raise ValidationError("Lower end cannot be higher than higher end")
 
     @pre_load
-    def _remove_blanks(self, data: dict, **kwargs: dict[str, Any]) -> dict:
+    def _remove_blanks(self, data: dict, **kwargs: dict) -> dict:
         """Replace empty values (strings) with None"""
         # TODO: Temporary fix for wrongly structured Request body
         # Client sends fields with empty string instead of omitting them in request body
@@ -332,7 +329,7 @@ class UserEntitiesSchema(ma.Schema):
     )
 
     @pre_dump
-    def _split_user_object(self, data: dict, **kwargs: dict[str, Any]) -> dict:
+    def _split_user_object(self, data: dict, **kwargs: dict) -> dict:
         """Move main_currency from nested dict to main one"""
 
         data["main_currency"] = data["user_details"].main_currency

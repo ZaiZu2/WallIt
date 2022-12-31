@@ -1,14 +1,9 @@
 from app import create_app, db, login
 from app.models import User, Transaction, Bank, Category, ExchangeRate
-from app.main import cli
-
-# from app.main.cli import load
+from app.cli import commands
 
 app = create_app()
-cli.register(app)
-# with app.app_context():
-#     # download("2022-12-13", "2022-12-13")
-#     load("deployment/exchange_rates_2020-01-01_2022-12-26.csv")
+commands.register(app)
 
 
 @app.shell_context_processor

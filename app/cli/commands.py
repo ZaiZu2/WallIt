@@ -15,13 +15,14 @@ from pathlib import Path
 from app import db
 from app.models import ExchangeRate
 from app.exceptions import FileError
+from app.cli.schemas import ExchangeRateSchema
 
 
 class ExchangeRatesLoader:
     def __init__(self, db: SQLAlchemy) -> None:
         self.db = db
-        self.exchange_rates: list[ExchangeRate] = []
-        self.currencies: list[str] = []
+        self.exchange_rates: list[ExchangeRateSchema] = []
+        self.currencies: set[str] = []
 
     def download_exchange_rates(self, start_date: datetime, end_date: datetime) -> None:
         if start_date > end_date:
@@ -37,8 +38,10 @@ class ExchangeRatesLoader:
             print("There are no records to save")
             return
 
-        with open(f"exchange_rates.csv", "w", newline="") as csv_file:
-            fieldnames = ["date", *self.currencies]
+        sorted_rates = sorted(self.exchange_rates, key=attrgetter("date", "source"))
+        file_name = f"exchange_rates_{sorted_rates[0].date.strftime('%Y-%m-%d')}_{sorted_rates[-1].date.strftime('%Y-%m-%d')}.csv"
+        with open(file_name, "w", newline="") as csv_file:
+            fieldnames = ["date", *current_app.config["SUPPORTED_CURRENCIES"]]
             csv_writer = csv.DictWriter(
                 csv_file, fieldnames=fieldnames, delimiter=",", extrasaction="ignore"
             )
@@ -46,14 +49,12 @@ class ExchangeRatesLoader:
 
             csv_dict: dict[datetime, dict[str, float]] = defaultdict(dict)
             # Ensure that records are sorted so .csv file is written chronologically
-            for exchange_rate in sorted(
-                self.exchange_rates, key=attrgetter("date", "source")
-            ):
+            for exchange_rate in sorted_rates:
                 csv_dict[exchange_rate.date][exchange_rate.source] = exchange_rate.rate
 
             # Attach date to each row
             for date, rates in csv_dict.items():
-                csv_writer.writerow({"Date": date.strftime("%Y-%m-%d"), **rates})
+                csv_writer.writerow({"date": date.strftime("%Y-%m-%d"), **rates})
 
         print("Exchange rates successfully written to the .csv file")
 
@@ -61,26 +62,32 @@ class ExchangeRatesLoader:
         """Save loaded exchange rates to the db"""
         db.session.add_all(self.exchange_rates)
         db.session.commit()
+        print("Exchange rates successfully written to the db")
 
     def load_from_csv(self, path: Path) -> None:
+        """Load exchange rates from a .csv file
+
+        Args:
+            path (Path): path to file
+
+        Raises:
+            FileError: raised in case of failed parsing
+        """
         exchange_rates = []
+        schema = ExchangeRateSchema()
         try:
             with open(path, "r", newline="") as csv_file:
                 csv_reader = csv.DictReader(csv_file)
                 for row in csv_reader:
-                    date = row.pop("Date")
-                    _ = [
-                        ExchangeRate(
-                            date=datetime.strptime(date, "%Y-%m-%d"),
-                            source=code,
-                            rate=float(rate) if rate else None,
+                    date = row.pop("date")
+                    for code, rate in row.items():
+                        verified_data = schema.load(
+                            dict(date=date, source=code, rate=rate)
                         )
-                        for code, rate in row.items()
-                    ]
-                    exchange_rates.extend(_)
+                        exchange_rates.append(ExchangeRate(**verified_data))
         except (KeyError, IOError):
             raise FileError(
-                "Error occured while parsing .csv file. File might be corrupted."
+                "Error occured while parsing .csv file. File might be corrupted.",
             )
 
         self.exchange_rates = exchange_rates
@@ -100,14 +107,24 @@ class ExchangeRatesLoader:
             response.raise_for_status()
             json = response.json()
 
-            currencies = list(json["response"]["fiats"].keys())
+            currencies = set(json["response"]["fiats"].keys())
             print(f"Successfully downloaded available currencies")
-        except HTTPError:
-            print(f"Failed to download available currencies")
+            if subset := current_app.config["SUPPORTED_CURRENCIES"] - currencies:
+                print(
+                    f"Exchange rates are not available for following supported currencies: {subset}"
+                )
+                currencies = currencies.intersection(
+                    current_app.config["SUPPORTED_CURRENCIES"]
+                )
 
-        if not currencies:
-            raise ValueError("No currencies were downloaded")
-        self.currencies = currencies
+            if not currencies:
+                raise ValueError(
+                    "No currencies were downloaded or are available to download"
+                )
+            self.currencies = currencies
+
+        except HTTPError as error:
+            print(f"Failed to download available currencies", error)
 
     async def _get_timeseries(self, start_date: datetime, end_date: datetime) -> None:
         """Asynchronously consume API to download exchange rates for a set period
@@ -121,8 +138,8 @@ class ExchangeRatesLoader:
         for date in rrule(freq=DAILY, dtstart=start_date, until=end_date):
             url = current_app.config["CURRENCYSCOOP_HISTORICAL_URL"].format(
                 key=current_app.config["CURRENCYSCOOP_API_KEY"],
-                target_currency="EUR",
                 date=date.strftime("%Y-%m-%d"),
+                symbols=",".join(current_app.config["SUPPORTED_CURRENCIES"]),
             )
             urls.add(url)
         print(f"Querying API to get exchange rates for {len(urls)} days")
@@ -133,6 +150,7 @@ class ExchangeRatesLoader:
             tasks = (client.get(url) for url in urls)
             responses = await asyncio.gather(*tasks)
 
+        schema = ExchangeRateSchema()
         exchange_rates = []
         failed: list[Response] = []
         for response in responses:
@@ -140,12 +158,11 @@ class ExchangeRatesLoader:
                 response.raise_for_status()
                 json = response.json()
 
-                date = datetime.strptime(json["response"]["date"], "%Y-%m-%d")
-                _ = [
-                    ExchangeRate(date=date, source=code.upper(), rate=rate)
-                    for code, rate in json["response"]["rates"].items()
-                ]
-                exchange_rates.extend(_)
+                for code, rate in json["response"]["rates"].items():
+                    verified_data = schema.load(
+                        dict(date=json["response"]["date"], source=code, rate=rate)
+                    )
+                    exchange_rates.append(ExchangeRate(**verified_data))
                 print(
                     f"Successfully downloaded exchange rates for {json['response']['date']}"
                 )
@@ -165,7 +182,7 @@ def register(app: Flask) -> None:
 
     @rates.command()
     @click.argument("start")
-    @click.argument("end")
+    @click.argument("end", required=False)
     def download(start: str, end: str | None = None) -> None:
         """Download exchange rates for a selected period from an external API and
         save them to the database or external .csv file
@@ -182,7 +199,11 @@ def register(app: Flask) -> None:
         except ValueError:
             print("Dates should be specified in 'YYYY-MM-DD' format")
             return
-        if start_date > end_date:
+        if (
+            start_date > end_date
+            and start_date < datetime.now()
+            and end_date < datetime.now()
+        ):
             print("Ending date can only be specified after starting date")
             return
 
@@ -229,4 +250,3 @@ def register(app: Flask) -> None:
             print(error.message)
             return
         rates_loader.save_to_db()
-        print("Exchange rates successfully saved in the database")

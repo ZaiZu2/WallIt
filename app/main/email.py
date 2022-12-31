@@ -16,8 +16,6 @@ def send_password_reset_email(user: User) -> None:
         plain_text_content=render_template("email/reset_password.txt", token=token),
         html_content=render_template("email/reset_password.html", token=token),
     )
-    try:
-        sg = SendGridAPIClient(current_app.config["SENDGRID_API_KEY"])
-        sg.send(message)
-    except Exception as error:
-        raise ExternalApiError("Unable to send email")
+
+    sg = SendGridAPIClient(current_app.config["SENDGRID_API_KEY"])
+    sg.send(message)

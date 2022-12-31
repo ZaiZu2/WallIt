@@ -3,17 +3,13 @@ from __future__ import annotations
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin
 from flask import current_app
-from sqlalchemy import UniqueConstraint, CheckConstraint, select, inspect
-from sqlalchemy.orm import with_parent, class_mapper
+from sqlalchemy import UniqueConstraint, CheckConstraint, select
+from sqlalchemy.orm import with_parent
 from datetime import datetime
 import jwt
 from time import time
-import requests
-from requests.exceptions import RequestException
-from collections import defaultdict
 
-from app import db, login, cache
-from app.exceptions import InvalidConfigError, ExternalApiError
+from app import db, login
 
 
 class UpdatableMixin:
@@ -190,47 +186,10 @@ class Transaction(UpdatableMixin, db.Model):
             self.main_amount = self.base_amount
             return
 
-        # date_cache = {
-        #   "EUR": {
-        #       "10-11-2021": {
-        #           "USD": 0.95, ...
-        #       },
-        #   },
-        # }
-        date_cache: dict[str, dict[str, dict[str, int]]] = cache.get(
-            "conversion_rates"
-        ) or defaultdict(dict)
-        # Check if currency exchange rates are already cached for this date
-        # If not, consume API and populate the date_cache with it
-        date = self.transaction_date.strftime("%Y-%m-%d")
-        if not date_cache or date not in date_cache[target_currency]:
-            if set(["CURRENCYSCOOP_API_KEY", "CURRENCYSCOOP_API_URL"]).issubset(
-                current_app.config
-            ):
-                api_url = current_app.config["CURRENCYSCOOP_API_URL"].format(
-                    key=current_app.config["CURRENCYSCOOP_API_KEY"],
-                    target_currency=target_currency,
-                    date=date,
-                )
-            else:
-                raise InvalidConfigError("CurrencyScoop API key is not accessible")
-
-            try:
-                r = requests.get(api_url)
-                r.raise_for_status()
-                json = r.json()["response"]
-            except RequestException as error:
-                raise ExternalApiError(error)
-
-            base_currency, rates = json["base"], json["rates"]
-            date_cache[base_currency][date] = rates
-            cache.set("conversion_rates", date_cache)
-
-        # Calculate the amount
-        self.main_amount = round(
-            self.base_amount / date_cache[target_currency][date][self.base_currency],
-            2,
+        exchange_rate = ExchangeRateSchema.find_exchange_rate(
+            self.transaction_date, self.base_currency, target_currency
         )
+        self.main_amount = round(self.base_amount * exchange_rate, 2)
 
     @classmethod
     def get_from_id(cls, id: int, user: User) -> Transaction | None:
@@ -293,8 +252,10 @@ class Category(db.Model, UpdatableMixin):
 
 
 class ExchangeRate(db.Model, UpdatableMixin):
+    """Table holding exchange rates of various currencies to a single, 'bridge' currency"""
+
     __tablename__ = "exchange_rates"
-    __tableargs__ = (UniqueConstraint("date", "source", "rate"),)
+    __table_args__ = (UniqueConstraint("date", "source", "rate"),)
 
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, nullable=False)
@@ -304,3 +265,20 @@ class ExchangeRate(db.Model, UpdatableMixin):
 
     def __repr__(self) -> str:
         return f"""{type(self).__name__}: 1 {self.source} : {self.rate:.2f} {self.target if self.target else 'EUR'} on {self.date.strftime('%Y-%m-%d')}"""
+
+    @classmethod
+    def find_exchange_rate(cls, date: datetime, source: str, target: str) -> float:
+        """Find a final exchange rate between 2 selected currencies on a given day
+
+        Args:
+            date (datetime): date of exchange rate
+            source (str): currency to be sold
+            target (str): currency to be bought
+
+        Returns:
+            float: final exchange rate
+        """
+        source_rate = cls.query.filter_by(date=date.date(), source=source).scalar()
+        target_rate = cls.query.filter_by(date=date.date(), source=target).scalar()
+
+        return (1 / source_rate.rate) * target_rate.rate
