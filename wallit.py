@@ -1,6 +1,6 @@
 from app import create_app, db, login
 from app.models import User, Transaction, Bank, Category, ExchangeRate
-import cli
+import app.cli as cli
 
 app = create_app()
 cli.register(app)

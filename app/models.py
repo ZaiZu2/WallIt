@@ -186,7 +186,7 @@ class Transaction(UpdatableMixin, db.Model):
             self.main_amount = self.base_amount
             return
 
-        exchange_rate = ExchangeRateSchema.find_exchange_rate(
+        exchange_rate = ExchangeRate.find_exchange_rate(
             self.transaction_date, self.base_currency, target_currency
         )
         self.main_amount = round(self.base_amount * exchange_rate, 2)

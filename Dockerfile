@@ -17,6 +17,7 @@ RUN pip install gunicorn
 COPY app app
 COPY migrations migrations
 COPY wallit.py config.py boot.sh ./
+COPY ./deployment/exchange_rates_data ./deployment/exchange_rates_data
 RUN chmod +x boot.sh
 
 ENV FLASK_APP wallit.py

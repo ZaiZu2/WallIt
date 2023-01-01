@@ -1,14 +1,12 @@
 #!/bin/bash
 
-while true; do
-    flask db upgrade
-    if [[ "$?" == "0" ]]; then
-        break
-    fi
-    echo Upgrade command failed, retrying in 5 secs...
-    sleep 5
-done
+sleep 5
+flask db upgrade
 
-# exec gunicorn -w 2 -b :5000 --access-logfile - --error-logfile - wallit:app
+flask rates load ./deployment/exchange_rates_data/exchange_rates_2018-01-01_2018-12-31.csv
+flask rates load ./deployment/exchange_rates_data/exchange_rates_2019-01-01_2019-12-31.csv
+flask rates load ./deployment/exchange_rates_data/exchange_rates_2020-01-01_2020-12-31.csv
+flask rates load ./deployment/exchange_rates_data/exchange_rates_2021-01-01_2021-12-31.csv
+flask rates load ./deployment/exchange_rates_data/exchange_rates_2022-01-01_2022-12-31.csv
 
 exec gunicorn  -w 2 -b :8080 wallit:app
