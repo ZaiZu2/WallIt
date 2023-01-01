@@ -64,14 +64,19 @@ def upgrade():
         batch_op.drop_constraint(
             "fk_transactions_categoryId_categories", type_="foreignkey"
         )
-        batch_op.drop_constraint("fk_transactions_bankId_banks", type_="foreignkey")
-        batch_op.drop_constraint("fk_transactions_userId_users", type_="foreignkey")
         batch_op.create_foreign_key(
             "fk_transactions_category_id_categories",
             "categories",
             ["category_id"],
             ["id"],
         )
+
+        batch_op.drop_constraint("fk_transactions_bankId_banks", type_="foreignkey")
+        batch_op.create_foreign_key(
+            "fk_transactions_bank_id_banks", "banks", ["bank_id"], ["id"]
+        )
+
+        batch_op.drop_constraint("fk_transactions_userId_users", type_="foreignkey")
         batch_op.create_foreign_key(
             "fk_transactions_user_id_users",
             "users",
@@ -79,9 +84,7 @@ def upgrade():
             ["id"],
             ondelete="CASCADE",
         )
-        batch_op.create_foreign_key(
-            "fk_transactions_bank_id_banks", "banks", ["bank_id"], ["id"]
-        )
+
     op.drop_column("transactions", "bankId")
     op.drop_column("transactions", "userId")
     op.drop_column("transactions", "srcAmount")
@@ -154,9 +157,12 @@ def downgrade():
     with op.batch_alter_table(
         "transactions", naming_convention=naming_convention
     ) as batch_op:
-        batch_op.drop_constraint("fk_transactions_bankId_banks", type_="foreignkey")
-        batch_op.drop_constraint("fk_transactions_user_id_users", type_="foreignkey")
         batch_op.drop_constraint("fk_transactions_bank_id_banks", type_="foreignkey")
+        batch_op.create_foreign_key(
+            "fk_transactions_bankId_banks", "banks", ["bankId"], ["id"]
+        )
+
+        batch_op.drop_constraint("fk_transactions_user_id_users", type_="foreignkey")
         batch_op.create_foreign_key(
             "fk_transactions_userId_users",
             "users",
@@ -164,11 +170,12 @@ def downgrade():
             ["id"],
             ondelete="CASCADE",
         )
-        batch_op.create_foreign_key(
-            "fk_transactions_categoryId_categories", "banks", ["bankId"], ["id"]
+
+        batch_op.drop_constraint(
+            "fk_transactions_category_id_categories", type_="foreignkey"
         )
         batch_op.create_foreign_key(
-            "fk_transactions_category_id_categories",
+            "fk_transactions_categoryId_categories",
             "categories",
             ["categoryId"],
             ["id"],
