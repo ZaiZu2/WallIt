@@ -16,6 +16,7 @@ from config import Config
 
 DEBUG_HIGH = logger.level("DEBUG_HIGH", no=8)
 
+
 metadata = MetaData(
     naming_convention={
         "ix": "ix_%(column_0_label)s",

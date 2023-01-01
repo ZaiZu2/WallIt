@@ -12,13 +12,14 @@ from marshmallow import (
     ValidationError,
     EXCLUDE,
 )
-from marshmallow.validate import Length, OneOf, And, Range, Regexp, Email
+from marshmallow.validate import Length, OneOf, Range, Regexp, Email
 from copy import deepcopy
 from datetime import datetime, timezone
 
+from config import Config
 from app import ma
 from app.models import Bank, Category, Transaction, User
-from app.api.utils import get_currencies
+from app.external.exchange_rates import ExchangeRatesLoader
 
 
 class UserSchema(ma.SQLAlchemySchema):
@@ -63,7 +64,7 @@ class UserSchema(ma.SQLAlchemySchema):
 
     @validates("main_currency")
     def _check_available_currencies(self, currency: str) -> None:
-        if currency not in get_currencies():
+        if currency not in Config.SUPPORTED_CURRENCIES:
             raise ValidationError("Only available currency can be accepted")
 
 
@@ -105,7 +106,7 @@ class ModifyUserSchema(ma.SQLAlchemySchema):
 
     @validates("main_currency")
     def _check_available_currencies(self, currency: str) -> None:
-        if currency not in get_currencies():
+        if currency not in Config.SUPPORTED_CURRENCIES:
             raise ValidationError("Only available currency can be accepted")
 
 
@@ -183,7 +184,7 @@ class TransactionSchema(ma.SQLAlchemySchema):
 
     @validates("base_currency")
     def _check_available_currencies(self, currency: str) -> None:
-        if currency not in get_currencies():
+        if currency not in Config.SUPPORTED_CURRENCIES:
             raise ValidationError("Specified currency is not available")
 
     @validates("category")
@@ -273,8 +274,7 @@ class FiltersSchema(ma.Schema):
 
     @validates("base_currencies")
     def _check_available_currencies(self, currencies: list[str]) -> None:
-        available_currencies = get_currencies()
-        if currencies and not set(currencies).issubset(set(available_currencies)):
+        if currencies and not set(currencies).issubset(Config.SUPPORTED_CURRENCIES):
             raise ValidationError("Only available currencies can be filtered")
 
     @validates_schema

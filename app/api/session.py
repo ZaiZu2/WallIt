@@ -5,7 +5,7 @@ from collections import defaultdict
 from app.models import Bank
 from app.api import blueprint
 from app.api.schemas import SessionEntitiesSchema
-from app.api.utils import get_currencies
+from app.external.exchange_rates import ExchangeRatesLoader
 
 
 @blueprint.route("/api/entities", methods=["GET"])
@@ -27,7 +27,7 @@ def fetch_session_entities() -> ResponseReturnValue:
         ResponseReturnValue: _description_
     """
     response_body: dict[str, list | dict] = defaultdict(dict)
-    response_body["currencies"] = get_currencies()
+    response_body["currencies"] = ExchangeRatesLoader.get_currencies()
     for bank in Bank.query.all():
         response_body["banks"][bank.name] = bank
 

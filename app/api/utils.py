@@ -1,12 +1,9 @@
-from flask import current_app
 from flask_login import current_user
 from flask_sqlalchemy import BaseQuery
 import typing as t
 from pathlib import Path
-import requests
-from requests.exceptions import RequestException
 
-from app import db, cache, logger
+from app import db, logger
 from app.models import Transaction, Bank
 from app.exceptions import InvalidConfigError
 
@@ -78,33 +75,3 @@ def validate_statement(origin: str, filename: str, file: t.IO[bytes]) -> bool:
         raise InvalidConfigError
 
     return is_validated
-
-
-@cache.cached(key_prefix="available_currencies")
-def get_currencies() -> list[str]:
-    """Consume CurrencyScoop API to get currency codes available for currency conversion
-    Raises:
-        InvalidConfigError: Invalid flask config for CurrencyScoop
-    Returns:
-        list[str]: set of available currency codes
-    """
-
-    if (
-        "CURRENCYSCOOP_API_KEY" not in current_app.config
-        or not current_app.config["CURRENCYSCOOP_API_KEY"]
-    ):
-        raise InvalidConfigError("CurrencyScoop API key is not accessible")
-
-    base_url = "https://api.currencyscoop.com/v1/currencies?api_key={key}&type=fiat"
-    base_url = base_url.format(key=current_app.config["CURRENCYSCOOP_API_KEY"])
-
-    try:
-        r = requests.get(base_url)
-        r.raise_for_status()
-    except RequestException as error:
-        print("Error during currency load: ", error)
-
-    response = r.json()
-    currencies = list(response["response"]["fiats"].keys())
-
-    return currencies

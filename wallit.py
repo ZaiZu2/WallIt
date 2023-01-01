@@ -1,9 +1,9 @@
 from app import create_app, db, login
 from app.models import User, Transaction, Bank, Category, ExchangeRate
-from app.cli import commands
+import cli
 
 app = create_app()
-commands.register(app)
+cli.register(app)
 
 
 @app.shell_context_processor
