@@ -5,7 +5,7 @@ from flask_login import current_user, login_required
 from app import db
 from app.api import blueprint
 from app.models import Category
-from app.api.schemas import CategorySchema
+from app.api.schemas import CategorySchema, UniqueCategorySchema
 
 
 @blueprint.route("/api/categories/add", methods=["POST"])
@@ -13,7 +13,7 @@ from app.api.schemas import CategorySchema
 def add_category() -> ResponseReturnValue:
     """Add category"""
 
-    verified_data = CategorySchema().load(request.json)
+    verified_data = UniqueCategorySchema().load(request.json)
     category = Category(user=current_user, **verified_data)
     db.session.add(category)
     db.session.commit()
@@ -50,7 +50,7 @@ def delete_categories() -> ResponseReturnValue:
         db.session.delete(deleted_category)
     db.session.commit()
 
-    return CategorySchema(many=True).dump(deleted_categories), 201
+    return {"categories": CategorySchema(many=True).dump(deleted_categories)}, 201
 
 
 @blueprint.route("/api/categories/<int:id>delete", methods=["DELETE"])

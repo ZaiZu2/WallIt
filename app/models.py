@@ -164,7 +164,7 @@ class Transaction(UpdatableMixin, db.Model):
             transaction_date=transaction_date,
             **kwargs,
         )
-        self.convert_to_main_amount(self.user.main_currency)
+        self.convert_to_main_amount()
 
     def __repr__(self) -> str:
         return f"Transaction: {self.base_amount} {self.base_currency} on {self.transaction_date}"
@@ -186,9 +186,11 @@ class Transaction(UpdatableMixin, db.Model):
             self.main_amount = self.base_amount
             return
 
-        exchange_rate = ExchangeRate.find_exchange_rate(
-            self.transaction_date, self.base_currency, target_currency
-        )
+        # No_autoflush is necessary as this is part of Transaction initialization process
+        with db.session.no_autoflush:
+            exchange_rate = ExchangeRate.find_exchange_rate(
+                self.transaction_date, self.base_currency, target_currency
+            )
         self.main_amount = round(self.base_amount * exchange_rate, 2)
 
     @classmethod

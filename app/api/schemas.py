@@ -1,4 +1,5 @@
 from typing import Any
+from flask import current_app
 from flask_login import current_user
 from marshmallow import (
     fields,
@@ -6,7 +7,6 @@ from marshmallow import (
     pre_dump,
     pre_load,
     post_load,
-    validate,
     validates,
     validates_schema,
     ValidationError,
@@ -14,12 +14,12 @@ from marshmallow import (
 )
 from marshmallow.validate import Length, OneOf, Range, Regexp, Email
 from copy import deepcopy
-from datetime import datetime, timezone
+import datetime as dt
+from datetime import datetime
 
 from config import Config
 from app import ma
 from app.models import Bank, Category, Transaction, User
-from app.external.exchange_rates import ExchangeRatesLoader
 
 
 class UserSchema(ma.SQLAlchemySchema):
@@ -106,7 +106,7 @@ class ModifyUserSchema(ma.SQLAlchemySchema):
 
     @validates("main_currency")
     def _check_available_currencies(self, currency: str) -> None:
-        if currency not in Config.SUPPORTED_CURRENCIES:
+        if currency not in current_app.config["SUPPORTED_CURRENCIES"]:
             raise ValidationError("Only available currency can be accepted")
 
 
@@ -146,6 +146,15 @@ class CategorySchema(ma.SQLAlchemySchema):
     )
 
 
+class UniqueCategorySchema(CategorySchema):
+    """Subclass of CategorySchema which raises ValidationError if category already exists for a given user"""
+
+    @validates_schema
+    def _check_duplicates(self, data: dict, **kwargs: dict) -> None:
+        if Category.query.filter_by(name=data.get("name"), user=current_user).scalar():
+            raise ValidationError("Category with this name already exists")
+
+
 class BankSchema(ma.SQLAlchemySchema):
     class Meta:
         model = Bank
@@ -167,10 +176,11 @@ class TransactionSchema(ma.SQLAlchemySchema):
     amount = ma.auto_field("main_amount", required=False)
     base_amount = ma.auto_field(required=True)
     base_currency = ma.auto_field(required=True)
-    date = ma.auto_field(
-        "transaction_date",
+    transaction_date = fields.NaiveDateTime(
+        data_key="date",
+        timezone=dt.timezone.utc,
         required=True,
-        validate=Range(max=datetime.now(timezone.utc), max_inclusive=True),
+        validate=Range(max=datetime.now(), max_inclusive=True),
     )
     creation_date = ma.auto_field()
     place = ma.auto_field()
@@ -184,7 +194,7 @@ class TransactionSchema(ma.SQLAlchemySchema):
 
     @validates("base_currency")
     def _check_available_currencies(self, currency: str) -> None:
-        if currency not in Config.SUPPORTED_CURRENCIES:
+        if currency not in current_app.config["SUPPORTED_CURRENCIES"]:
             raise ValidationError("Specified currency is not available")
 
     @validates("category")
