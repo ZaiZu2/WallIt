@@ -33,27 +33,7 @@ def modify_category(id: int) -> ResponseReturnValue:
     return CategorySchema().dump(category), 201
 
 
-# TODO: Delete and replace with single category delete
-@blueprint.route("/api/categories/delete", methods=["DELETE"])
-@login_required
-def delete_categories() -> ResponseReturnValue:
-    """Delete multiple categories"""
-
-    verified_data = CategorySchema(many=True).load(request.json, partial=True)
-
-    deleted_categories = []
-    for category in verified_data:
-        if category := Category.get_from_id(category["id"], current_user):
-            deleted_categories.append(category)
-
-    for deleted_category in deleted_categories:
-        db.session.delete(deleted_category)
-    db.session.commit()
-
-    return {"categories": CategorySchema(many=True).dump(deleted_categories)}, 201
-
-
-@blueprint.route("/api/categories/<int:id>delete", methods=["DELETE"])
+@blueprint.route("/api/categories/<int:id>/delete", methods=["DELETE"])
 @login_required
 def delete_category(id: int) -> ResponseReturnValue:
     """Delete multiple categories"""
@@ -63,4 +43,4 @@ def delete_category(id: int) -> ResponseReturnValue:
     db.session.delete(category)
     db.session.commit()
 
-    return CategorySchema().dump(category), 201
+    return CategorySchema().dump(category), 200

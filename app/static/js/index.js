@@ -18,7 +18,7 @@ import {
   addTransaction,
   addCategory,
   modifyCategory,
-  deleteCategories,
+  deleteCategory,
 } from "./utils.js";
 
 const logOutButton = document.getElementById("log-out");
@@ -271,6 +271,8 @@ addCategoryForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const formData = new FormData(event.target);
+  if (formData.entries().next().done) return;
+
   const category = {};
   for (const [name, value] of formData.entries()) {
     category[name] = value;
@@ -285,6 +287,8 @@ modifyCategoryForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const formData = new FormData(event.target);
+  if (formData.entries().next().done) return;
+
   const modifiedColumns = {};
   for (const [name, value] of formData.entries()) {
     modifiedColumns[name] = value;
@@ -302,15 +306,19 @@ deleteCategoriesForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const formData = new FormData(event.target);
-  const categoryIds = [];
-  for (let categoryId of formData.keys())
-    categoryIds.push({ id: user.categories[categoryId].id });
+  if (formData.entries().next().done) return;
 
-  await deleteCategories(categoryIds);
-  // Remove deleted categories from loaded transactions
+  const categoryIds = [];
+
+  for (let id of formData.values()) {
+    let category = await deleteCategory(id);
+    categoryIds.push(category.id);
+  }
+
+  // Remove deleted category references from loaded transactions
   for (let transaction of user.transactions) {
-    for (let category of categoryIds) {
-      if (transaction.category == category.id) transaction.category = null;
+    for (let id of categoryIds) {
+      if (transaction.category == id) transaction.category = null;
     }
   }
 

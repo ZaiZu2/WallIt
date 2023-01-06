@@ -593,14 +593,13 @@ export async function modifyCategory(id, modifiedColumns) {
   user.categories[modifiedCategory.name] = modifiedCategory;
 }
 
-export async function deleteCategories(categoryIds) {
-  const deletedCategories = await fetch(`/api/categories/delete`, {
+export async function deleteCategory(id) {
+  const deletedCategory = await fetch(`/api/categories/${id}/delete`, {
     method: "DELETE",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
     },
-    body: JSON.stringify(categoryIds),
   })
     .then((response) => {
       if (!response.ok) {
@@ -610,8 +609,8 @@ export async function deleteCategories(categoryIds) {
     })
     .then((data) => data);
 
-  for (let deletedCategory of deletedCategories)
-    delete user.categories[deletedCategory.name];
+  delete user.categories[deletedCategory.name];
+  return deletedCategory;
 }
 
 async function modifyUser(id, modifiedColumns) {
