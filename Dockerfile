@@ -10,8 +10,8 @@ ENV VIRTUAL_ENV=/opt/venv
 RUN python -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-COPY requirements.txt requirements.txt
-RUN pip install -r requirements.txt
+COPY requirements_prod.txt requirements_prod.txt
+RUN pip install -r requirements_prod.txt
 RUN pip install gunicorn
 
 COPY app app

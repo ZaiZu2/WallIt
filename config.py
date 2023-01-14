@@ -1,6 +1,7 @@
 import os
-from dotenv import load_dotenv
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).joinpath(".env"))
 
@@ -186,5 +187,5 @@ class Config:
     )
 
     # Email API
-    ADMINS = ["wallit.help@gmail.com"]
+    AUTOMATED_EMAIL = "wallit.help@gmail.com"
     SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY")

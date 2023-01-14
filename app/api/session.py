@@ -1,11 +1,12 @@
-from flask.typing import ResponseReturnValue
-from flask_login import login_required
 from collections import defaultdict
 
-from app.models import Bank
+from flask.typing import ResponseReturnValue
+from flask_login import login_required
+
 from app.api import blueprint
 from app.api.schemas import SessionEntitiesSchema
 from app.external.exchange_rates import ExchangeRatesLoader
+from app.models import Bank
 
 
 @blueprint.route("/api/entities", methods=["GET"])

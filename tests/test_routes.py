@@ -1,7 +1,8 @@
-from flask import url_for, session
-from flask_login import current_user, login_user
-from flask.testing import FlaskClient
 from unittest.mock import patch
+
+from flask import session, url_for
+from flask.testing import FlaskClient
+from flask_login import current_user, login_user
 
 from app.models import User
 

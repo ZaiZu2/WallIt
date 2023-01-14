@@ -1,11 +1,12 @@
-from flask_login import current_user
-from flask_sqlalchemy import BaseQuery
 import typing as t
 from pathlib import Path
 
+from flask_login import current_user
+from flask_sqlalchemy import BaseQuery
+
 from app import db, logger
-from app.models import Transaction, Bank
 from app.exceptions import InvalidConfigError
+from app.models import Bank, Transaction
 
 
 def filter_transactions(filters: dict) -> list[Transaction]:

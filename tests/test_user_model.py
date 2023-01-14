@@ -1,10 +1,11 @@
-import pytest
-from unittest.mock import patch
-from datetime import datetime
-import string
 import random
+import string
+from datetime import datetime
+from unittest.mock import patch
 
-from app.models import User, Transaction, Category, Bank
+import pytest
+
+from app.models import Bank, Category, Transaction, User
 
 
 def test_password_hashing(user_1: User) -> None:

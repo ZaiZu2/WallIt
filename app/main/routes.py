@@ -1,12 +1,12 @@
-from flask import redirect, url_for, render_template, flash
+from flask import flash, redirect, render_template, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.wrappers import Response
 
 from app import db
 from app.main import blueprint
-from app.main.forms import LoginForm, RequestPasswordForm, SignUpForm, ResetPasswordForm
-from app.models import User
 from app.main.email import send_password_reset_email
+from app.main.forms import LoginForm, RequestPasswordForm, ResetPasswordForm, SignUpForm
+from app.models import User
 
 
 @blueprint.route("/index")

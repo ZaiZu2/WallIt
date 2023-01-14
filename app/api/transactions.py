@@ -1,31 +1,26 @@
-from flask import request, abort
-from flask.typing import ResponseReturnValue
-from flask_login import current_user, login_required
-from werkzeug.utils import secure_filename
-from sqlalchemy import select, func, between, and_, case
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
-from dateutil.rrule import rrule, MONTHLY
 from typing import Callable
 
+from dateutil.relativedelta import relativedelta
+from dateutil.rrule import MONTHLY, rrule
+from flask import abort, request
+from flask.typing import ResponseReturnValue
+from flask_login import current_user, login_required
+from sqlalchemy import and_, between, case, func, select
+from werkzeug.utils import secure_filename
+
 from app import db, logger
-from app.models import Transaction, User, Bank
 from app.api import blueprint
+from app.api.imports import import_equabank_statement, import_revolut_statement
 from app.api.schemas import (
-    TransactionSchema,
-    ModifyTransactionSchema,
     FiltersSchema,
+    ModifyTransactionSchema,
     MonthlySaldoSchema,
+    TransactionSchema,
 )
-from app.api.imports import (
-    import_equabank_statement,
-    import_revolut_statement,
-)
-from app.api.utils import (
-    filter_transactions,
-    validate_statement,
-)
+from app.api.utils import filter_transactions, validate_statement
 from app.exceptions import FileError
+from app.models import Bank, Transaction, User
 
 
 @blueprint.route("/api/transactions", methods=["POST"])

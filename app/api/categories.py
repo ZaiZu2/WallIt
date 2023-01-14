@@ -1,11 +1,11 @@
-from flask import request, abort
+from flask import abort, request
 from flask.typing import ResponseReturnValue
 from flask_login import current_user, login_required
 
 from app import db
 from app.api import blueprint
-from app.models import Category
 from app.api.schemas import CategorySchema, UniqueCategorySchema
+from app.models import Category
 
 
 @blueprint.route("/api/categories/add", methods=["POST"])

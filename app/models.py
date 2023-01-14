@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from werkzeug.security import check_password_hash, generate_password_hash
-from flask_login import UserMixin
-from flask import current_app
-from sqlalchemy import UniqueConstraint, CheckConstraint, select
-from sqlalchemy.orm import with_parent
 from datetime import datetime
-import jwt
 from time import time
+
+import jwt
+from flask import current_app
+from flask_login import UserMixin
+from sqlalchemy import CheckConstraint, UniqueConstraint, select
+from sqlalchemy.orm import with_parent
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db, login
 

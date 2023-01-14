@@ -1,6 +1,6 @@
-from app import create_app, db, login
-from app.models import User, Transaction, Bank, Category, ExchangeRate
 import app.cli as cli
+from app import create_app, db, login
+from app.models import Bank, Category, ExchangeRate, Transaction, User
 
 app = create_app()
 cli.register(app)

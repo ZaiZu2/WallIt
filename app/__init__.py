@@ -1,16 +1,17 @@
+import logging
+import sys
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
+
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import MetaData
+from flask_caching import Cache
+from flask_login import LoginManager
 from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
-from flask_caching import Cache
-import sys
-from pathlib import Path
 from loguru import logger
-import logging
-from logging.handlers import RotatingFileHandler
+from sqlalchemy import MetaData
 
 from config import Config
 

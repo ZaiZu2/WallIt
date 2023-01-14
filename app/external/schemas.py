@@ -1,8 +1,7 @@
-from marshmallow import pre_load, post_load
-from marshmallow.validate import Length, OneOf, And, Range
+from marshmallow import post_load, pre_load
+from marshmallow.validate import And, Length, OneOf, Range
 
-from app import ma
-from app import Config
+from app import Config, ma
 from app.models import ExchangeRate
 
 

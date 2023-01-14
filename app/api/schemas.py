@@ -1,25 +1,26 @@
+import datetime as dt
+from copy import deepcopy
+from datetime import datetime
 from typing import Any
+
 from flask import current_app
 from flask_login import current_user
 from marshmallow import (
+    EXCLUDE,
+    ValidationError,
     fields,
     post_dump,
+    post_load,
     pre_dump,
     pre_load,
-    post_load,
     validates,
     validates_schema,
-    ValidationError,
-    EXCLUDE,
 )
-from marshmallow.validate import Length, OneOf, Range, Regexp, Email
-from copy import deepcopy
-import datetime as dt
-from datetime import datetime
+from marshmallow.validate import Email, Length, OneOf, Range, Regexp
 
-from config import Config
 from app import ma
 from app.models import Bank, Category, Transaction, User
+from config import Config
 
 
 class UserSchema(ma.SQLAlchemySchema):

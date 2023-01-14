@@ -1,4 +1,4 @@
-from app.models import User, Category
+from app.models import Category, User
 
 
 def test_get_from_id(

@@ -1,13 +1,14 @@
-import pytest
+from datetime import datetime
+from typing import Generator
 from unittest.mock import patch
+
+import pytest
 from flask import Flask, url_for
 from flask.testing import FlaskClient
 from flask_login import login_user
-from typing import Generator
-from datetime import datetime
 
 from app import create_app, db
-from app.models import User, Transaction, Category, Bank
+from app.models import Bank, Category, Transaction, User
 from config import Config
 
 

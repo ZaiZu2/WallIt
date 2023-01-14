@@ -1,8 +1,8 @@
 from flask import url_for
 from flask.testing import FlaskClient
 
+from app.models import Bank, Category, Transaction, User
 from tests.conftest import login
-from app.models import User, Transaction, Category, Bank
 
 
 def test_modify_user(client: FlaskClient, user_1: User) -> None:

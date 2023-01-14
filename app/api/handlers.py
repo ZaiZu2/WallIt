@@ -1,5 +1,5 @@
-from marshmallow.exceptions import ValidationError
 from flask.typing import ResponseReturnValue
+from marshmallow.exceptions import ValidationError
 
 from app.api import blueprint
 

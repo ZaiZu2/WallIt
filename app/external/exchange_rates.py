@@ -1,19 +1,20 @@
-from flask import current_app
 import asyncio
-import httpx
-from httpx._exceptions import HTTPError
-from httpx import Response
-from datetime import datetime
-from dateutil.rrule import rrule, DAILY
 import csv
-from operator import attrgetter
 from collections import defaultdict
+from datetime import datetime
+from operator import attrgetter
 from pathlib import Path
 
-from app import db, cache
-from app.models import ExchangeRate
-from app.exceptions import FileError, ExternalApiError
+import httpx
+from dateutil.rrule import DAILY, rrule
+from flask import current_app
+from httpx import Response
+from httpx._exceptions import HTTPError
+
+from app import cache, db
+from app.exceptions import ExternalApiError, FileError
 from app.external.schemas import ExchangeRateSchema
+from app.models import ExchangeRate
 
 
 class ExchangeRatesLoader:

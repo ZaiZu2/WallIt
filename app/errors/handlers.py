@@ -1,5 +1,5 @@
-from werkzeug.exceptions import HTTPException
 from flask import render_template, request
+from werkzeug.exceptions import HTTPException
 
 from app.errors import blueprint
 

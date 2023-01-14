@@ -1,7 +1,7 @@
-from unittest.mock import patch
 from datetime import datetime
+from unittest.mock import patch
 
-from app.models import User, Transaction
+from app.models import Transaction, User
 
 
 def test_transaction_creation(user_1: User) -> None:

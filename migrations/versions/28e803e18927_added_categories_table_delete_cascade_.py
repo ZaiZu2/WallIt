@@ -5,8 +5,8 @@ Revises: 874b0ebea9e4
 Create Date: 2022-06-24 17:10:45.970115
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # import debugpy
 

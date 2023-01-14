@@ -1,11 +1,11 @@
-import typing
-import io
 import csv
-from datetime import datetime
+import io
+import typing
 import xml.etree.ElementTree as ET
+from datetime import datetime
 
-from app.models import Transaction, User, Bank
 from app.exceptions import FileError
+from app.models import Bank, Transaction, User
 
 
 def import_revolut_statement(

@@ -1,18 +1,18 @@
-from marshmallow import ValidationError
-from flask import request, abort
-from flask.typing import ResponseReturnValue
-from flask_login import current_user, login_required
 from collections import defaultdict
 
+from flask import abort, request
+from flask.typing import ResponseReturnValue
+from flask_login import current_user, login_required
+
 from app import db
-from app.models import User
 from app.api import blueprint
 from app.api.schemas import (
     ChangePasswordSchema,
     ModifyUserSchema,
-    UserSchema,
     UserEntitiesSchema,
+    UserSchema,
 )
+from app.models import User
 
 
 @blueprint.route("/api/users/<int:id>/modify", methods=["PATCH"])

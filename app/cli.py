@@ -1,7 +1,8 @@
-from flask import Flask
 from datetime import datetime
-import click
 from pathlib import Path
+
+import click
+from flask import Flask
 
 from app import db
 from app.exceptions import FileError
