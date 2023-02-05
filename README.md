@@ -1,4 +1,8 @@
 # WallIt - protect your wallet from petty expenses
+
+To experience the deployed app, click [here](https://wallit.fly.dev/).
+You can use credentials given in the login placeholders to omit account creation.
+
 ### ***Features***
 Wallit was created as a remedy to the end-of-the-month confusion, when expenses, which you supposedly kept under a very strict control, yet again consumed your whole monthly wage. It allows you to focus on the essential task of controlling your cash flow, while abstracting away all the annoying parts of the process.
   - Sift, sort, skim through and filter your transactions in a functional table.

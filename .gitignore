@@ -52,6 +52,7 @@ instance/
 # Environments
 venv/*
 venv/!requirements.txt
+venv_*
 
 # mypy
 .mypy_cache/

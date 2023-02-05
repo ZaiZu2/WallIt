@@ -14,11 +14,11 @@
         {{ login_form.hidden_tag() }}
         <div class="input-group">
             {{ login_form.username.label }}
-            {{ login_form.username() }}
+            {{ login_form.username(placeholder="guest") }}
         </div>
         <div class="input-group">
             {{ login_form.password.label }}
-            {{ login_form.password() }}
+            {{ login_form.password(placeholder="guest") }}
         </div>
         {{ login_form.remember_me() }}
         {{ login_form.remember_me.label }}
