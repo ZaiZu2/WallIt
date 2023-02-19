@@ -174,28 +174,28 @@ filterSubmit.addEventListener("click", async () => {
       e.preventDefault();
       const formData = new FormData(form);
 
-      // Crate object for input values
-      if (form.name === "amount" || form.name === "date") {
-        const localInputs = {};
-        formData.forEach((value, key) => (localInputs[key] = value));
-        inputs[form.name] = localInputs;
-        // Create an array for checkbox values
-      } else {
-        const localInputs = [];
-        formData.forEach((value, key) => localInputs.push(value));
-        inputs[form.name] = localInputs;
-      }
+      if (form.name === "amount" || form.name === "date")
+        formData.forEach(
+          (value, key) => (inputs[`${form.name}_${key}`] = value)
+        );
+      else inputs[form.name] = [...formData.values()];
     });
     form.requestSubmit();
   });
 
-  user.transactions = await fetch("/api/transactions", {
-    method: "POST",
+  const url = new URLSearchParams();
+  for (let [key, value] of Object.entries(inputs)) {
+    if (Array.isArray(value) && value.length !== 0) {
+      url.append(key, value.join(","));
+    }
+    if (!Array.isArray(value) && value !== "") url.set(key, value);
+  }
+
+  user.transactions = await fetch("api/transactions?" + url.toString(), {
+    method: "GET",
     headers: {
-      "Content-Type": "application/json",
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
     },
-    body: JSON.stringify(inputs),
   })
     .then((response) => {
       if (!response.ok)

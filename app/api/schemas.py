@@ -267,14 +267,10 @@ MonthlySaldoSchema = ma.Schema.from_dict(
 class FiltersSchema(ma.Schema):
     """Schema used for validation of filtering values"""
 
-    amount = fields.Dict(
-        keys=fields.String(validate=OneOf(["min", "max"])),
-        values=fields.Float(allow_none=True),
-    )
-    date = fields.Dict(
-        keys=fields.String(validate=OneOf(["min", "max"])),
-        values=fields.DateTime(format="%Y-%m-%d", allow_none=True),
-    )
+    amount_min = fields.Float()
+    amount_max = fields.Float()
+    date_min = fields.DateTime(format="%Y-%m-%d", allow_none=True)
+    date_max = fields.DateTime(format="%Y-%m-%d", allow_none=True)
     base_currencies = fields.List(
         fields.String(),
         allow_none=True,
@@ -289,31 +285,32 @@ class FiltersSchema(ma.Schema):
             raise ValidationError("Only available currencies can be filtered")
 
     @validates_schema
-    def _check_range_filters(self, data: dict, **kwargs: dict) -> None:
-        for filter in ["amount", "date"]:
-            if (
-                data[filter]["min"]
-                and data[filter]["max"]
-                and data[filter]["min"] > data[filter]["max"]
-            ):
-                raise ValidationError("Lower end cannot be higher than higher end")
+    def _check_amount_range(self, data: dict, **kwargs: dict) -> None:
+        if (
+            data.get("amount_min")
+            and data.get("amount_max")
+            and data["amount_min"] > data["amount_max"]
+        ):
+            raise ValidationError("Lower end cannot be higher than higher end")
+
+    @validates_schema
+    def _check_date_range(self, data: dict, **kwargs: dict) -> None:
+        if (
+            data.get("date_min")
+            and data.get("date_max")
+            and data["date_min"] > data["date_max"]
+        ):
+            raise ValidationError("Lower end cannot be higher than higher end")
 
     @pre_load
-    def _remove_blanks(self, data: dict, **kwargs: dict) -> dict:
+    def _create_list_from_string(self, data: dict, **kwargs: dict) -> dict:
         """Replace empty values (strings) with None"""
-        # TODO: Temporary fix for wrongly structured Request body
-        # Client sends fields with empty string instead of omitting them in request body
 
-        cleaned_data = deepcopy(data)
-        for key, value in data.items():
-            if isinstance(value, dict):
-                for nested_key, nested_value in data[key].items():
-                    if not nested_value:
-                        cleaned_data[key][nested_key] = None
-            elif not value:
-                cleaned_data[key] = None
+        for param in "base_currency", "category", "bank":
+            if data.get(param, None):
+                data[param] = data[param].split(",")
 
-        return cleaned_data
+        return data
 
 
 class UserEntitiesSchema(ma.Schema):

@@ -8,39 +8,38 @@ import {
 } from "./utils.js";
 
 export function reloadTable(table) {
-  if (user.transactions && user.transactions.length != 0)
-    table
-      .updateConfig({
-        data: () => {
-          // Keys to be retained in a new array passed to the Table
-          const keysNeeded = [
-            "id",
-            "info",
-            "title",
-            "amount",
-            "base_amount",
-            "base_currency",
-            "category",
-            "date",
-            "place",
-            "bank",
-            "creation_date",
-          ];
+  table
+    .updateConfig({
+      data: () => {
+        // Keys to be retained in a new array passed to the Table
+        const keysNeeded = [
+          "id",
+          "info",
+          "title",
+          "amount",
+          "base_amount",
+          "base_currency",
+          "category",
+          "date",
+          "place",
+          "bank",
+          "creation_date",
+        ];
 
-          let formattedTransactions = structuredClone(user.transactions);
+        let formattedTransactions = structuredClone(user.transactions);
 
-          for (let transaction of formattedTransactions) {
-            for (let key of Object.keys(transaction)) {
-              if (!keysNeeded.includes(key)) delete transaction[key];
-              if (key.includes("date"))
-                transaction[key] = transaction[key].split("T")[0];
-            }
+        for (let transaction of formattedTransactions) {
+          for (let key of Object.keys(transaction)) {
+            if (!keysNeeded.includes(key)) delete transaction[key];
+            if (key.includes("date"))
+              transaction[key] = transaction[key].split("T")[0];
           }
+        }
 
-          return formattedTransactions;
-        },
-      })
-      .forceRender();
+        return formattedTransactions;
+      },
+    })
+    .forceRender();
 }
 
 const editableCellAttributes = (cell, row, column) => {

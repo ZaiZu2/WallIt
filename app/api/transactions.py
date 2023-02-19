@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import datetime
 from typing import Callable
 
@@ -18,51 +19,59 @@ from app.api.schemas import (
     MonthlySaldoSchema,
     TransactionSchema,
 )
-from app.api.utils import filter_transactions, validate_statement
+from app.api.utils import validate_statement
 from app.exceptions import FileError
 from app.models import Bank, Transaction, User
 
 
-@blueprint.route("/api/transactions", methods=["POST"])
+@blueprint.route("/api/transactions", methods=["GET"])
 @login_required
 def fetch_transactions() -> ResponseReturnValue:
-    """Receive filter parameters in JSON, query DB for filtered values
-    and return Transactions serialized to JSON
+    """Filter for transactions based on url-encoded filtering parameters
 
     Request JSON structure example:
     {
-        'amount': {'max': '123123', 'min': '213'},
-        'date': {'max': '2022-07-21', 'min': '2022-07-07'}
+        'amount_min': '213',
+        'amount_max': '393',
+        'date_min': '2022-07-07',
+        'date_min': '2022-12-07',
         'base_currency': ['CZK', 'USD'],
         'bank': ['mBank', 'Revolut'],
         'category': ['Salary', 'Hobby', 'Restaurant'],
     }
 
-    Response JSON structure example:
-    {
-        "transactions": [
-        {
-            "amount": 61800.05,
-            "bank": "mBank",
-            "base_amount": 3193.0,
-            "base_currency": "USD",
-            "category": "groceries",
-            "date": "Mon, 08 Feb 2021 15:02:58 GMT",
-            "info": null,
-            "place": "Bengubelan",
-            "title": null
-        },
-        ...,
-        ]
-    }
-
     Returns:
-        dict: JSON with transaction data
+        dict: list of transactions
     """
 
-    transaction_filters = FiltersSchema().load(request.json)
-    transactions = filter_transactions(transaction_filters)
-    return TransactionSchema(many=True).dump(transactions), 201
+    filters = FiltersSchema().load(dict(request.args))
+
+    FILTER_MAP = {
+        "amount_min": Transaction.base_amount,
+        "amount_max": Transaction.base_amount,
+        "date_min": Transaction.transaction_date,
+        "date_max": Transaction.transaction_date,
+        "base_currencies": Transaction.base_currency,
+        "banks": Transaction.bank_id,
+        "categories": Transaction.category_id,
+    }
+
+    query = Transaction.query.filter_by(user=current_user)
+
+    for filter_name, filter_values in filters.items():
+        if filter_name in ("amount_min", "date_min"):
+            query = query.filter(FILTER_MAP[filter_name] >= filter_values)
+        if filter_name in ("amount_max", "date_max"):
+            query = query.filter(FILTER_MAP[filter_name] <= filter_values)
+        if filter_name in ("base_currencies", "categories", "banks"):
+            query = query.filter(FILTER_MAP[filter_name].in_(filter_values))
+
+    query = query.order_by(Transaction.transaction_date.desc())
+    transactions: list[Transaction] = query.all()
+    logger.debug(str(query))
+    # logger.log("DEBUG_HIGH", query.compile(compile_kwargs={"literal_binds": True}).string)
+
+    return TransactionSchema(many=True).dump(transactions), 200
 
 
 @blueprint.route("/api/transactions/add", methods=["POST"])
