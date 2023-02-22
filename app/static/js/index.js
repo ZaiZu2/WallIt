@@ -1,8 +1,3 @@
-import {
-  html,
-  render,
-} from "https://unpkg.com/htm/preact/standalone.module.js";
-
 import { transactionsTable, reloadTable } from "./gridjs.js";
 import {
   categoryChart,
@@ -15,11 +10,14 @@ import {
   renderListCheckboxes,
   renderBankForms,
   renderCategoryForms,
+} from "./components.js";
+import {
   addTransaction,
   addCategory,
   modifyCategory,
   deleteCategory,
 } from "./utils.js";
+import "./settings.js";
 
 const logOutButton = document.getElementById("log-out");
 logOutButton.addEventListener("click", logOut);
@@ -415,13 +413,6 @@ function showUploadModal(responseStatus, uploadResults) {
     }
     modalContent.append(p, ul);
   }
-}
-
-async function reloadWindows() {
-  reloadForms();
-  reloadTable(transactionsTable);
-  reloadCategoryChart(categoryChart);
-  reloadMonthlyChart(monthlyChart);
 }
 
 async function reloadForms() {
