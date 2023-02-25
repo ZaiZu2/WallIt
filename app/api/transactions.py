@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 
 from app import db, logger
 from app.api import blueprint
-from app.api.imports import import_equabank_statement, import_revolut_statement
+from app.api.imports import BANK_IMPORT_MAP
 from app.api.schemas import (
     FiltersSchema,
     ModifyTransactionSchema,
@@ -21,7 +21,7 @@ from app.api.schemas import (
 )
 from app.api.utils import validate_statement
 from app.exceptions import FileError
-from app.models import Bank, Transaction, User
+from app.models import Bank, MyBanks, Transaction, User
 
 
 @blueprint.route("/api/transactions", methods=["GET"])
@@ -148,24 +148,10 @@ def upload_statements() -> ResponseReturnValue:
     # both in files being loaded, and in the DB
 
     # Check if user uploaded any statements
-    is_empty = True
-    for file in request.files.values():
-        if file.filename:
-            is_empty = False
-    if is_empty:
-        return {"info": "No files were uploaded."}, 400
+    file_included = any([file.filename for file in request.files.values()])
+    if not file_included:
+        return {"info": "No files were provided."}, 400
 
-    # Maps request parameters to corresponding banks
-    BANK_MAP = {
-        "revolut": {
-            "import_func": import_revolut_statement,
-            "instance": Bank.query.filter_by(name="Revolut").one(),
-        },
-        "equabank": {
-            "import_func": import_equabank_statement,
-            "instance": Bank.query.filter_by(name="Equabank").one(),
-        },
-    }
     # dictionary holding filenames which failed to upload
     failed_upload: dict[str, str] = {}
     # dictionary holding filenames which were successfully uploaded
@@ -173,27 +159,25 @@ def upload_statements() -> ResponseReturnValue:
     # list holding all imported transactions
     uploaded_transactions: list[Transaction] = []
 
-    for statement_origin, file in request.files.items(True):
+    for i, (bank_name, file) in enumerate(request.files.items(True)):
         # Sanitize the filename
         filename = secure_filename(file.filename)
-        # Check if user attached file to a form
-        if filename:
-            if validate_statement(statement_origin, filename, file.stream):
-                # Run import function corresponding to statement_origin
-                import_function: Callable = BANK_MAP[statement_origin]["import_func"]
+        filename = f"sanitized_filename_{i}" if not filename else filename
 
-                try:
-                    temp_transactions: list[Transaction] = import_function(
-                        file, current_user, BANK_MAP[statement_origin]["instance"]
-                    )
-                except FileError:
-                    failed_upload[filename] = statement_origin
+        if validate_statement(MyBanks(bank_name), filename, file.stream):
+            # Run import function corresponding to bank_name
+            import_function: Callable = BANK_IMPORT_MAP[MyBanks(bank_name)]
 
-                # Append transactions from all files to the main list
-                uploaded_transactions.extend(temp_transactions)
-                success_upload[filename] = statement_origin
-            else:
-                failed_upload[filename] = statement_origin
+            try:
+                temp_transactions = import_function(file, current_user)
+            except FileError:
+                failed_upload[filename] = "Errors while parsing the file"
+
+            # Append transactions from all files to the main list
+            uploaded_transactions.extend(temp_transactions)
+            success_upload[filename] = bank_name
+        else:
+            failed_upload[filename] = "Wrong file type or contents"
 
     db.session.add_all(uploaded_transactions)
     db.session.commit()
@@ -205,12 +189,12 @@ def upload_statements() -> ResponseReturnValue:
         "info": "",
     }
 
-    if failed_upload and success_upload:
-        return upload_results, 206
-    if not success_upload:
-        return upload_results, 415
     if not failed_upload:
         return upload_results, 201
+    if not success_upload:
+        return upload_results, 415
+    else:
+        return upload_results, 206
 
 
 @blueprint.route("/api/transactions/monthly", methods=["GET"])
@@ -277,9 +261,9 @@ def monthly_statements() -> ResponseReturnValue:
         )
 
         results = db.session.execute(query).all()[0]
-        logger.log(
-            "DEBUG_HIGH", query.compile(compile_kwargs={"literal_binds": True}).string
-        )
+        # logger.log(
+        #     "DEBUG_HIGH", query.compile(compile_kwargs={"literal_binds": True}).string
+        # )
 
         if results[0]:
             saldo.append(

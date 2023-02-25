@@ -82,7 +82,7 @@ def user_2(app: Flask) -> User:
 
 @pytest.fixture()
 def bank_1() -> Category:
-    bank_1 = Bank(name="Revolut", statement_type="csv")
+    bank_1 = Bank(name="Revolut", statement_type="csv", name_enum="revolut")
 
     db.session.add(bank_1)
     db.session.commit()
@@ -91,7 +91,7 @@ def bank_1() -> Category:
 
 @pytest.fixture()
 def bank_2() -> Category:
-    bank_2 = Bank(name="mBank", statement_type="xml")
+    bank_2 = Bank(name="Equabank", statement_type="xml", name_enum="equabank")
 
     db.session.add(bank_2)
     db.session.commit()

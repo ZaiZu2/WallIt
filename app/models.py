@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import Enum
 from time import time
 
 import jwt
@@ -11,6 +12,7 @@ from sqlalchemy.orm import with_parent
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db, login
+from config import Config
 
 
 class UpdatableMixin:
@@ -207,12 +209,22 @@ class Transaction(UpdatableMixin, db.Model):
         return cls.query.filter_by(id=id, user=user).first()
 
 
+class MyBanks(Enum):
+    REVOLUT = "revolut"
+    EQUABANK = "equabank"
+
+
 class Bank(db.Model):
     __tablename__ = "banks"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Text, index=True, unique=True, nullable=False)
     statement_type = db.Column(db.String(10), nullable=False)
+    name_enum = db.Column(
+        db.Enum(MyBanks, values_callable=lambda enum: [x.value for x in enum]),
+        unique=True,
+        nullable=False,
+    )
 
     transactions = db.relationship(
         "Transaction", back_populates="bank", lazy=True, uselist=True

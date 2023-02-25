@@ -1,5 +1,4 @@
 import datetime as dt
-from copy import deepcopy
 from datetime import datetime
 from typing import Any
 
@@ -16,7 +15,7 @@ from marshmallow import (
     validates,
     validates_schema,
 )
-from marshmallow.validate import Email, Length, OneOf, Range, Regexp
+from marshmallow.validate import Email, Length, Range, Regexp
 
 from app import ma
 from app.models import Bank, Category, Transaction, User

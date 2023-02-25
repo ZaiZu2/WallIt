@@ -47,12 +47,10 @@ def test_user_selects(user_1: User) -> None:
         last_name="last2",
         main_currency="USD",
     )
-    bank_1 = Bank(name="Revolut", statement_type="csv")
-    bank_2 = Bank(name="mBank", statement_type="xml")
-    bank_3 = Bank(name="Equabank", statement_type="xml")
+    bank_1 = Bank(name="Revolut", statement_type="csv", name_enum="revolut")
+    bank_2 = Bank(name="Equabank", statement_type="xml", name_enum="equabank")
     category_1 = Category(name="Groceries", user=user_1)
     category_2 = Category(name="Car", user=user_1)
-    category_3 = Category(name="Restaurants", user=user_2)
 
     with patch("app.models.Transaction.convert_to_main_amount"):
         transaction_1 = Transaction(

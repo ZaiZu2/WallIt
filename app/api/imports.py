@@ -3,14 +3,14 @@ import io
 import typing
 import xml.etree.ElementTree as ET
 from datetime import datetime
+from typing import Any
 
+from app import db
 from app.exceptions import FileError
-from app.models import Bank, Transaction, User
+from app.models import Bank, MyBanks, Transaction, User
 
 
-def import_revolut_statement(
-    file: typing.BinaryIO, user: User, bank: Bank
-) -> list[Transaction]:
+def import_revolut_statement(file: typing.BinaryIO, user: User) -> list[Transaction]:
     """Load Transactions from Revolut monthly bank statement in .csv file format
 
     Args:
@@ -24,7 +24,9 @@ def import_revolut_statement(
     """
 
     transactions: list[Transaction] = []
-
+    revolut_id = (
+        db.session.query(Bank.id).filter_by(name_enum=MyBanks.EQUABANK.value).scalar()
+    )
     with io.TextIOWrapper(file, encoding="utf-8") as csv_file:
         try:
             reader = csv.DictReader(csv_file, delimiter=",")
@@ -40,7 +42,7 @@ def import_revolut_statement(
                     data["transaction_date"] = datetime.strptime(
                         row["Completed Date"], "%Y-%m-%d %H:%M:%S"
                     )
-                    data["bank"] = bank
+                    data["bank_id"] = revolut_id
                     data["user"] = user
 
                     transaction = Transaction(**data)
@@ -51,9 +53,7 @@ def import_revolut_statement(
     return transactions
 
 
-def import_equabank_statement(
-    file: typing.BinaryIO, user: User, bank: Bank
-) -> list[Transaction]:
+def import_equabank_statement(file: typing.BinaryIO, user: User) -> list[Transaction]:
     """Load Transactions from Equabank monthly bank statement in .xml file format
 
     Args:
@@ -152,6 +152,9 @@ def import_equabank_statement(
 
     # temp list holding loaded Transactions
     transactions: list[Transaction] = []
+    equabank_id: int = (
+        db.session.query(Bank.id).filter_by(name_enum=MyBanks.EQUABANK.value).scalar()
+    )
 
     with io.TextIOWrapper(file, encoding="utf-8") as xml_file:
         # Variable holding calculated sum of all parsed expenses from a single file
@@ -165,7 +168,7 @@ def import_equabank_statement(
             # iterate through transaction elements in the statement tree
             for transaction_element in root.findall(".//nms:Ntry", namespace):
                 # Parsing transaction data
-                data = {}
+                data: dict[str, Any] = {}
                 data["info"] = parse_record(
                     transaction_element, ".//nms:RltdPties//nms:Nm"
                 )
@@ -181,7 +184,7 @@ def import_equabank_statement(
                     amount_XPath="./nms:Amt",
                     vector_XPath="./nms:CdtDbtInd",
                 )
-                data["bank"] = bank
+                data["bank_id"] = equabank_id
                 data["user"] = user
 
                 transaction = Transaction(**data)
@@ -199,3 +202,9 @@ def import_equabank_statement(
             raise FileError("Error during parsing statement - validation failed")
 
     return transactions
+
+
+BANK_IMPORT_MAP = {
+    MyBanks.REVOLUT: import_revolut_statement,
+    MyBanks.EQUABANK: import_equabank_statement,
+}

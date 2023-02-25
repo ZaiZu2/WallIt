@@ -49,7 +49,7 @@ def login() -> Response:
         login_user(user, remember=login_form.remember_me.data)
         return redirect(url_for("main.index"))
 
-    # Reassing form.errors to flash as they will be inaccessible after after redirection
+    # Reassing form.errors to flash as they will be inaccessible after redirection
     for field in login_form._fields.values():
         for error in field.errors:
             flash(error, "login_message")

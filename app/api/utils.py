@@ -3,10 +3,10 @@ from pathlib import Path
 
 from app import db
 from app.exceptions import InvalidConfigError
-from app.models import Bank
+from app.models import Bank, MyBanks
 
 
-def validate_statement(origin: str, filename: str, file: t.IO[bytes]) -> bool:
+def validate_statement(origin: MyBanks, filename: str, file: t.IO[bytes]) -> bool:
     """Validate the uploaded file for correct extension and content
 
     Args:
@@ -20,16 +20,11 @@ def validate_statement(origin: str, filename: str, file: t.IO[bytes]) -> bool:
     # TODO: Additional file content validation
 
     is_validated = False
-
-    # Query for acceptable statement extensions associated with each bank
-    results = db.session.query(Bank.name, Bank.statement_type).all()
-    extension_map: dict[str, str] = {
-        bank_name.lower(): file_extension for (bank_name, file_extension) in results
-    }
+    correct = db.session.query(Bank.statement_type).filter_by(name_enum=origin).scalar()
 
     try:
         # Check correctness of the associated filetype
-        if Path(filename).suffix[1:] == extension_map[origin]:
+        if Path(filename).suffix[1:] == correct:
             is_validated = True
             return is_validated
     except KeyError:

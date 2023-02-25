@@ -220,7 +220,7 @@ uploadSubmit.addEventListener("click", async function uploadStatements() {
 
       const formData = new FormData(form);
       for (let [key, file] of formData) {
-        allData.append(key, file);
+        if (file.name !== "") allData.append(key, file);
       }
     });
     form.requestSubmit();
@@ -228,13 +228,13 @@ uploadSubmit.addEventListener("click", async function uploadStatements() {
 
   let responseStatus = 0;
   const uploadResults = await fetch("/api/transactions/upload", {
-    method: "POST", // *GET, POST, PUT, DELETE, etc.
-    mode: "cors", // no-cors, *cors, same-origin
-    credentials: "same-origin", // include, *same-origin, omit
+    method: "POST",
+    mode: "cors",
+    credentials: "same-origin",
     headers: {
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,
     },
-    body: allData, // body data type must match "Content-Type" header
+    body: allData,
   })
     .then((response) => {
       if (!response.ok && response.status != 400 && response.status != 415)
