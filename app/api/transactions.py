@@ -93,7 +93,7 @@ def modify_transaction(id: int) -> tuple[str, int]:
     "Modify 'info','title','place', 'category' column of the transaction"
 
     if not (transaction := Transaction.get_from_id(id, current_user)):
-        abort(404)
+        abort(404, "Transaction not found")
     verified_data = ModifyTransactionSchema().load(request.json)
     transaction.update(verified_data)
     db.session.commit()
@@ -106,7 +106,7 @@ def delete_transaction(id: int) -> tuple[dict, int]:
     """Delete transaction with given Id"""
 
     if not (transaction := Transaction.get_from_id(id, current_user)):
-        abort(404)
+        abort(404, "Transaction not found")
     db.session.delete(transaction)
     db.session.commit()
     return {}, 200
@@ -117,7 +117,7 @@ def delete_transaction(id: int) -> tuple[dict, int]:
 def delete_all_transactions(id: int) -> ResponseReturnValue:
     user: User = User.query.get(id)
     if user != current_user:
-        abort(404)
+        abort(404, "User not found")
 
     no_of_deleted = Transaction.query.filter_by(user=user).delete()
     db.session.commit()
@@ -177,7 +177,7 @@ def upload_statements() -> ResponseReturnValue:
             uploaded_transactions.extend(temp_transactions)
             success_upload[filename] = bank_name
         else:
-            failed_upload[filename] = "Wrong file type or contents"
+            failed_upload[filename] = "Corrupted file type or contents"
 
     db.session.add_all(uploaded_transactions)
     db.session.commit()
@@ -197,9 +197,9 @@ def upload_statements() -> ResponseReturnValue:
         return upload_results, 206
 
 
-@blueprint.route("/api/transactions/monthly", methods=["GET"])
+@blueprint.route("/api/users/<int:id>/monthly", methods=["GET"])
 @login_required
-def monthly_statements() -> ResponseReturnValue:
+def monthly_statements(id: int) -> ResponseReturnValue:
     """Return list of monthly saldos featuring incoming, outgoing and balance value
 
     Response JSON structure example:
@@ -215,6 +215,9 @@ def monthly_statements() -> ResponseReturnValue:
     Returns:
         ResponseReturnValue: (response, http_code)
     """
+    user: User = User.query.get(id)
+    if user != current_user:
+        abort(404, "User not found")
 
     oldest = (
         Transaction.query.with_entities(func.min(Transaction.transaction_date))
@@ -223,12 +226,12 @@ def monthly_statements() -> ResponseReturnValue:
     )
     # No transactions related to the user
     if not oldest:
-        return {}, 404
+        abort(404, "User has no transactions to build summary from")
 
     oldest = oldest - relativedelta(day=1, hour=0, minute=0, second=0)
     newest = (
         Transaction.query.with_entities(func.max(Transaction.transaction_date))
-        .filter_by(user=current_user)
+        .filter_by(user=user)
         .scalar()
     )
 
@@ -256,7 +259,7 @@ def monthly_statements() -> ResponseReturnValue:
                     month,
                     month + relativedelta(months=+1),
                 ),
-                Transaction.user == current_user,
+                Transaction.user == user,
             )
         )
 

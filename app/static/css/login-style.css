@@ -251,3 +251,16 @@ img:active {
   -ms-transform: scale(0.95);
   transform: scale(0.95);
 }
+
+.error-window {
+  display: flex;
+  flex-direction: column;
+}
+
+.error-logo {
+  width: 400px;
+  overflow: hidden;
+
+  font-size: 96px;
+  text-align: center;
+}

@@ -101,7 +101,7 @@ export const categoryChart = new Chart(categoryChartCell, {
 });
 
 export async function reloadMonthlyChart(chart) {
-  const data = await fetch("/api/transactions/monthly", {
+  const data = await fetch(`/api/users/${user.user_details.id}/monthly`, {
     method: "GET",
     mode: "cors",
     credentials: "same-origin",

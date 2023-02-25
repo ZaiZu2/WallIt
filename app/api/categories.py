@@ -26,7 +26,7 @@ def modify_category(id: int) -> ResponseReturnValue:
     """Modify category"""
 
     if not (category := Category.get_from_id(id, current_user)):
-        abort(404)
+        abort(404, "Category not found")
     verified_data = CategorySchema().load(request.json)
     category.update(verified_data)
     db.session.commit()
@@ -39,7 +39,7 @@ def delete_category(id: int) -> ResponseReturnValue:
     """Delete multiple categories"""
 
     if not (category := Category.get_from_id(id, current_user)):
-        abort(404)
+        abort(404, "Category not found")
     db.session.delete(category)
     db.session.commit()
 

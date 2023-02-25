@@ -12,7 +12,6 @@ from sqlalchemy.orm import with_parent
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db, login
-from config import Config
 
 
 class UpdatableMixin:

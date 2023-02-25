@@ -55,7 +55,7 @@ def test_change_password(client: FlaskClient, user_1: User) -> None:
                 repeat_password="password3",
             ),
         )
-        assert response.status_code == 400
+        assert response.status_code == 403
         assert user_1.check_password("password2")
 
 

@@ -20,7 +20,7 @@ from app.models import User
 def modify_user(id: int) -> ResponseReturnValue:
     user: User = User.query.get(id)
     if user is None or user != current_user:
-        abort(404)
+        abort(404, "User not found")
 
     verified_data = ModifyUserSchema().load(request.json)
     user.update(verified_data)
@@ -34,11 +34,11 @@ def modify_user(id: int) -> ResponseReturnValue:
 def change_password(id: int) -> ResponseReturnValue:
     user = User.query.get(id)
     if user is None or user != current_user:
-        abort(404)
+        abort(404, "User not found")
 
     verified_data = ChangePasswordSchema().load(request.json)
     if not user.check_password(verified_data["old_password"]):
-        abort(400)
+        abort(403, "Wrong password")
     user.set_password(verified_data["new_password"])
     db.session.commit()
 
@@ -50,7 +50,7 @@ def change_password(id: int) -> ResponseReturnValue:
 def delete_user(id: int) -> ResponseReturnValue:
     user = User.query.get(id)
     if user is None or user != current_user:
-        abort(404)
+        abort(404, "User not found")
 
     db.session.delete(user)
     db.session.commit()
