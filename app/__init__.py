@@ -1,5 +1,4 @@
 import logging
-import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -10,13 +9,9 @@ from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
-from loguru import logger
 from sqlalchemy import MetaData
 
 from config import Config
-
-DEBUG_HIGH = logger.level("DEBUG_HIGH", no=8)
-
 
 metadata = MetaData(
     naming_convention={
@@ -59,31 +54,37 @@ def create_app(config_class=Config) -> Flask:
 
     app.register_blueprint(errors_blueprint)
 
-    logger.remove()
-    logger.add(
-        sys.stderr,
-        level="DEBUG",
-        format="<BLUE>{time:HH:mm:ss} | {level} | {name}:{function}:{line}</BLUE>\n"
-        "<cyan>{message}</cyan>",
-        colorize=True,
-    )
+    Path("./logs").mkdir(exist_ok=True)
+    if app.debug:
+        # Logging for debugging
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.DEBUG)
+        app.logger.addHandler(stream_handler)
+    else:
+        # Logging for requests
+        requests_handler = RotatingFileHandler(
+            "logs/requests.log", maxBytes=10240, backupCount=10
+        )
+        logging.getLogger("werkzeug").addHandler(requests_handler)
+        logging.getLogger("werkzeug").setLevel(logging.INFO)
 
-    if app.config["LOG_TO_STDOUT"]:
+        # Logging error tracebacks
+        errors_handler = RotatingFileHandler(
+            "logs/errors.log", maxBytes=10240, backupCount=10
+        )
+        errors_handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s %(levelname)s: %(message)s\n"
+                "[in %(pathname)s:%(lineno)d]"
+            )
+        )
+        app.logger.addHandler(errors_handler)
+        app.logger.setLevel(logging.INFO)
+
+        # Additional logging to stdout for PaaS monitoring
         stream_handler = logging.StreamHandler()
         stream_handler.setLevel(logging.INFO)
         app.logger.addHandler(stream_handler)
-    else:
-        Path("./logs").mkdir(exist_ok=True)
-        file_handler = RotatingFileHandler(
-            "logs/wallit.log", maxBytes=10240, backupCount=10
-        )
-        file_handler.setFormatter(
-            logging.Formatter(
-                "%(asctime)s %(levelname)s: %(message)s " "[in %(pathname)s:%(lineno)d]"
-            )
-        )
-        file_handler.setLevel(logging.INFO)
-        app.logger.addHandler(file_handler)
 
     return app
 

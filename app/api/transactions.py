@@ -1,16 +1,15 @@
-from copy import deepcopy
 from datetime import datetime
 from typing import Callable
 
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import MONTHLY, rrule
-from flask import abort, request
+from flask import abort, current_app, request
 from flask.typing import ResponseReturnValue
 from flask_login import current_user, login_required
 from sqlalchemy import and_, between, case, func, select
 from werkzeug.utils import secure_filename
 
-from app import db, logger
+from app import db
 from app.api import blueprint
 from app.api.imports import BANK_IMPORT_MAP
 from app.api.schemas import (
@@ -21,7 +20,7 @@ from app.api.schemas import (
 )
 from app.api.utils import validate_statement
 from app.exceptions import FileError
-from app.models import Bank, MyBanks, Transaction, User
+from app.models import MyBanks, Transaction, User
 
 
 @blueprint.route("/api/transactions", methods=["GET"])
@@ -68,8 +67,9 @@ def fetch_transactions() -> ResponseReturnValue:
 
     query = query.order_by(Transaction.transaction_date.desc())
     transactions: list[Transaction] = query.all()
-    logger.debug(str(query))
-    # logger.log("DEBUG_HIGH", query.compile(compile_kwargs={"literal_binds": True}).string)
+    current_app.logger.debug(
+        str(query.statement.compile(compile_kwargs={"literal_binds": True}))
+    )
 
     return TransactionSchema(many=True).dump(transactions), 200
 
@@ -264,9 +264,9 @@ def monthly_statements(id: int) -> ResponseReturnValue:
         )
 
         results = db.session.execute(query).all()[0]
-        # logger.log(
-        #     "DEBUG_HIGH", query.compile(compile_kwargs={"literal_binds": True}).string
-        # )
+        current_app.logger.debug(
+            query.compile(compile_kwargs={"literal_binds": True}).string
+        )
 
         if results[0]:
             saldo.append(

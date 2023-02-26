@@ -17,7 +17,7 @@ class Config:
     # File upload configuration
     MAX_CONTENT_LENGTH = 1024 * 1024
     RESET_TOKEN_MINUTES = int(os.environ.get("RESET_TOKEN_MINUTES") or "15")
-    LOG_TO_STDOUT = os.environ.get("LOG_TO_STDOUT")
+    LOG_TO_STDOUT = os.environ.get("LOG_TO_STDOUT") or False
 
     # Cache config
     CACHE_TYPE = "SimpleCache"
