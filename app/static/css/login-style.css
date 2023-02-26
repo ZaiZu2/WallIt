@@ -264,3 +264,8 @@ img:active {
   font-size: 96px;
   text-align: center;
 }
+
+.error-subtitle {
+  size: 1.2rem;
+  margin-bottom: 30px;
+}
