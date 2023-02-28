@@ -64,7 +64,7 @@ def test_successful_delete_user(client: FlaskClient, user_1: User) -> None:
         # Check successful call
         login(user_1, client)
         response = client.delete(url_for("api.delete_user", id=user_1.id))
-        assert response.status_code == 200
+        assert response.status_code == 204
         assert User.query.get(user_1.id) == None
 
 

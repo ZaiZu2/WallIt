@@ -42,7 +42,7 @@ def change_password(id: int) -> ResponseReturnValue:
     user.set_password(verified_data["new_password"])
     db.session.commit()
 
-    return {}, 200
+    return {}, 204
 
 
 @blueprint.route("/api/users/<int:id>/delete", methods=["DELETE"])
@@ -54,13 +54,13 @@ def delete_user(id: int) -> ResponseReturnValue:
 
     db.session.delete(user)
     db.session.commit()
-    return {}, 200
+    return {}, 204
 
 
 @blueprint.route("/api/user/entities", methods=["GET"])
 @login_required
 def fetch_user_entities() -> ResponseReturnValue:
-    """Fetch entities assigned to user
+    """Fetch entities assigned to a user
 
     Response JSON structure example:
     {
@@ -74,7 +74,7 @@ def fetch_user_entities() -> ResponseReturnValue:
         dict: lists containing values for each filtering parameter
     """
 
-    response_body: dict[str, list | dict] = defaultdict(dict)
+    response_body: dict[str, dict] = defaultdict(dict)
 
     response_body["user_details"] = current_user
     response_body["base_currencies"] = current_user.select_base_currencies()

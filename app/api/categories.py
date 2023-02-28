@@ -11,7 +11,7 @@ from app.models import Category
 @blueprint.route("/api/categories/add", methods=["POST"])
 @login_required
 def add_category() -> ResponseReturnValue:
-    """Add category"""
+    """Add a category"""
 
     verified_data = UniqueCategorySchema().load(request.json)
     category = Category(user=current_user, **verified_data)
@@ -23,7 +23,7 @@ def add_category() -> ResponseReturnValue:
 @blueprint.route("/api/categories/<int:id>/modify", methods=["PATCH"])
 @login_required
 def modify_category(id: int) -> ResponseReturnValue:
-    """Modify category"""
+    """Modify a category"""
 
     if not (category := Category.get_from_id(id, current_user)):
         abort(404, "Category not found")
@@ -36,7 +36,7 @@ def modify_category(id: int) -> ResponseReturnValue:
 @blueprint.route("/api/categories/<int:id>/delete", methods=["DELETE"])
 @login_required
 def delete_category(id: int) -> ResponseReturnValue:
-    """Delete multiple categories"""
+    """Delete a category"""
 
     if not (category := Category.get_from_id(id, current_user)):
         abort(404, "Category not found")

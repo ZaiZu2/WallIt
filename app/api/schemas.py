@@ -64,7 +64,7 @@ class UserSchema(ma.SQLAlchemySchema):
 
     @validates("main_currency")
     def _check_available_currencies(self, currency: str) -> None:
-        if currency not in Config.SUPPORTED_CURRENCIES:
+        if currency not in current_app.config["SUPPORTED_CURRENCIES"]:
             raise ValidationError("Only available currency can be accepted")
 
 
@@ -280,7 +280,9 @@ class FiltersSchema(ma.Schema):
 
     @validates("base_currencies")
     def _check_available_currencies(self, currencies: list[str]) -> None:
-        if currencies and not set(currencies).issubset(Config.SUPPORTED_CURRENCIES):
+        if currencies and not set(currencies).issubset(
+            current_app.config["SUPPORTED_CURRENCIES"]
+        ):
             raise ValidationError("Only available currencies can be filtered")
 
     @validates_schema
@@ -290,7 +292,7 @@ class FiltersSchema(ma.Schema):
             and data.get("amount_max")
             and data["amount_min"] > data["amount_max"]
         ):
-            raise ValidationError("Lower end cannot be higher than higher end")
+            raise ValidationError("Lower end cannot be higher than the higher end")
 
     @validates_schema
     def _check_date_range(self, data: dict, **kwargs: dict) -> None:
@@ -299,11 +301,11 @@ class FiltersSchema(ma.Schema):
             and data.get("date_max")
             and data["date_min"] > data["date_max"]
         ):
-            raise ValidationError("Lower end cannot be higher than higher end")
+            raise ValidationError("Lower end cannot be higher than the higher end")
 
     @pre_load
     def _create_list_from_string(self, data: dict, **kwargs: dict) -> dict:
-        """Replace empty values (strings) with None"""
+        """Split comma separated values into a list"""
 
         for param in "base_currency", "category", "bank":
             if data.get(param, None):
@@ -313,7 +315,7 @@ class FiltersSchema(ma.Schema):
 
 
 class UserEntitiesSchema(ma.Schema):
-    """Schema used for dumping entities assigned to user"""
+    """Schema used for dumping entities assigned to a user"""
 
     user_details = fields.Nested(UserSchema, exclude=("main_currency",), dump_only=True)
     main_currency = fields.String(dump_only=True)

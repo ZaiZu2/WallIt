@@ -4,9 +4,8 @@ from pathlib import Path
 import click
 from flask import Flask
 
-from app import db
 from app.exceptions import FileError
-from app.external.exchange_rates import ExchangeRatesLoader
+from app.external.exchange_rates import RatesManager
 
 
 def register(app: Flask) -> None:
@@ -42,14 +41,15 @@ def register(app: Flask) -> None:
             print("Ending date can only be specified after starting date")
             return
 
-        ExchangeRatesLoader.download_exchange_rates(start_date, end_date)
+        rates_manager = RatesManager()
+        rates_manager.download_exchange_rates(start_date, end_date)
 
         while True:
             confirm = input(
                 "Would you like to save downloaded records to .csv file? (y/n) "
             )
             if confirm in ["Y", "y"]:
-                ExchangeRatesLoader.save_to_csv()
+                rates_manager.save_to_csv()
                 break
             elif confirm in ["N", "n"]:
                 break
@@ -58,7 +58,7 @@ def register(app: Flask) -> None:
                 "Would you like to save downloaded records to database? (y/n) "
             )
             if confirm in ["Y", "y"]:
-                ExchangeRatesLoader.save_to_db()
+                rates_manager.save_to_db()
                 break
             elif confirm in ["N", "n"]:
                 break
@@ -77,9 +77,11 @@ def register(app: Flask) -> None:
             print("File '{path}' could not be found")
             return
 
+        rates_manager = RatesManager()
+
         try:
-            ExchangeRatesLoader.load_from_csv(path)
+            rates_manager.load_from_csv(path)
         except FileError as error:
             print(error.message)
             return
-        ExchangeRatesLoader.save_to_db()
+        rates_manager.save_to_db()

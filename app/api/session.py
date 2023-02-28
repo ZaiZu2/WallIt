@@ -1,11 +1,11 @@
 from collections import defaultdict
 
+from flask import current_app
 from flask.typing import ResponseReturnValue
 from flask_login import login_required
 
 from app.api import blueprint
 from app.api.schemas import SessionEntitiesSchema
-from app.external.exchange_rates import ExchangeRatesLoader
 from app.models import Bank
 
 
@@ -27,8 +27,8 @@ def fetch_session_entities() -> ResponseReturnValue:
     Returns:
         ResponseReturnValue: _description_
     """
-    response_body: dict[str, list | dict] = defaultdict(dict)
-    response_body["currencies"] = ExchangeRatesLoader.get_currencies()
+    response_body: dict[str, dict] = defaultdict(dict)
+    response_body["currencies"] = current_app.config["SUPPORTED_CURRENCIES"]
     for bank in Bank.query.all():
         response_body["banks"][bank.name] = bank
 

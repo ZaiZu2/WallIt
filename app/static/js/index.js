@@ -343,7 +343,7 @@ async function updateSessionEntities() {
 
 async function updateUserEntities() {
   // Fetch filter data based on user's transactions from server
-  const entities = await fetch("/api/user/entities", {
+  const entities = await fetch(`/api/user/entities`, {
     method: "GET", // *GET, POST, PUT, DELETE, etc.
     headers: {
       "X-CSRFToken": document.getElementsByName("csrf-token")[0].content,

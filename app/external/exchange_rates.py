@@ -17,29 +17,25 @@ from app.external.schemas import ExchangeRateSchema
 from app.models import ExchangeRate
 
 
-class ExchangeRatesLoader:
-    db = db
-    exchange_rates: list[ExchangeRateSchema] = []
-    currencies: set[str]
+class RatesManager:
+    def __init__(self) -> None:
+        self.exchange_rates: list[ExchangeRateSchema] = []
+        self.downloader = RatesDownloader()
 
-    @classmethod
-    def download_exchange_rates(cls, start_date: datetime, end_date: datetime) -> None:
-        if start_date > end_date:
-            raise ValueError("Ending date can only be specified after starting date")
+    def download_exchange_rates(self, start_date: datetime, end_date: datetime) -> None:
+        self.exchange_rates = self.downloader.download_exchange_rates(
+            start_date, end_date
+        )
 
-        cls.get_currencies()
-        asyncio.run(cls._get_timeseries(start_date, end_date))
-
-    @classmethod
-    def save_to_csv(cls) -> None:
+    def save_to_csv(self) -> None:
         """Save loaded exchange rates to a .csv file"""
 
-        if not cls.exchange_rates:
+        if not self.exchange_rates:
             print("There are no records to save")
             return
 
         # Ensure that records are sorted so .csv file is written chronologically
-        sorted_rates = sorted(cls.exchange_rates, key=attrgetter("date", "source"))
+        sorted_rates = sorted(self.exchange_rates, key=attrgetter("date", "source"))
         file_name = f"exchange_rates_{sorted_rates[0].date.strftime('%Y-%m-%d')}_{sorted_rates[-1].date.strftime('%Y-%m-%d')}.csv"
         with open(file_name, "w", newline="") as csv_file:
             fieldnames = ["date", *current_app.config["SUPPORTED_CURRENCIES"]]
@@ -58,15 +54,13 @@ class ExchangeRatesLoader:
 
         print("Exchange rates successfully written to the .csv file")
 
-    @classmethod
-    def save_to_db(cls) -> None:
+    def save_to_db(self) -> None:
         """Save loaded exchange rates to the db"""
-        db.session.add_all(cls.exchange_rates)
+        db.session.add_all(self.exchange_rates)
         db.session.commit()
         print("Exchange rates successfully written to the db")
 
-    @classmethod
-    def load_from_csv(cls, path: Path) -> None:
+    def load_from_csv(self, path: Path) -> None:
         """Load exchange rates from a .csv file
 
         Args:
@@ -92,11 +86,23 @@ class ExchangeRatesLoader:
                 "Error occured while parsing .csv file. File might be corrupted.",
             )
 
-        cls.exchange_rates = exchange_rates
+        self.exchange_rates = exchange_rates
 
-    @classmethod
-    @cache.cached(key_prefix="currencies")
-    def get_currencies(cls) -> set[str]:
+
+class RatesDownloader:
+    def __init__(self) -> None:
+        self.currencies: set[str] = set()
+
+    def download_exchange_rates(
+        self, start_date: datetime, end_date: datetime
+    ) -> list[ExchangeRate]:
+        if start_date > end_date:
+            raise ValueError("Ending date can only be specified after starting date")
+
+        self.get_currencies()
+        return asyncio.run(self._get_timeseries(start_date, end_date))
+
+    def get_currencies(self) -> set[str]:
         """Consume API to download currencies for which exchange rates are available
 
         Raises:
@@ -107,7 +113,7 @@ class ExchangeRatesLoader:
         )
 
         try:
-            response = httpx.get(url)
+            response = httpx.get(url, timeout=None)
             response.raise_for_status()
             json = response.json()
 
@@ -130,11 +136,12 @@ class ExchangeRatesLoader:
             raise ValueError(
                 "No currencies were downloaded or are available to download"
             )
-        cls.currencies = currencies
+        self.currencies = currencies
         return currencies
 
-    @classmethod
-    async def _get_timeseries(cls, start_date: datetime, end_date: datetime) -> None:
+    async def _get_timeseries(
+        self, start_date: datetime, end_date: datetime
+    ) -> list[ExchangeRate]:
         """Asynchronously consume API to download exchange rates for a set period
 
         Args:
@@ -159,7 +166,7 @@ class ExchangeRatesLoader:
             responses = await asyncio.gather(*tasks)
 
         schema = ExchangeRateSchema()
-        exchange_rates = []
+        exchange_rates: list[ExchangeRate] = []
         failed: list[Response] = []
         for response in responses:
             try:
@@ -179,4 +186,4 @@ class ExchangeRatesLoader:
 
         if failed:
             print(f"Failed to download exchange rates for {len(failed)} days")
-        cls.exchange_rates = exchange_rates
+        return exchange_rates
