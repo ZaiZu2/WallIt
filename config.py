@@ -179,7 +179,6 @@ class Config:
         "YER",
         "ZAR",
         "ZMW",
-        "ZWL",
     }
     CURRENCYSCOOP_API_KEY = os.environ.get("CURRENCYSCOOP_API_KEY")
     CURRENCYSCOOP_HISTORICAL_URL = "https://api.currencyscoop.com/v1/historical?api_key={key}&base=EUR&date={date}&symbols={symbols}"
