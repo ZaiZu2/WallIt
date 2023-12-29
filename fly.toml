@@ -1,35 +1,27 @@
-# fly.toml file generated for wallit on 2022-11-28T22:50:41+01:00
-
 app = "wallit"
-kill_signal = "SIGINT"
-kill_timeout = 5
-processes = []
+primary_region = "waw"
+kill_signal = "SIGTERM"
+kill_timeout = "5s"
 
-[env]
-  PORT = "8080"
-
-[[services]]
-  http_checks = []
+[http_service]
   internal_port = 8080
-  processes = ["app"]
-  protocol = "tcp"
-  script_checks = []
-  [services.concurrency]
-    hard_limit = 25
-    soft_limit = 20
-    type = "connections"
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = false
 
-  [[services.ports]]
-    force_https = true
-    handlers = ["http"]
-    port = 80
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 300
+    soft_limit = 250
 
-  [[services.ports]]
-    handlers = ["tls", "http"]
-    port = 443
-
-  [[services.tcp_checks]]
-    grace_period = "1s"
-    interval = "15s"
-    restart_limit = 0
-    timeout = "2s"
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "30s"
+    method = "GET"
+    path = "/welcome"
+    
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
