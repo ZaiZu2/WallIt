@@ -1,11 +1,12 @@
 from flask import flash, redirect, render_template, url_for
-from flask_login import current_user, login_required, login_user, logout_user
+from flask_login import current_user, login_required, login_user, logout_user 
 from werkzeug.wrappers import Response
 
 from app import db
 from app.main import blueprint
 from app.main.email import send_password_reset_email
 from app.main.forms import LoginForm, RequestPasswordForm, ResetPasswordForm, SignUpForm
+from app.main.utils import wait_for_db
 from app.models import User
 
 
@@ -13,6 +14,7 @@ from app.models import User
 @blueprint.route("/")
 @login_required
 def index() -> str:
+    wait_for_db()
     return render_template(
         "index.html", current_user=current_user._get_current_object()
     )
@@ -20,6 +22,7 @@ def index() -> str:
 
 @blueprint.route("/welcome", methods=["GET"])
 def welcome() -> str | Response:
+    wait_for_db()
     if current_user.is_authenticated:
         return redirect(url_for("main.index"))
 
